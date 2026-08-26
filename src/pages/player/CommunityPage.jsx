@@ -1,0 +1,254 @@
+import React, { useState } from 'react';
+import { Users, Heart, MessageSquare, Send, Award, CheckCircle2, Vote } from 'lucide-react';
+import { useDataStore } from '../../store/useDataStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import Avatar from '../../components/common/Avatar';
+import Badge from '../../components/common/Badge';
+import Button from '../../components/common/Button';
+import toast from 'react-hot-toast';
+
+export const CommunityPage = () => {
+  const { communityPosts, polls, challenges, addCommunityPost, likePost, addComment, votePoll } = useDataStore();
+  const { currentUser } = useAuthStore();
+
+  const [selectedCity, setSelectedCity] = useState('all');
+  const [postText, setPostText] = useState('');
+  const [commentInputs, setCommentInputs] = useState({});
+
+  const filteredPosts = communityPosts.filter(p => 
+    selectedCity === 'all' || p.city?.toLowerCase() === selectedCity.toLowerCase()
+  );
+
+  const handleCreatePost = (e) => {
+    e.preventDefault();
+    if (!postText.trim()) return;
+
+    addCommunityPost({
+      city: currentUser?.city || 'Raipur',
+      authorId: currentUser?.id || 'usr_player_demo',
+      authorName: currentUser?.name || 'Arjun Mehta',
+      authorAvatar: currentUser?.profileImageUrl || currentUser?.avatar,
+      authorElo: currentUser?.eloRating || currentUser?.elo || 1840,
+      content: postText,
+      tags: ['FIFAAllStars', currentUser?.city || 'Raipur']
+    });
+
+    toast.success('Post published to community feed!');
+    setPostText('');
+  };
+
+  const handleVote = (pollId, optionId) => {
+    votePoll(pollId, optionId, currentUser?.id);
+    toast.success('Vote recorded!');
+  };
+
+  const handleAddComment = (postId, e) => {
+    e.preventDefault();
+    const text = commentInputs[postId];
+    if (!text || !text.trim()) return;
+
+    addComment(postId, {
+      id: `c_${Date.now()}`,
+      author: currentUser?.name || 'Player',
+      avatar: currentUser?.profileImageUrl || currentUser?.avatar,
+      text: text,
+      timestamp: 'Just now'
+    });
+
+    setCommentInputs({ ...commentInputs, [postId]: '' });
+    toast.success('Comment added!');
+  };
+
+  return (
+    <div className="space-y-8 py-4 max-w-4xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
+          <Users className="w-8 h-8 text-sport-500" />
+          <span>Community & Monthly Challenges</span>
+        </h1>
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
+          City-wise player discussions, active polls, and monthly reward achievements
+        </p>
+      </div>
+
+      {/* Monthly Challenges Ribbon */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wide flex items-center space-x-2">
+          <Award className="w-5 h-5 text-amber-500" />
+          <span>Active Monthly Challenges</span>
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {challenges.map((ch) => {
+            const currentCount = ch.userProgress[currentUser?.id] || 1;
+            const percentage = Math.min(100, Math.round((currentCount / ch.target) * 100));
+
+            return (
+              <div key={ch.id} className="footy-card p-5 space-y-3 border-amber-500/30">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{ch.title}</h4>
+                    <p className="text-xs text-slate-400 font-semibold mt-0.5">{ch.description}</p>
+                  </div>
+                  <Badge variant="gold" size="sm">+₹{ch.rewardWalletBonus}</Badge>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-bold">
+                    <span className="text-slate-500 dark:text-slate-400">Progress: {currentCount}/{ch.target}</span>
+                    <span className="text-sport-500">{percentage}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div className="bg-sport-500 h-full transition-all duration-500" style={{ width: `${percentage}%` }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* City Filter Bar */}
+      <div className="footy-card p-3 flex items-center space-x-2 overflow-x-auto">
+        <span className="text-xs font-extrabold text-slate-400 uppercase px-2">Filter City:</span>
+        {['all', 'Raipur', 'Bangalore', 'Mumbai', 'Delhi', 'Pune'].map((c) => (
+          <button
+            key={c}
+            onClick={() => setSelectedCity(c)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all uppercase whitespace-nowrap ${
+              selectedCity === c
+                ? 'bg-sport-500 text-white'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
+      {/* Community Polls Section */}
+      {polls.length > 0 && (
+        <div className="footy-card p-6 space-y-4">
+          <div className="flex items-center space-x-2">
+            <Vote className="w-5 h-5 text-sky-500" />
+            <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Community Poll ({polls[0].city})</h3>
+          </div>
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{polls[0].question}</p>
+
+          <div className="space-y-2">
+            {polls[0].options.map(opt => {
+              const hasVoted = polls[0].votedUserIds?.includes(currentUser?.id);
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => handleVote(polls[0].id, opt.id)}
+                  disabled={hasVoted}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-xs font-bold transition-all ${
+                    hasVoted ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border-slate-200 dark:border-slate-800 hover:border-sport-500'
+                  }`}
+                >
+                  <span>{opt.text}</span>
+                  <span className="text-sport-500 font-extrabold">{opt.votes} Votes</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Create Post Box */}
+      <div className="footy-card p-5 space-y-4">
+        <div className="flex items-start space-x-3">
+          <Avatar src={currentUser?.profileImageUrl || currentUser?.avatar} name={currentUser?.name} size="md" />
+          <textarea
+            rows="3"
+            placeholder={`Share match updates or looking-for-players notice in ${currentUser?.city || 'Raipur'}...`}
+            value={postText}
+            onChange={(e) => setPostText(e.target.value)}
+            className="flex-1 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sport-500"
+          />
+        </div>
+
+        <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
+          <Button variant="primary" size="sm" icon={Send} onClick={handleCreatePost}>
+            Post to {currentUser?.city || 'Raipur'} Feed
+          </Button>
+        </div>
+      </div>
+
+      {/* Posts Feed */}
+      <div className="space-y-6">
+        {filteredPosts.map((post) => (
+          <div key={post.id} className="footy-card p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Avatar src={post.authorAvatar} name={post.authorName} size="md" />
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{post.authorName}</h4>
+                    <Badge variant="emerald" size="sm">{post.authorElo} Elo</Badge>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-semibold">{post.city || 'Raipur'} • {post.timestamp}</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-relaxed font-sans">
+              {post.content}
+            </p>
+
+            <div className="flex flex-wrap gap-1.5">
+              {post.tags?.map((tag, i) => (
+                <span key={i} className="text-[10px] font-extrabold text-sport-500 bg-sport-500/10 px-2.5 py-0.5 rounded-md">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+
+            <div className="flex items-center space-x-6 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <button
+                onClick={() => likePost(post.id)}
+                className="flex items-center space-x-1.5 text-slate-500 hover:text-rose-500 transition-colors"
+              >
+                <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />
+                <span>{post.likes} Likes</span>
+              </button>
+
+              <div className="flex items-center space-x-1.5 text-slate-500">
+                <MessageSquare className="w-4 h-4 text-sport-500" />
+                <span>{post.comments?.length || 0} Comments</span>
+              </div>
+            </div>
+
+            {/* Comments List */}
+            <div className="space-y-2 pt-2">
+              {post.comments?.map((c) => (
+                <div key={c.id} className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-xs space-y-1">
+                  <div className="flex justify-between font-bold text-slate-900 dark:text-white">
+                    <span>{c.author}</span>
+                    <span className="text-[10px] text-slate-400 font-normal">{c.timestamp}</span>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 font-semibold">{c.text}</p>
+                </div>
+              ))}
+
+              <form onSubmit={(e) => handleAddComment(post.id, e)} className="flex gap-2 pt-2">
+                <input
+                  type="text"
+                  placeholder="Write a comment..."
+                  value={commentInputs[post.id] || ''}
+                  onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500"
+                />
+                <Button type="submit" variant="primary" size="sm" icon={Send} />
+              </form>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default CommunityPage;

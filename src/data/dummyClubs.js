@@ -1,0 +1,62 @@
+export const dummyClubs = [
+  {
+    id: "clb_raipur_1",
+    name: "Bernabeu Arena Turf",
+    address: "VIP Road, Near Magneto Mall, Telibandha",
+    city: "Raipur",
+    geoCoordinates: { lat: 21.2497, lng: 81.6584 },
+    operatingHours: { open: "06:00", close: "23:00" },
+    amenities: ["Floodlights", "Pro Shop", "Washrooms", "Parking", "Cafeteria", "Changing Rooms"],
+    status: "ACTIVE",
+    managerIds: ["usr_manager_demo"],
+    clubImageUrl: "/src/assets/images/courts/court-1.jpg",
+    rating: 4.9,
+    reviewsCount: 142,
+    description: "Raipur's premier FIFA grade 3G artificial grass turf featuring high intensity HD floodlighting & automated score displays."
+  },
+  {
+    id: "clb_blr_1",
+    name: "Silicon Turf Hub",
+    address: "100 Feet Road, Indiranagar",
+    city: "Bangalore",
+    geoCoordinates: { lat: 12.9716, lng: 77.5946 },
+    operatingHours: { open: "06:00", close: "00:00" },
+    amenities: ["Floodlights", "Pro Shop", "Washrooms", "Parking", "Free WiFi", "Live Video Recording"],
+    status: "ACTIVE",
+    managerIds: ["usr_manager_2"],
+    clubImageUrl: "/src/assets/images/courts/court-2.jpg",
+    rating: 4.8,
+    reviewsCount: 215,
+    description: "State-of-the-art multi-pitch sports arena located in the heart of Indiranagar."
+  },
+  {
+    id: "clb_pune_1",
+    name: "Champions Turf Arena",
+    address: "FC Road, Deccan Gymkhana",
+    city: "Pune",
+    geoCoordinates: { lat: 18.5204, lng: 73.8567 },
+    operatingHours: { open: "07:00", close: "23:00" },
+    amenities: ["Floodlights", "Washrooms", "Parking", "Juice Bar", "First Aid Kit"],
+    status: "ACTIVE",
+    managerIds: ["usr_manager_3"],
+    clubImageUrl: "/src/assets/images/courts/court-3.jpg",
+    rating: 4.7,
+    reviewsCount: 98,
+    description: "All-weather covered turf dome with shock-pad underlayment for maximum safety."
+  },
+  {
+    id: "clb_mumbai_1",
+    name: "Marine Drive Sports Complex",
+    address: "Netaji Subhash Chandra Bose Road",
+    city: "Mumbai",
+    geoCoordinates: { lat: 18.9438, lng: 72.8234 },
+    operatingHours: { open: "06:00", close: "22:00" },
+    amenities: ["Floodlights", "Pro Shop", "Washrooms", "Parking", "Locker Rooms"],
+    status: "PENDING",
+    managerIds: ["usr_admin_demo"],
+    clubImageUrl: "/src/assets/images/courts/court-4.jpg",
+    rating: 4.6,
+    reviewsCount: 45,
+    description: "Iconic oceanfront turf facility awaiting official FIFA All Stars verification."
+  }
+];
