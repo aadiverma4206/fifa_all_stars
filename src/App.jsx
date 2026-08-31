@@ -41,6 +41,8 @@ import DisputesPage from './pages/admin/DisputesPage';
 import AuditLogsPage from './pages/admin/AuditLogsPage';
 import SupportTicketsPage from './pages/admin/SupportTicketsPage';
 
+import ScrollToTop from './components/common/ScrollToTop';
+
 function App() {
   const { applyTheme, listenToSystemChanges } = useThemeStore();
   const { currentUser } = useAuthStore();
@@ -55,6 +57,7 @@ function App() {
 
   return (
     <>
+      <ScrollToTop />
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <Routes>
         

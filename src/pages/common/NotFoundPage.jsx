@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Home, AlertCircle } from 'lucide-react';
 import Button from '../../components/common/Button';
+import BackButton from '../../components/common/BackButton';
 import FootballScene from '../../components/football3d/FootballScene';
 
 export const NotFoundPage = () => {
@@ -27,11 +28,15 @@ export const NotFoundPage = () => {
         </p>
       </div>
 
-      <Link to="/">
-        <Button variant="primary" size="md" icon={Home} className="px-8">
-          Back to FIFA All Stars Home
-        </Button>
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+        <BackButton fallback="/" label="Go Back to Previous Page" className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700" />
+
+        <Link to="/">
+          <Button variant="primary" size="md" icon={Home} className="px-6">
+            Back to Home
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 };

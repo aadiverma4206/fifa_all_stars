@@ -4,6 +4,7 @@ import { Trophy, Calendar, Users, Award, Shield, ArrowLeft, Plus } from 'lucide-
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import Button from '../../components/common/Button';
+import BackButton from '../../components/common/BackButton';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
@@ -38,10 +39,7 @@ export const TournamentDetailsPage = () => {
   return (
     <div className="space-y-8 py-4 max-w-5xl mx-auto">
       
-      <Link to="/tournaments" className="inline-flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-amber-500 transition-colors">
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to Tournaments</span>
-      </Link>
+      <BackButton fallback="/player/tournaments" label="Back to Tournaments" />
 
       <div className="relative rounded-3xl overflow-hidden footy-card p-6 sm:p-10 space-y-6">
         {tournament.banner && (

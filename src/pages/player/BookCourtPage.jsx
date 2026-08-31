@@ -5,6 +5,7 @@ import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getTodayDate } from '../../utils/dateUtils';
 import Button from '../../components/common/Button';
+import BackButton from '../../components/common/BackButton';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
@@ -92,10 +93,7 @@ export const BookCourtPage = () => {
   return (
     <div className="space-y-8 py-4 max-w-4xl mx-auto">
       
-      <Link to="/courts" className="inline-flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-sport-500 transition-colors">
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to Turf Directory</span>
-      </Link>
+      <BackButton fallback="/player/courts" label="Back to Turf Directory" />
 
       {/* Unavailable Warning Banner */}
       {isUnavailable && (

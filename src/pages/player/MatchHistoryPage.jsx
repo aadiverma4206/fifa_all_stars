@@ -6,6 +6,7 @@ import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import Badge from '../../components/common/Badge';
 import Avatar from '../../components/common/Avatar';
+import BackButton from '../../components/common/BackButton';
 
 export const MatchHistoryPage = () => {
   const { games } = useDataStore();
@@ -61,10 +62,7 @@ export const MatchHistoryPage = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <Link to="/player/find-games" className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-400 hover:text-sport-500 mb-3 transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Find Games</span>
-          </Link>
+          <BackButton fallback="/player/find-games" label="Back to Find Games" className="mb-3" />
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
             <Trophy className="w-7 h-7 text-amber-500 flex-shrink-0" />
             Match History

@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, Users, Shield, ArrowLeft, Send, CheckCircle, T
 import { useDataStore, MATCH_FORMAT_SLOTS } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import Button from '../../components/common/Button';
+import BackButton from '../../components/common/BackButton';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
@@ -220,10 +221,7 @@ export const GameDetailsPage = () => {
     <div className="space-y-8 py-4 max-w-5xl mx-auto">
       
       {/* Back button */}
-      <Link to="/games" className="inline-flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-sport-500 transition-colors">
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to All Pick-Up Games</span>
-      </Link>
+      <BackButton fallback="/player/find-games" label="Back to All Pick-Up Games" />
 
       {/* Main Banner Header */}
       <div className="footy-card p-6 sm:p-8 space-y-6">
