@@ -1,3 +1,5 @@
+import { getTodayDate } from '../utils/dateUtils';
+
 export const dummyGames = [
   {
     id: "gam_101",
@@ -17,6 +19,7 @@ export const dummyGames = [
     ],
     waitlist: [],
     skill: "Intermediate",
+    privacy: "PUBLIC",
     venueReference: {
       clubId: "clb_raipur_1",
       clubName: "Bernabeu Arena Turf",
@@ -25,7 +28,7 @@ export const dummyGames = [
       city: "Raipur"
     },
     dateTime: {
-      date: "2026-08-28",
+      date: getTodayDate(0),
       startTime: "19:00",
       endTime: "20:30"
     },
@@ -65,6 +68,7 @@ export const dummyGames = [
       { id: "usr_manager_3", name: "Priya Nair", avatar: "/src/assets/images/avatars/avatar-5.jpg" }
     ],
     skill: "Advanced",
+    privacy: "PUBLIC",
     venueReference: {
       clubId: "clb_raipur_1",
       clubName: "Bernabeu Arena Turf",
@@ -73,7 +77,7 @@ export const dummyGames = [
       city: "Raipur"
     },
     dateTime: {
-      date: "2026-08-29",
+      date: getTodayDate(1),
       startTime: "18:00",
       endTime: "20:00"
     },
@@ -99,6 +103,7 @@ export const dummyGames = [
     ],
     waitlist: [],
     skill: "All Levels",
+    privacy: "PUBLIC",
     venueReference: {
       clubId: "clb_blr_1",
       clubName: "Silicon Turf Hub",
@@ -107,11 +112,11 @@ export const dummyGames = [
       city: "Bangalore"
     },
     dateTime: {
-      date: "2026-08-26",
+      date: getTodayDate(0),
       startTime: "20:00",
       endTime: "21:30"
     },
-    status: "IN_PROGRESS",
+    status: "ONGOING",
     score: { teamA: 3, teamB: 2 },
     description: "Live ongoing evening match at Silicon Turf Hub."
   },
@@ -133,6 +138,7 @@ export const dummyGames = [
     ],
     waitlist: [],
     skill: "Intermediate",
+    privacy: "PUBLIC",
     venueReference: {
       clubId: "clb_pune_1",
       clubName: "Champions Turf Arena",
@@ -141,7 +147,7 @@ export const dummyGames = [
       city: "Pune"
     },
     dateTime: {
-      date: "2026-08-25",
+      date: getTodayDate(-1),
       startTime: "19:00",
       endTime: "20:00"
     },

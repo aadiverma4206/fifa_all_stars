@@ -14,13 +14,15 @@ export const Avatar = ({ src, alt = 'Avatar', name = '', size = 'md', status, cl
   };
 
   const sizes = {
-    sm: 'w-8 h-8 text-xs',
+    xs: 'w-6 h-6 text-[9px] font-extrabold',
+    sm: 'w-8 h-8 text-xs font-bold',
     md: 'w-10 h-10 text-sm font-black',
     lg: 'w-14 h-14 text-base font-black',
     xl: 'w-20 h-20 text-xl font-black'
   };
 
   const statusSizes = {
+    xs: 'w-1.5 h-1.5',
     sm: 'w-2 h-2',
     md: 'w-2.5 h-2.5',
     lg: 'w-3.5 h-3.5',
@@ -28,26 +30,19 @@ export const Avatar = ({ src, alt = 'Avatar', name = '', size = 'md', status, cl
   };
 
   const initials = getInitials(name || alt);
+  const sizeClass = sizes[size] || sizes.md;
 
   return (
-    <div className={clsx('relative inline-block flex-shrink-0 select-none', className)}>
+    <div className={clsx('relative inline-block flex-shrink-0 select-none', sizeClass, className)}>
       {!imageError && src ? (
         <img
           src={src}
           alt={alt}
           onError={() => setImageError(true)}
-          className={clsx(
-            sizes[size],
-            'rounded-full object-cover ring-2 ring-sport-500/30 shadow-sm'
-          )}
+          className="w-full h-full rounded-full object-cover ring-2 ring-sport-500/30 shadow-sm"
         />
       ) : (
-        <div
-          className={clsx(
-            sizes[size],
-            'rounded-full bg-gradient-to-tr from-sport-600 to-teal-500 text-white flex items-center justify-center font-bold tracking-wider ring-2 ring-sport-500/30 shadow-sm'
-          )}
-        >
+        <div className="w-full h-full rounded-full bg-gradient-to-tr from-sport-600 to-teal-500 text-white flex items-center justify-center font-bold tracking-wider ring-2 ring-sport-500/30 shadow-sm">
           {initials}
         </div>
       )}

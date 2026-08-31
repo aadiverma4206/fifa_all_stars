@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, Clock, MapPin, ShieldCheck, Zap, CheckCircle2, ArrowLeft, Lock, AlertTriangle } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { getTodayDate } from '../../utils/dateUtils';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
@@ -21,7 +22,7 @@ export const BookCourtPage = () => {
 
   const isUnavailable = court?.status === 'BLOCKED' || court?.status === 'MAINTENANCE';
 
-  const [date, setDate] = useState('2026-08-29');
+  const [date, setDate] = useState(getTodayDate(1));
   const [startTime, setStartTime] = useState('19:00');
   const [duration, setDuration] = useState(1.5);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -43,8 +44,21 @@ export const BookCourtPage = () => {
       return;
     }
     if (!currentUser) return;
+    
+    // Strict Date Validation: Past Date Guard
+    const today = getTodayDate();
+    if (date < today) {
+      toast.error('Cannot book pitch slots for past dates! Please select today or a future date.');
+      return;
+    }
+
+    if (!startTime) {
+      toast.error('Please select a valid time slot for your pitch reservation.');
+      return;
+    }
+
     if (currentUser.walletBalance < grandTotal) {
-      toast.error(`Insufficient balance! Booking total is ₹${grandTotal}. Please top up your wallet.`);
+      toast.error(`Insufficient wallet balance! Booking total is ₹${grandTotal}, but your balance is ₹${currentUser.walletBalance?.toFixed(2)}. Please top up.`);
       return;
     }
 
@@ -139,7 +153,7 @@ export const BookCourtPage = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-400 mb-1">Select Time Slot</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {availableSlots.map(slot => (
                     <button
                       key={slot}

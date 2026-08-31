@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { DollarSign, Clock, Sparkles, Save, HelpCircle } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import ManagerNav from '../../components/club/ManagerNav';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 
@@ -29,16 +28,33 @@ export const PricingSettingsPage = () => {
     e.preventDefault();
     if (!activeCourt) return;
 
+    if (peakStart && peakEnd && peakStart >= peakEnd) {
+      toast.error('Peak End Time must be after Peak Start Time!');
+      return;
+    }
+
+    const pMult = parseFloat(peakMultiplier);
+    const wMult = parseFloat(weekendMultiplier);
+
+    if (isNaN(pMult) || pMult < 1.0) {
+      toast.error('Peak multiplier must be at least 1.0x.');
+      return;
+    }
+
+    if (isNaN(wMult) || wMult < 1.0) {
+      toast.error('Weekend multiplier must be at least 1.0x.');
+      return;
+    }
+
     updatePricingSettings(activeCourt.courtId || activeCourt.id, {
       peakWindow: `${peakStart}-${peakEnd}`,
-      peakMultiplier: parseFloat(peakMultiplier),
-      weekendMultiplier: parseFloat(weekendMultiplier)
+      peakMultiplier: pMult,
+      weekendMultiplier: wMult
     });
   };
 
   return (
     <div className="space-y-6 py-4 max-w-5xl mx-auto">
-      <ManagerNav />
 
       <div>
         <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">

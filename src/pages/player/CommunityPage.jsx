@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Heart, MessageSquare, Send, Award, CheckCircle2, Vote } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -8,6 +9,7 @@ import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 
 export const CommunityPage = () => {
+  const navigate = useNavigate();
   const { communityPosts, polls, challenges, addCommunityPost, likePost, addComment, votePoll } = useDataStore();
   const { currentUser } = useAuthStore();
 
@@ -21,6 +23,11 @@ export const CommunityPage = () => {
 
   const handleCreatePost = (e) => {
     e.preventDefault();
+    if (!currentUser) {
+      toast.error('Please sign in to publish community posts.');
+      navigate('/login');
+      return;
+    }
     if (!postText.trim()) return;
 
     addCommunityPost({
@@ -38,12 +45,22 @@ export const CommunityPage = () => {
   };
 
   const handleVote = (pollId, optionId) => {
+    if (!currentUser) {
+      toast.error('Please sign in to vote on polls.');
+      navigate('/login');
+      return;
+    }
     votePoll(pollId, optionId, currentUser?.id);
     toast.success('Vote recorded!');
   };
 
   const handleAddComment = (postId, e) => {
     e.preventDefault();
+    if (!currentUser) {
+      toast.error('Please sign in to add comments.');
+      navigate('/login');
+      return;
+    }
     const text = commentInputs[postId];
     if (!text || !text.trim()) return;
 

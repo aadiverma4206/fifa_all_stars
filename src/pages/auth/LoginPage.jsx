@@ -1,24 +1,81 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Shield, Users, Building2, Trophy, Key, ArrowRight, Sparkles, Star, ChevronDown, ChevronUp, Play, MapPin, Camera } from 'lucide-react';
+import { 
+  Trophy, Shield, Building2, Key, Mail, Lock, Eye, EyeOff, 
+  Sparkles, CheckCircle2, ShieldCheck, ChevronDown, ChevronUp, Star, Info, User, Phone, UserPlus
+} from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getDefaultRoleRoute } from '../../utils/permissions';
+import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
-import FootballScene from '../../components/football3d/FootballScene';
+import communityPlayersImg from '../../assets/images/hero/community-players.jpg';
+import { validateEmail, validatePassword, validatePhone, validateNonEmpty } from '../../utils/validationUtils';
 import toast from 'react-hot-toast';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { loginWithCredentials, usersList } = useAuthStore();
+  const { loginWithCredentials, registerPlayer } = useAuthStore();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState('PLAYER');
+  const [email, setEmail] = useState('player@fifaallstars.com');
+  const [password, setPassword] = useState('Player@123');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
-
-  const [selectedArea, setSelectedArea] = useState('');
   const [openFaq, setOpenFaq] = useState(null);
+
+  // Public Player Registration Form States
+  const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regCity, setRegCity] = useState('Raipur');
+  const [regPosition, setRegPosition] = useState('Striker');
+  const [regBio, setRegBio] = useState('');
+
+
+  // Pre-configured persona credentials for each role
+  const rolePersonas = {
+    PLAYER: {
+      role: 'PLAYER',
+      title: 'Player Workspace',
+      user: 'Arjun Mehta',
+      email: 'player@fifaallstars.com',
+      pass: 'Player@123',
+      badge: '⚽ Player Portal',
+      description: 'Book pitch slots, join pickup games & view Elo ratings.',
+    },
+    CLUB_MANAGER: {
+      role: 'CLUB_MANAGER',
+      title: 'Club Manager Hub',
+      user: 'Rajesh Sharma',
+      email: 'manager@fifaallstars.com',
+      pass: 'Manager@123',
+      badge: '🏟️ Club Manager',
+      description: 'Manage turf schedules, peak rates & pitch bookings.',
+    },
+    SUPER_ADMIN: {
+      role: 'SUPER_ADMIN',
+      title: 'Super Admin Operations',
+      user: 'Aaditya Verma (Owner)',
+      email: 'superadmin@fifaallstars.com',
+      pass: 'SuperAdmin@123',
+      badge: '🛡️ Super Admin',
+      description: 'Platform governance, user accounts & audit logs.',
+    }
+  };
+
+  const currentPersona = rolePersonas[selectedRole];
+
+  const handleRoleSelect = (roleKey) => {
+    setSelectedRole(roleKey);
+    setEmail(rolePersonas[roleKey].email);
+    setPassword(rolePersonas[roleKey].pass);
+  };
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();
@@ -28,16 +85,20 @@ export const LoginPage = () => {
       return;
     }
 
-    const res = loginWithCredentials(email, password);
+    setIsLoading(true);
+    setTimeout(() => {
+      const res = loginWithCredentials(email, password);
+      setIsLoading(false);
 
-    if (res.success) {
-      toast.success(`Welcome back, ${res.user.name}!`);
-      const targetRoute = getDefaultRoleRoute(res.user.role);
-      navigate(targetRoute, { replace: true });
-    } else {
-      toast.error(res.error || 'Invalid credentials');
-      triggerShake();
-    }
+      if (res.success) {
+        toast.success(`Authenticated as ${res.user.name} (${res.user.role})`);
+        const targetRoute = getDefaultRoleRoute(res.user.role);
+        navigate(targetRoute, { replace: true });
+      } else {
+        toast.error(res.error || 'Invalid credentials');
+        triggerShake();
+      }
+    }, 400);
   };
 
   const triggerShake = () => {
@@ -45,23 +106,66 @@ export const LoginPage = () => {
     setTimeout(() => setIsShaking(false), 600);
   };
 
-  const handleQuickDemo = (demoEmail, demoPassword) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    
-    toast.loading('Auto-filling demo credentials...', { id: 'demo-login' });
+  const handleQuickDemo = (roleKey) => {
+    handleRoleSelect(roleKey);
+    const persona = rolePersonas[roleKey];
+    toast.loading(`Authenticating as ${persona.user}...`, { id: 'demo-login' });
 
     setTimeout(() => {
-      const res = loginWithCredentials(demoEmail, demoPassword);
+      const res = loginWithCredentials(persona.email, persona.pass);
       if (res.success) {
-        toast.success(`Logged in as ${res.user.name}`, { id: 'demo-login' });
+        toast.success(`Welcome, ${res.user.name}!`, { id: 'demo-login' });
         const targetRoute = getDefaultRoleRoute(res.user.role);
         navigate(targetRoute, { replace: true });
       } else {
-        toast.error(res.error || 'Demo login failed', { id: 'demo-login' });
+        toast.error(res.error || 'Demo authentication failed', { id: 'demo-login' });
         triggerShake();
       }
     }, 400);
+  };
+
+  const handleSocialClick = (provider) => {
+    toast(`${provider} Sign-In is a visual UI element. Please use the Role tabs or Log In button to authenticate.`, {
+      icon: 'ℹ️',
+      style: { borderRadius: '16px', background: '#0f172a', color: '#fff', fontSize: '12px' }
+    });
+  };
+
+  const handleSignUpClick = () => {
+    navigate('/register');
+  };
+
+  const handleRegisterSubmit = (e) => {
+    e.preventDefault();
+    if (!regName || !regEmail || !regPassword) {
+      toast.error('Please enter Full Name, Email, and Password.');
+      return;
+    }
+
+    const res = registerPlayer({
+      name: regName,
+      email: regEmail,
+      phone: regPhone,
+      password: regPassword,
+      city: regCity,
+      playingHand: `Right / ${regPosition}`,
+      bio: regBio
+    });
+
+    if (res.success) {
+      setIsSignUpModalOpen(false);
+      navigate('/player/home', { replace: true });
+    } else {
+      toast.error(res.error || 'Registration failed');
+    }
+  };
+
+
+  const handleConfirmationClick = () => {
+    toast('Confirmation instructions is a visual UI element.', {
+      icon: 'ℹ️',
+      style: { borderRadius: '16px', background: '#0f172a', color: '#fff', fontSize: '12px' }
+    });
   };
 
   const reviews = [
@@ -73,27 +177,27 @@ export const LoginPage = () => {
     {
       name: 'Zinedine',
       location: 'Birmingham',
-      text: "Without Footy Addicts, I would've been depressed after moving to a new city and not playing football for a while as well as not having a group to play with."
+      text: "Without FIFA All Stars, I would've been depressed after moving to a new city and not playing football for a while as well as not having a group to play with."
     },
     {
       name: 'Gemma',
       location: 'London',
-      text: 'I have actually turned into a bit of a Footy Addict, trying to get 3 or 4 games in per week.'
+      text: 'I have actually turned into a bit of a football addict, trying to get 3 or 4 games in per week.'
     }
   ];
 
   const faqs = [
     {
-      q: 'How does Footy Addicts work?',
-      a: 'Simply select your demo role or create a free account, browse open pick-up games near your area, book your spot online with a few clicks, and turn up at the pitch to play!'
+      q: 'How does FIFA All Stars role-based access work?',
+      a: 'To maintain full data transparency and security, role selection happens exclusively at the Login Portal. Users log in as a Player, Club Manager, or Super Admin and are granted isolated workspace permissions.'
     },
     {
-      q: 'How can I join a game?',
-      a: 'Log in as a Player, go to the Find Games page, choose a date and venue that fits your schedule, click Join Game, and confirm your slot.'
+      q: 'Can I switch roles while logged in inside the dashboard?',
+      a: 'No. In accordance with strict RBAC security standards, role switching inside the dashboard is disabled. To change workspace roles, simply log out and sign in with the target role credentials.'
     },
     {
-      q: 'Can anybody create a new game?',
-      a: 'Yes! Any registered player or venue manager can host a new game session, set the format (5v5 or 7v7), entry fee, and invite community players.'
+      q: 'How can I quickly test all 3 role perspectives?',
+      a: 'You can click any of the 3 role tabs (Player, Club Manager, Super Admin) on this login screen and press "1-Click Instant Demo Login" to jump into that role workspace instantly!'
     }
   ];
 
@@ -106,170 +210,259 @@ export const LoginPage = () => {
   ];
 
   return (
-    <div className="space-y-16 py-4">
+    <div className="space-y-12 py-4">
       
-      {/* 1. HERO BANNER WITH 3D FOOTBALL & LOGIN FORM (Matching Reference Image) */}
-      <section className="relative rounded-3xl overflow-hidden min-h-[580px] lg:min-h-[640px] flex items-center p-6 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-2xl bg-slate-950 text-white">
+      {/* 1. HERO SPLIT SCREEN (LIGHT & DARK MODE COMPATIBLE + 100% RESPONSIVE) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
         
-        {/* Background Image Overlay */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-25"
-          style={{ backgroundImage: "url('/src/assets/images/hero/hero-1.jpg')" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-950/60" />
-
-        <div className="relative z-10 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        {/* LEFT COLUMN: High Quality Gentle Photo of Football Players */}
+        <div className="lg:col-span-6 rounded-xl overflow-hidden shadow-2xl relative min-h-[380px] sm:min-h-[480px] lg:min-h-[580px] flex items-end group border border-slate-200 dark:border-slate-800">
+          <img 
+            src={communityPlayersImg} 
+            alt="Football Players in Green Bibs" 
+            className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
           
-          {/* Left Column: Heading & Find a Game Box */}
-          <div className="lg:col-span-7 space-y-6 text-left">
-            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-sport-500/10 border border-sport-500/30 text-sport-500 text-xs font-black uppercase tracking-widest">
-              <Sparkles className="w-4 h-4" />
-              <span>CASUAL FOOTBALL HUB</span>
-            </div>
+          <div className="relative z-10 p-6 sm:p-10 space-y-2 text-left text-white">
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-emerald-500/30 border border-emerald-400/40 text-emerald-300 text-[11px] font-black uppercase tracking-wider backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Friendly Football Community</span>
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-white uppercase tracking-tight">
+              Play Casual Football Anywhere
+            </h2>
+            <p className="text-xs sm:text-sm font-semibold text-slate-200 max-w-md leading-relaxed">
+              Join thousands of football lovers. Book pitches, join pick-up 5v5/7v7 games, and feel the game energy with gentle, inclusive community vibes.
+            </p>
+          </div>
+        </div>
 
-            <div className="space-y-1">
-              <h1 className="text-4xl sm:text-6xl font-black tracking-tight uppercase font-sans leading-none text-white">
-                Play Football <br />
-                <span className="font-serif italic font-normal text-slate-300 text-3xl sm:text-5xl">
-                  whenever You Want
+        {/* RIGHT COLUMN: Modern Login Form (Light & Dark Compatible) */}
+        <div className="lg:col-span-6 flex flex-col justify-center">
+          <motion.div
+            animate={isShaking ? { x: [-12, 12, -8, 8, -4, 4, 0] } : {}}
+            transition={{ duration: 0.5 }}
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-10 shadow-xl space-y-6"
+          >
+            
+            {/* Header & Role Selection Tabs (Data Transparency Enforced) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    FIFA <span className="text-sport-500">ALL STARS</span>
+                  </h1>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Sign in to your role workspace portal
+                  </p>
+                </div>
+                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                  🔒 Data Transparency
                 </span>
-              </h1>
+              </div>
+
+              {/* 3 Role Selection Pills */}
+              <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-extrabold">
+                <button
+                  type="button"
+                  onClick={() => handleRoleSelect('PLAYER')}
+                  className={`py-2 px-2 rounded-lg transition-all ${
+                    selectedRole === 'PLAYER' 
+                      ? 'bg-emerald-500 text-white shadow-md' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Player
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRoleSelect('CLUB_MANAGER')}
+                  className={`py-2 px-2 rounded-lg transition-all ${
+                    selectedRole === 'CLUB_MANAGER' 
+                      ? 'bg-sky-500 text-white shadow-md' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRoleSelect('SUPER_ADMIN')}
+                  className={`py-2 px-2 rounded-lg transition-all ${
+                    selectedRole === 'SUPER_ADMIN' 
+                      ? 'bg-amber-500 text-white shadow-md' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Super Admin
+                </button>
+              </div>
             </div>
 
-            {/* Find a game near you box (Matching Screenshot) */}
-            <div className="bg-slate-900/90 backdrop-blur-xl p-5 rounded-3xl border border-slate-800 shadow-2xl max-w-lg space-y-3">
-              <span className="text-xs font-black uppercase tracking-wider text-white block">
-                Find a game near you
-              </span>
+            {/* Persona Auto-Fill Card */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block">
+                  Persona: {currentPersona.user}
+                </span>
+                <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">{currentPersona.email}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo(selectedRole)}
+                className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 font-extrabold text-[11px] transition-all shadow-sm whitespace-nowrap"
+              >
+                1-Click Demo Log In
+              </button>
+            </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <select
-                  value={selectedArea}
-                  onChange={(e) => setSelectedArea(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-2xl border border-slate-700 bg-slate-950 text-slate-100 font-bold text-xs focus:ring-2 focus:ring-sport-500"
+            {/* Main Login Form */}
+            <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs font-extrabold">
+              
+              {/* Email Input */}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1">Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me & Forgot Password Row */}
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="rounded border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="font-semibold text-slate-600 dark:text-slate-400">Remember me</span>
+                </label>
+                <button 
+                  type="button"
+                  onClick={() => toast.success('Demo password pre-filled. Click Log In.')} 
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold"
                 >
-                  <option value="">Select area</option>
-                  <option value="Raipur">Raipur, Chhattisgarh</option>
-                  <option value="Bangalore">Bangalore, Karnataka</option>
-                  <option value="Mumbai">Mumbai, Maharashtra</option>
-                  <option value="Delhi">Delhi NCR</option>
-                  <option value="Pune">Pune, Maharashtra</option>
-                </select>
+                  Forgot password?
+                </button>
+              </div>
+
+              {/* Log In Button */}
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isLoading}
+                className="w-full py-3.5 text-xs font-black uppercase tracking-wide"
+              >
+                Log in & Launch Workspace
+              </Button>
+
+              {/* Divider */}
+              <div className="relative flex items-center justify-center py-2">
+                <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
+                <span className="absolute bg-white dark:bg-slate-900 px-3 text-[11px] font-semibold text-slate-400">
+                  Or continue with
+                </span>
+              </div>
+
+              {/* Social Login Buttons */}
+              <div className="grid grid-cols-3 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleSocialClick('Google')}
+                  className="py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-all"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z" />
+                    <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z" />
+                    <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12s.7 2.3 1.9 4.7l3.7-1.9z" />
+                    <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z" />
+                  </svg>
+                </button>
 
                 <button
                   type="button"
-                  onClick={() => navigate('/games')}
-                  className="px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs tracking-wide transition-all shadow-lg shadow-indigo-600/30 whitespace-nowrap"
+                  onClick={() => handleSocialClick('Apple')}
+                  className="py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-all text-slate-900 dark:text-white"
                 >
-                  Search for games
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.35c.67-.82 1.12-1.96.99-3.1-.96.04-2.13.64-2.82 1.44-.61.71-1.15 1.87-.99 2.98 1.07.08 2.16-.5 2.82-1.32z" />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSocialClick('Facebook')}
+                  className="py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-all"
+                >
+                  <svg className="w-5 h-5 fill-current text-[#1877F2]" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
                 </button>
               </div>
-            </div>
 
-            {/* Quick 1-Click Demo Logins Banner */}
-            <div className="pt-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
-                1-CLICK QUICK DEMO LOGINS
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button
-                  onClick={() => handleQuickDemo('superadmin@fifaallstars.com', 'SuperAdmin@123')}
-                  className="p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-extrabold text-left transition-all group"
-                >
-                  <div className="flex items-center space-x-1.5">
-                    <Shield className="w-4 h-4 text-amber-500" />
-                    <span>Super Admin</span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-slate-400 block mt-1">Full Back-Office Oversight</span>
-                </button>
-
-                <button
-                  onClick={() => handleQuickDemo('manager@fifaallstars.com', 'Manager@123')}
-                  className="p-3 rounded-2xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xs font-extrabold text-left transition-all group"
-                >
-                  <div className="flex items-center space-x-1.5">
-                    <Building2 className="w-4 h-4 text-sky-500" />
-                    <span>Club Manager</span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-slate-400 block mt-1">Venue & Pitch Control</span>
-                </button>
-
-                <button
-                  onClick={() => handleQuickDemo('player@fifaallstars.com', 'Player@123')}
-                  className="p-3 rounded-2xl bg-sport-500/10 hover:bg-sport-500/20 border border-sport-500/30 text-sport-400 text-xs font-extrabold text-left transition-all group"
-                >
-                  <div className="flex items-center space-x-1.5">
-                    <Trophy className="w-4 h-4 text-sport-500" />
-                    <span>Player Demo</span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-slate-400 block mt-1">Matches & Tournaments</span>
-                </button>
+              {/* Helper Links */}
+              <div className="text-center pt-2 space-y-1 text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+                <p>
+                  Don't have an account?{' '}
+                  <Link to="/register" className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer">
+                    Sign up
+                  </Link>
+                </p>
+                <p>
+                  <button type="button" onClick={handleConfirmationClick} className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold">
+                    Didn't receive confirmation instructions?
+                  </button>
+                </p>
               </div>
-            </div>
 
-          </div>
+              {/* Legal Terms Notice */}
+              <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 font-medium leading-relaxed pt-2">
+                By signing up for FIFA All Stars, you agree to our{' '}
+                <a href="#terms" className="text-indigo-600 dark:text-indigo-400 hover:underline">Terms of Service</a> and{' '}
+                <a href="#privacy" className="text-indigo-600 dark:text-indigo-400 hover:underline">Privacy Policy</a>.
+              </p>
 
-          {/* Right Column: 3D Football Animation Scene */}
-          <div className="lg:col-span-5 flex items-center justify-center relative min-h-[360px]">
-            <FootballScene />
-          </div>
+            </form>
 
+          </motion.div>
         </div>
+
       </section>
 
-      {/* 2. LOGIN FORM CARD SECTION */}
-      <section className="max-w-md mx-auto">
-        <motion.div
-          animate={isShaking ? { x: [-12, 12, -8, 8, -4, 4, 0] } : {}}
-          transition={{ duration: 0.5 }}
-          className="footy-card p-8 space-y-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl"
-        >
-          <div className="text-center space-y-1">
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-              Sign In to Your Account
-            </h2>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Enter credentials or use 1-click quick demo buttons above
-            </p>
-          </div>
-
-          <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs font-bold">
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
-              <input
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 mb-1">Password</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-rose-500/30 flex items-center justify-center space-x-2"
-            >
-              <Key className="w-4 h-4" />
-              <span>Sign In & Launch Dashboard</span>
-            </button>
-          </form>
-        </motion.div>
-      </section>
-
-      {/* 3. PDF SECTIONS BELOW (AS FEATURED ON, STATS, REVIEWS, FAQS, CITIES) */}
+      {/* 2. AS FEATURED ON & COMMUNITY WELCOME SECTION */}
       <section className="footy-card p-8 sm:p-12 space-y-8 text-center sm:text-left">
         <div className="text-center space-y-4">
           <span className="text-xs font-black tracking-widest text-slate-400 uppercase">AS FEATURED ON</span>
@@ -281,18 +474,18 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto space-y-3 pt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="max-w-3xl mx-auto space-y-3 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-            Welcome to Footy Addicts / FIFA All Stars
+            Welcome to FIFA All Stars
           </h2>
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">
-            We make playing casual football easy for thousands of football lovers around India. Our simple app gets you playing football on a pitch in your area faster than you can say tiki-taka. We pride ourselves in being the home of well organised games, dodgy bicycle kicks and last minute winners.
+          <p className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">
+            We make playing casual football easy for thousands of football lovers around India. Our simple app gets you playing football on a pitch in your area faster than you can say tiki-taka. We pride ourselves in being the home of well organized games, dodgy bicycle kicks and last minute winners.
           </p>
         </div>
       </section>
 
-      {/* THE STATS NEVER LIE */}
-      <section className="relative rounded-3xl overflow-hidden bg-slate-950 p-8 sm:p-14 border border-slate-800 text-white text-center shadow-2xl">
+      {/* 3. THE STATS NEVER LIE SECTION */}
+      <section className="relative rounded-xl overflow-hidden bg-slate-950 p-8 sm:p-14 border border-slate-800 text-white text-center shadow-2xl">
         <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight mb-10">The Stats Never Lie</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div>
@@ -314,31 +507,7 @@ export const LoginPage = () => {
         </div>
       </section>
 
-      {/* FIND. BOOK. PLAY. */}
-      <section className="footy-card p-8 sm:p-14 space-y-10 text-center">
-        <div className="space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase">Where the football magic happens</h2>
-          <p className="text-xs font-bold text-slate-400 uppercase">Best pitches to play football</p>
-          <h3 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight pt-2">Find. Book. Play.</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-sport-500/10 text-sport-500 flex items-center justify-center mx-auto text-3xl">⚽</div>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Find your nearest football pitch with a quick scroll.</p>
-          </div>
-          <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-3xl">👆</div>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Book your next game, with a few clicks.</p>
-          </div>
-          <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center mx-auto text-3xl">👏</div>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Play your best game. Have fun. Feel good.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* REVIEWS */}
+      {/* 4. REVIEWS */}
       <section className="space-y-8 text-center">
         <div>
           <span className="text-xs font-black text-rose-500 uppercase tracking-widest block">REVIEWS</span>
@@ -365,52 +534,31 @@ export const LoginPage = () => {
         </div>
       </section>
 
-      {/* THREE PILLARS & FAQS */}
-      <section className="footy-card p-8 sm:p-12 space-y-10">
-        <div className="space-y-4 max-w-3xl mx-auto text-center sm:text-left">
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase">Our ethos is built around three pillars</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold pt-2">
-            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 border-l-4 border-sport-500">
-              <span className="block text-sport-500 font-black text-sm mb-1">Accessibility</span>
-              <p className="text-slate-600 dark:text-slate-300">Click away from playing football anywhere.</p>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 border-l-4 border-amber-500">
-              <span className="block text-amber-500 font-black text-sm mb-1">Social Integration</span>
-              <p className="text-slate-600 dark:text-slate-300">Enriching communities through sports.</p>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 border-l-4 border-sky-500">
-              <span className="block text-sky-500 font-black text-sm mb-1">Wellbeing</span>
-              <p className="text-slate-600 dark:text-slate-300">Stronger physically & mentally.</p>
-            </div>
-          </div>
+      {/* 5. FAQS */}
+      <section className="footy-card p-8 sm:p-12 space-y-6">
+        <div className="text-center sm:text-left">
+          <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase">Any questions? We got you.</h3>
+          <p className="text-xs text-slate-400 font-semibold mt-1">Our FAQ section is a great place to start if you've got a question.</p>
         </div>
 
-        {/* FAQ Accordion */}
-        <div className="max-w-3xl mx-auto space-y-4 pt-6 border-t border-slate-200 dark:border-slate-800">
-          <div className="text-center sm:text-left">
-            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase">Any questions? We got you.</h3>
-            <p className="text-xs text-slate-400 font-semibold mt-1">Our FAQ section is a great place to start if you've got a question.</p>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            {faqs.map((faq, idx) => (
-              <div key={idx} className="footy-card p-4 rounded-2xl cursor-pointer" onClick={() => setOpenFaq(openFaq === idx ? null : idx)}>
-                <div className="flex items-center justify-between">
-                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{faq.q}</h4>
-                  {openFaq === idx ? <ChevronUp className="w-4 h-4 text-sport-500" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                </div>
-                {openFaq === idx && (
-                  <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-                    {faq.a}
-                  </p>
-                )}
+        <div className="space-y-3 max-w-3xl mx-auto">
+          {faqs.map((faq, idx) => (
+            <div key={idx} className="footy-card p-4 rounded-2xl cursor-pointer" onClick={() => setOpenFaq(openFaq === idx ? null : idx)}>
+              <div className="flex items-center justify-between">
+                <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{faq.q}</h4>
+                {openFaq === idx ? <ChevronUp className="w-4 h-4 text-rose-500" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
-            ))}
-          </div>
+              {openFaq === idx && (
+                <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  {faq.a}
+                </p>
+              )}
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* INDIAN CITIES DIRECTORY */}
+      {/* 6. INDIAN CITIES DIRECTORY */}
       <section className="footy-card p-8 sm:p-12 space-y-8">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase">Your local football pitch across India</h2>
@@ -422,10 +570,10 @@ export const LoginPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-xs">
           {indianCities.map((city, idx) => (
             <div key={idx} className="space-y-2">
-              <h4 className="font-black text-slate-900 dark:text-white uppercase text-sm text-sport-500">Play football in {city.name}</h4>
+              <h4 className="font-black text-slate-900 dark:text-white uppercase text-sm text-rose-500">Play football in {city.name}</h4>
               <ul className="space-y-1.5 text-slate-600 dark:text-slate-300 font-semibold">
                 {city.pitches.map((p, i) => (
-                  <li key={i} className="hover:text-sport-500 cursor-pointer flex items-center space-x-1.5">
+                  <li key={i} className="hover:text-rose-500 cursor-pointer flex items-center space-x-1.5">
                     <span>•</span>
                     <span>{p}</span>
                   </li>
@@ -436,8 +584,108 @@ export const LoginPage = () => {
         </div>
       </section>
 
+      {/* 7. PUBLIC PLAYER REGISTRATION MODAL */}
+      <Modal isOpen={isSignUpModalOpen} onClose={() => setIsSignUpModalOpen(false)} title="Create Player Account">
+        <form onSubmit={handleRegisterSubmit} className="space-y-4 text-xs font-bold">
+          
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 space-y-1">
+            <div className="flex items-center space-x-1.5 font-black text-xs">
+              <UserPlus className="w-4 h-4" />
+              <span>Public Player Registration</span>
+            </div>
+            <p className="text-[11px] font-semibold">
+              Public accounts are automatically created with <strong>PLAYER</strong> permissions. Club Manager & Super Admin accounts are managed by Super Admins.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
+            <input
+              type="text"
+              placeholder="e.g. Rahul Sharma"
+              value={regName}
+              onChange={(e) => setRegName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">Email Address *</label>
+              <input
+                type="email"
+                placeholder="name@example.com"
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+              <input
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={regPhone}
+                onChange={(e) => setRegPhone(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1">Password *</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={regPassword}
+              onChange={(e) => setRegPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1">City</label>
+            <select
+              value={regCity}
+              onChange={(e) => setRegCity(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white"
+            >
+              <option value="Raipur">Raipur</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Delhi">Delhi</option>
+              <option value="Pune">Pune</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1">Short Player Bio</label>
+            <textarea
+              rows="2"
+              placeholder="Tell other players about your playing style..."
+              value={regBio}
+              onChange={(e) => setRegBio(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsSignUpModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="md">
+              Create Account & Enter Workspace
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
     </div>
   );
 };
 
 export default LoginPage;
+

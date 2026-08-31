@@ -4,6 +4,7 @@ import { Trophy, Wallet, Menu, X, LogOut, User, Settings, CreditCard, ChevronDow
 import { useAuthStore } from '../../store/useAuthStore';
 import { getRoleNavItems, getDefaultRoleRoute } from '../../utils/permissions';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 import Avatar from './Avatar';
 import toast from 'react-hot-toast';
 
@@ -41,7 +42,7 @@ export const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16 sm:h-20">
           
           {/* Brand Logo */}
@@ -79,12 +80,7 @@ export const Navbar = () => {
                 );
               })
             ) : (
-              <>
-                <Link to="/" className="px-3.5 py-2 text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:text-sport-500">Home</Link>
-                <Link to="/player/find-games" className="px-3.5 py-2 text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:text-sport-500">Games</Link>
-                <Link to="/player/courts" className="px-3.5 py-2 text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:text-sport-500">Venues</Link>
-                <Link to="/player/community" className="px-3.5 py-2 text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:text-sport-500">Community</Link>
-              </>
+              <Link to="/" className="px-3.5 py-2 text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:text-sport-500">Home</Link>
             )}
           </nav>
 
@@ -93,28 +89,28 @@ export const Navbar = () => {
             
             <ThemeToggle />
 
+            {currentUser && <NotificationBell />}
+
             {currentUser ? (
               <>
-                {/* Role Switcher */}
-                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
-                  <button
-                    onClick={() => switchRole('PLAYER')}
-                    className={`px-3 py-1 rounded-xl transition-all ${userRole === 'PLAYER' ? 'bg-sport-500 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                  >
-                    Player
-                  </button>
-                  <button
-                    onClick={() => switchRole('CLUB_MANAGER')}
-                    className={`px-3 py-1 rounded-xl transition-all ${userRole === 'CLUB_MANAGER' ? 'bg-sport-500 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                  >
-                    Manager
-                  </button>
-                  <button
-                    onClick={() => switchRole('SUPER_ADMIN')}
-                    className={`px-3 py-1 rounded-xl transition-all ${userRole === 'SUPER_ADMIN' ? 'bg-sport-500 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                  >
-                    Admin
-                  </button>
+                {/* Data Transparency & Role Badge - Access control starts strictly at Login */}
+                <div className="flex items-center space-x-2 px-3 py-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-black">
+                  {userRole === 'SUPER_ADMIN' ? (
+                    <span className="flex items-center space-x-1.5 text-amber-500">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                      <span>🛡️ Super Admin</span>
+                    </span>
+                  ) : userRole === 'CLUB_MANAGER' ? (
+                    <span className="flex items-center space-x-1.5 text-sky-500">
+                      <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+                      <span>🏟️ Club Manager</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center space-x-1.5 text-emerald-500">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>⚽ Player</span>
+                    </span>
+                  )}
                 </div>
 
                 {/* Wallet Balance Badge for Players */}
@@ -125,7 +121,7 @@ export const Navbar = () => {
                   </Link>
                 )}
 
-                {/* User Profile Dropdown Menu */}
+                {/* User Profile Dropdown Menu with Data Transparency */}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
@@ -136,10 +132,27 @@ export const Navbar = () => {
                   </button>
 
                   {profileDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl py-2 z-50 text-xs font-bold">
+                    <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl py-2 z-50 text-xs font-bold space-y-1">
                       <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-800">
                         <span className="block font-black text-slate-900 dark:text-white truncate">{currentUser.name}</span>
-                        <span className="text-[10px] text-slate-400 block font-semibold truncate">@{currentUser.name?.toLowerCase()?.replace(/\s+/g, '')}</span>
+                        <span className="text-[10px] text-slate-400 block font-semibold truncate">{currentUser.email}</span>
+                        <div className="mt-2 inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 text-[10px] font-black border border-emerald-500/20 uppercase">
+                          <span>🔒 Data Transparency & RBAC Verified</span>
+                        </div>
+                      </div>
+
+                      <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 text-[10px] text-slate-500 dark:text-slate-400 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Active Role:</span>
+                          <span className="font-extrabold text-slate-700 dark:text-slate-200">{currentUser.role}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Session Status:</span>
+                          <span className="font-extrabold text-emerald-500">AUTHENTICATED</span>
+                        </div>
+                        <p className="text-[9px] italic text-slate-400 pt-1">
+                          Role switching is restricted inside dashboard for security. Log out to access other roles.
+                        </p>
                       </div>
 
                       <Link
@@ -156,7 +169,7 @@ export const Navbar = () => {
                         className="w-full text-left flex items-center space-x-2.5 px-4 py-2.5 text-rose-500 hover:bg-rose-500/10 transition-colors font-black border-t border-slate-200 dark:border-slate-800"
                       >
                         <LogOut className="w-4 h-4" />
-                        <span>Logout</span>
+                        <span>Switch Role / Logout</span>
                       </button>
                     </div>
                   )}
@@ -164,14 +177,14 @@ export const Navbar = () => {
               </>
             ) : (
               <div className="flex items-center space-x-2">
-                <Link to="/login">
-                  <button className="px-4 py-2 rounded-2xl text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <Link to="/register">
+                  <button className="px-4 py-2 rounded-2xl text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                     Register
                   </button>
                 </Link>
 
                 <Link to="/login">
-                  <button className="px-5 py-2 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black uppercase shadow-md shadow-rose-500/30">
+                  <button className="px-5 py-2 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black uppercase shadow-md shadow-rose-500/30 cursor-pointer">
                     Sign In
                   </button>
                 </Link>
@@ -180,9 +193,10 @@ export const Navbar = () => {
 
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile menu button & quick action icons */}
           <div className="flex md:hidden items-center space-x-2">
             <ThemeToggle />
+            {currentUser && <NotificationBell />}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-2xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -195,34 +209,55 @@ export const Navbar = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 px-4 pt-3 pb-6 space-y-3 bg-white dark:bg-slate-900 transition-colors">
+        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 px-4 pt-4 pb-6 space-y-4 bg-white dark:bg-slate-900 transition-colors shadow-2xl">
           {currentUser ? (
             <>
-              {roleNavLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-4 py-2.5 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {/* User Profile Card on Mobile */}
+              <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Avatar src={currentUser?.profileImageUrl || currentUser?.avatar} name={currentUser?.name} size="md" status="active" />
+                  <div>
+                    <span className="block font-black text-sm text-slate-900 dark:text-white leading-tight">{currentUser.name}</span>
+                    <span className="text-[10px] text-emerald-500 font-extrabold uppercase">⚽ {currentUser.role}</span>
+                  </div>
+                </div>
+
+                {userRole === 'PLAYER' && (
+                  <Link to="/player/profile" onClick={() => setMobileMenuOpen(false)} className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-black">
+                    ₹{currentUser?.walletBalance?.toFixed(2)}
+                  </Link>
+                )}
+              </div>
+
+              {/* Mobile Role Nav Links */}
+              <div className="space-y-1">
+                {roleNavLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-2.5 rounded-xl text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-4 py-2.5 rounded-2xl text-sm font-bold text-rose-500 hover:bg-rose-500/10 flex items-center space-x-2"
+                className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-black text-rose-500 hover:bg-rose-500/10 flex items-center space-x-2 border-t border-slate-200 dark:border-slate-800 uppercase"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Logout</span>
+                <span>Logout / Switch Role</span>
               </button>
             </>
           ) : (
-            <div className="space-y-2 pt-2">
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-black uppercase text-slate-900 dark:text-white">
-                Register
+            <div className="space-y-2 pt-1">
+              <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-black uppercase text-slate-900 dark:text-white">
+                Register Account
               </Link>
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-2.5 rounded-2xl bg-rose-500 text-xs font-black uppercase text-white shadow-md">
-                Sign In
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-3 rounded-xl bg-rose-500 text-xs font-black uppercase text-white shadow-md">
+                Sign In to Workspace
               </Link>
             </div>
           )}

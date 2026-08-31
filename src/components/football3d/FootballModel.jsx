@@ -99,11 +99,27 @@ function generateRealisticFootballTexture(theme = 'dark') {
 
   // 5. Official FIFA ALL STARS Match Ball Watermark Logo
   ctx.save();
-  ctx.fillStyle = '#0f172a';
   ctx.font = '900 24px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('FIFA ALL STARS', canvas.width / 2, canvas.height / 2 + 10);
+  
+  const fifaWidth = ctx.measureText('FIFA ').width;
+  const allStarsWidth = ctx.measureText('ALL STARS').width;
+  const totalWidth = fifaWidth + allStarsWidth;
+  const startX = (canvas.width - totalWidth) / 2;
+  const textY = canvas.height / 2 + 10;
+  
+  ctx.textAlign = 'left';
+  
+  // "FIFA" in vibrant green
+  ctx.fillStyle = '#22c55e';
+  ctx.fillText('FIFA ', startX, textY);
+  
+  // "ALL STARS" in dark slate
+  ctx.fillStyle = '#0f172a';
+  ctx.fillText('ALL STARS', startX + fifaWidth, textY);
+  
+  // "OFFICIAL MATCH BALL"
   ctx.font = '700 14px sans-serif';
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#22c55e';
   ctx.fillText('OFFICIAL MATCH BALL', canvas.width / 2, canvas.height / 2 + 30);
   ctx.restore();

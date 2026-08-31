@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Building2, MapPin, Clock, ShieldCheck, CheckSquare, Save } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import ManagerNav from '../../components/club/ManagerNav';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 
@@ -44,21 +43,36 @@ export const ManageClubPage = () => {
 
   const handleSaveClub = (e) => {
     e.preventDefault();
+
+    if (!name || !name.trim()) {
+      toast.error('Venue / Club Name is required.');
+      return;
+    }
+
+    if (!address || !address.trim()) {
+      toast.error('Full Street Address is required.');
+      return;
+    }
+
+    if (openTime && closeTime && openTime >= closeTime) {
+      toast.error('Closing Time must be after Opening Time!');
+      return;
+    }
+
     updateClub(myClub.id, {
-      name,
-      address,
+      name: name.trim(),
+      address: address.trim(),
       city,
-      geoCoordinates: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      geoCoordinates: { lat: parseFloat(lat) || 21.2497, lng: parseFloat(lng) || 81.6584 },
       operatingHours: { open: openTime, close: closeTime },
       amenities: selectedAmenities,
       clubImageUrl,
-      description
+      description: description.trim()
     });
   };
 
   return (
     <div className="space-y-6 py-4 max-w-5xl mx-auto">
-      <ManagerNav />
 
       <div>
         <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">

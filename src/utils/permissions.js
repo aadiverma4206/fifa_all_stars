@@ -35,8 +35,6 @@ export const ROLE_OPERATIONS = {
       { label: "Find Games", path: "/player/find-games", icon: "Search" },
       { label: "Turfs & Courts", path: "/player/courts", icon: "MapPin" },
       { label: "Tournaments", path: "/player/tournaments", icon: "Trophy" },
-      { label: "Leaderboard", path: "/player/leaderboard", icon: "Shield" },
-      { label: "Community", path: "/player/community", icon: "Users" },
       { label: "My Profile", path: "/player/profile", icon: "User" }
     ]
   },
@@ -52,10 +50,12 @@ export const ROLE_OPERATIONS = {
       "TOGGLE_OWN_COURT_STATUS",
       "VIEW_OWN_CLUB_BOOKINGS",
       "VIEW_OWN_REFUND_REQUESTS_READONLY",
-      "HOST_VENUE_EVENT"
+      "HOST_VENUE_EVENT",
+      "HOST_MANAGE_VENUE_GAMES"
     ],
     navItems: [
       { label: "Dashboard", path: "/club/dashboard", icon: "LayoutDashboard" },
+      { label: "Game Sessions", path: "/club/games", icon: "Flame" },
       { label: "Manage Venue", path: "/club/manage", icon: "Building2" },
       { label: "Courts & Pitches", path: "/club/courts", icon: "MapPin" },
       { label: "Peak Pricing", path: "/club/pricing", icon: "DollarSign" },
@@ -186,10 +186,13 @@ export function getManagedCourts(user, courtsList = [], clubsList = []) {
 }
 
 /**
- * Scoping Helper: Filters bookings list to only those belonging to owned courts.
+ * Scoping Helper: Checks if user can join games as a player.
+ * CLUB_MANAGER accounts are explicitly restricted from playing or occupying player slots.
  */
-export function getManagedBookings(user, bookingsList = [], clubsList = []) {
-  const managedClubs = getManagedClubs(user, clubsList);
-  const managedClubIds = new Set(managedClubs.map(c => c.id));
-  return bookingsList.filter(b => managedClubIds.has(b.clubId));
+export function canJoinGame(user) {
+  if (!user) return false;
+  if (user.status === 'SUSPENDED') return false;
+  if (user.role === 'CLUB_MANAGER') return false;
+  return true;
 }
+

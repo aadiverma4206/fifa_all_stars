@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy } from 'lucide-react';
+import { Trophy, Sparkles } from 'lucide-react';
 
 export const Footer = () => {
   return (
     <footer className="border-t border-slate-200 dark:border-slate-800 bg-slate-900 text-white pt-12 pb-8 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-12 space-y-8">
         
-        {/* Footer Navigation Columns (Matching Footy Addicts Footer Screenshots) */}
+        {/* Footer Navigation Columns */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-xs font-semibold text-slate-400">
           <div className="space-y-3">
             <h4 className="text-white font-extrabold uppercase text-xs">New to FIFA All Stars?</h4>
@@ -39,31 +39,27 @@ export const Footer = () => {
             </ul>
           </div>
 
-          {/* App Badges */}
+          {/* Powered by Botivate Section */}
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Trophy className="w-5 h-5 text-sport-500" />
               <span className="font-extrabold text-white uppercase tracking-wider">FIFA ALL STARS</span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Join over 285K+ players! Download the FIFA All Stars app.
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Premier Pickup Football & Arena Management Platform across India.
             </p>
-            <div className="space-y-2 pt-1">
-              <button className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold text-left flex items-center space-x-2">
-                <span>📱</span>
-                <span>Available on App Store</span>
-              </button>
-              <button className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold text-left flex items-center space-x-2">
-                <span>▶️</span>
-                <span>Get it on Google Play</span>
-              </button>
+            <div className="pt-2">
+              <div className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-slate-800/90 border border-slate-700/80 text-slate-200 text-xs font-black">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Powered by <strong className="text-sport-400">Botivate</strong></span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Bottom Copyright Ribbon */}
         <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] font-bold text-slate-500 gap-2">
-          <span>2026 © FIFA All Stars, Ltd. All rights reserved</span>
+          <span>2026 © FIFA All Stars, Ltd. All rights reserved • Powered by <strong className="text-slate-300">Botivate</strong></span>
           <div className="flex space-x-4">
             <span className="hover:underline cursor-pointer">Terms of use</span>
             <span className="hover:underline cursor-pointer">Privacy policy</span>

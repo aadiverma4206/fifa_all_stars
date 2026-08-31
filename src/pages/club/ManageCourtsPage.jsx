@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { MapPin, Plus, Edit2, ShieldAlert, CheckCircle2, Lock, Wrench } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import ManagerNav from '../../components/club/ManagerNav';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
@@ -27,13 +26,22 @@ export const ManageCourtsPage = () => {
 
   const handleAddCourt = (e) => {
     e.preventDefault();
-    if (!courtName.trim()) return;
+    if (!courtName || !courtName.trim()) {
+      toast.error('Pitch Name cannot be empty.');
+      return;
+    }
+
+    const price = parseFloat(basePrice);
+    if (isNaN(price) || price <= 0) {
+      toast.error('Base Hourly Rate must be a positive number greater than ₹0.');
+      return;
+    }
 
     addCourt(myClub.id, {
-      name: courtName,
+      name: courtName.trim(),
       type,
       surface,
-      basePrice: parseFloat(basePrice)
+      basePrice: price
     });
 
     setIsAddModalOpen(false);
@@ -51,9 +59,20 @@ export const ManageCourtsPage = () => {
     e.preventDefault();
     if (!selectedCourt) return;
 
+    if (!courtName || !courtName.trim()) {
+      toast.error('Pitch Name cannot be empty.');
+      return;
+    }
+
+    const price = parseFloat(basePrice);
+    if (isNaN(price) || price <= 0) {
+      toast.error('Base Hourly Rate must be a positive number greater than ₹0.');
+      return;
+    }
+
     updateCourt(selectedCourt.courtId || selectedCourt.id, {
-      name: courtName,
-      basePrice: parseFloat(basePrice)
+      name: courtName.trim(),
+      basePrice: price
     });
 
     setIsEditModalOpen(false);
@@ -61,7 +80,6 @@ export const ManageCourtsPage = () => {
 
   return (
     <div className="space-y-6 py-4 max-w-6xl mx-auto">
-      <ManagerNav />
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

@@ -1,9 +1,12 @@
+import { getTodayDate } from '../utils/dateUtils';
+
 export const dummyUsers = [
   // --- SUPER ADMIN DEMO & ADMINS ---
   {
     id: "usr_admin_demo",
     name: "Aaditya Verma (Platform Owner)",
     email: "superadmin@fifaallstars.com",
+    phone: "+91 98765 43210",
     password: "SuperAdmin@123",
     role: "SUPER_ADMIN",
     isOwner: true, // PLATFORM OWNER - CAN NEVER BE DEMOTED OR SUSPENDED
@@ -16,12 +19,22 @@ export const dummyUsers = [
     badges: ["SuperAdmin", "PlatformFounder", "FIFA Verified"],
     joinedDate: "2023-01-01",
     walletBalance: 50000.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: ["clb_raipur_1"],
+    gamesCreated: ["gam_101"],
+    gamesJoined: ["gam_101"],
+    paymentHistory: [
+      { id: "tx_01", type: "WALLET_TOPUP", amount: 50000.00, date: getTodayDate(-5), status: "SUCCESS" }
+    ],
+    gameHistory: [
+      { gameId: "gam_101", title: "Raipur 5v5 Showdown", score: "Team A 4 - 3 Team B", date: getTodayDate(-2) }
+    ]
   },
   {
     id: "usr_admin_2",
     name: "Rohan Deshmukh (Super Admin)",
     email: "rohan.admin@fifaallstars.com",
+    phone: "+91 98765 43211",
     password: "Admin@123",
     role: "SUPER_ADMIN",
     isOwner: false,
@@ -34,39 +47,56 @@ export const dummyUsers = [
     badges: ["SuperAdmin", "DisputeResolution"],
     joinedDate: "2023-04-15",
     walletBalance: 25000.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: [],
+    gamesCreated: [],
+    gamesJoined: [],
+    paymentHistory: [],
+    gameHistory: []
   },
   {
     id: "usr_ops_admin",
-    name: "Vikram Sethi (Ops Staff)",
+    name: "Vikram Sethi (Ops Admin)",
     email: "ops@fifaallstars.com",
+    phone: "+91 98765 43212",
     password: "Ops@123",
-    role: "OPS_ADMIN",
+    role: "SUPER_ADMIN",
     isOwner: false,
     skillLevel: "Intermediate",
     eloRating: 1400,
     city: "Bangalore",
     profileImageUrl: "/src/assets/images/avatars/avatar-4.jpg",
-    badges: ["OperationsStaff"],
+    badges: ["SuperAdmin", "OperationsStaff"],
     joinedDate: "2024-01-01",
     walletBalance: 5000.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: [],
+    gamesCreated: [],
+    gamesJoined: [],
+    paymentHistory: [],
+    gameHistory: []
   },
   {
     id: "usr_finance_admin",
-    name: "Kavita Rao (Finance Staff)",
+    name: "Kavita Rao (Finance Admin)",
     email: "finance@fifaallstars.com",
+    phone: "+91 98765 43213",
     password: "Finance@123",
-    role: "FINANCE_ADMIN",
+    role: "SUPER_ADMIN",
     isOwner: false,
     skillLevel: "Intermediate",
     eloRating: 1400,
     city: "Delhi",
     profileImageUrl: "/src/assets/images/avatars/avatar-5.jpg",
-    badges: ["FinanceStaff"],
+    badges: ["SuperAdmin", "FinanceStaff"],
     joinedDate: "2024-01-01",
     walletBalance: 5000.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: [],
+    gamesCreated: [],
+    gamesJoined: [],
+    paymentHistory: [],
+    gameHistory: []
   },
 
   // --- CLUB MANAGER DEMO & MANAGERS ---
@@ -74,6 +104,7 @@ export const dummyUsers = [
     id: "usr_manager_demo",
     name: "Rajesh Sharma (Club Manager)",
     email: "manager@fifaallstars.com",
+    phone: "+91 98765 43214",
     password: "Manager@123",
     role: "CLUB_MANAGER",
     clubId: "clb_raipur_1",
@@ -86,12 +117,18 @@ export const dummyUsers = [
     badges: ["VerifiedPartner", "TopVenue2025"],
     joinedDate: "2023-08-10",
     walletBalance: 14500.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: ["clb_raipur_1"],
+    gamesCreated: ["gam_101"],
+    gamesJoined: [], // CLUB MANAGERS CANNOT JOIN GAMES AS PLAYERS
+    paymentHistory: [],
+    gameHistory: []
   },
   {
     id: "usr_manager_2",
     name: "Vikram Malhotra",
     email: "vikram.m@fifaallstars.com",
+    phone: "+91 98765 43215",
     password: "Manager@123",
     role: "CLUB_MANAGER",
     clubId: "clb_blr_1",
@@ -104,7 +141,12 @@ export const dummyUsers = [
     badges: ["VerifiedPartner"],
     joinedDate: "2023-11-01",
     walletBalance: 18900.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: ["clb_blr_1"],
+    gamesCreated: [],
+    gamesJoined: [], // CLUB MANAGERS CANNOT JOIN GAMES AS PLAYERS
+    paymentHistory: [],
+    gameHistory: []
   },
 
   // --- PLAYER DEMO & PLAYERS ---
@@ -112,6 +154,7 @@ export const dummyUsers = [
     id: "usr_player_demo",
     name: "Arjun Mehta (Demo Player)",
     email: "player@fifaallstars.com",
+    phone: "+91 98765 43216",
     password: "Player@123",
     role: "PLAYER",
     skillLevel: "Advanced",
@@ -123,12 +166,22 @@ export const dummyUsers = [
     badges: ["TopScorer", "MVPSpecialist", "CommunityCaptain"],
     joinedDate: "2024-02-01",
     walletBalance: 2450.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: ["clb_raipur_1"],
+    gamesCreated: ["gam_101"],
+    gamesJoined: ["gam_101"],
+    paymentHistory: [
+      { id: "tx_101", type: "GAME_FEE", amount: 250.00, date: "2026-08-26", status: "SUCCESS", description: "Entry Fee for Raipur 5v5 Showdown" }
+    ],
+    gameHistory: [
+      { gameId: "gam_101", title: "Raipur 5v5 Showdown at Bernabeu Arena", score: "Team A 4 - 3 Team B", date: "2026-08-26" }
+    ]
   },
   {
     id: "usr_p2",
     name: "Siddharth Rao",
     email: "siddharth.rao@example.com",
+    phone: "+91 98765 43217",
     password: "player123",
     role: "PLAYER",
     skillLevel: "Professional",
@@ -140,12 +193,22 @@ export const dummyUsers = [
     badges: ["MasterDivision", "GoldenBoot"],
     joinedDate: "2024-01-10",
     walletBalance: 1200.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: ["clb_blr_1"],
+    gamesCreated: [],
+    gamesJoined: ["gam_102"],
+    paymentHistory: [
+      { id: "tx_102", type: "COURT_BOOKING", amount: 1050.00, date: "2026-08-24", status: "SUCCESS", description: "Court reservation at Silicon Turf Hub" }
+    ],
+    gameHistory: [
+      { gameId: "gam_102", title: "Bangalore Night Futsal League", score: "Team A 2 - 2 Team B", date: "2026-08-24" }
+    ]
   },
   {
     id: "usr_p3",
     name: "Ananya Iyer",
     email: "ananya.iyer@example.com",
+    phone: "+91 98765 43218",
     password: "player123",
     role: "PLAYER",
     skillLevel: "Advanced",
@@ -157,6 +220,11 @@ export const dummyUsers = [
     badges: ["CleanSheetKing"],
     joinedDate: "2023-12-05",
     walletBalance: 3100.00,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    clubsJoined: [],
+    gamesCreated: [],
+    gamesJoined: [],
+    paymentHistory: [],
+    gameHistory: []
   }
 ];

@@ -1,13 +1,29 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { dummyClubs } from '../data/dummyClubs';
 import { dummyCourts } from '../data/dummyCourts';
 import { dummyGames } from '../data/dummyGames';
 import { dummyTournaments } from '../data/dummyTournaments';
 import { dummyCommunityPosts, dummyPolls, dummyChallenges } from '../data/dummyCommunity';
 import { calculateNewElo } from '../utils/eloCalculator';
+import { getTodayDate } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 
-export const useDataStore = create((set, get) => ({
+export const MATCH_FORMAT_SLOTS = {
+  '1v1': 2,
+  '2v2': 4,
+  '3v3': 6,
+  '4v4': 8,
+  '5v5': 10,
+  '6v6': 12,
+  '7v7': 14,
+  '8v8': 16,
+  '11v11': 22
+};
+
+export const useDataStore = create(
+  persist(
+    (set, get) => ({
   clubs: dummyClubs,
   courts: dummyCourts,
   games: dummyGames,
@@ -15,8 +31,61 @@ export const useDataStore = create((set, get) => ({
   communityPosts: dummyCommunityPosts,
   polls: dummyPolls,
   challenges: dummyChallenges,
+
+  // --- IN-APP NOTIFICATION ENGINE ---
+  notifications: [
+    {
+      id: "notif_1",
+      userId: "usr_player_demo",
+      title: "⚽ New 5v5 Game Available",
+      message: "A new 5v5 game is available at Bernabeu Arena Turf. Entry fee: ₹150. Join now before all slots are filled.",
+      date: "Just now",
+      read: false,
+      linkUrl: "/games/gam_101",
+      clubId: "clb_raipur_1",
+      gameId: "gam_101"
+    },
+    {
+      id: "notif_2",
+      userId: "usr_player_demo",
+      title: "💳 Payment Successful & Slot Secured",
+      message: "Your payment of ₹150 for Raipur Friday Night 5v5 Super Match was successful. Slot confirmed!",
+      date: "2 hours ago",
+      read: true,
+      linkUrl: "/games/gam_101",
+      clubId: "clb_raipur_1",
+      gameId: "gam_101"
+    },
+    {
+      id: "notif_3",
+      userId: "usr_p2",
+      title: "🔥 Match Started! (ONGOING)",
+      message: "Bangalore Techie Fastbreak 5v5 is now ONGOING at Silicon Turf Hub.",
+      date: "1 hour ago",
+      read: false,
+      linkUrl: "/games/gam_103",
+      clubId: "clb_blr_1",
+      gameId: "gam_103"
+    }
+  ],
+
+  // --- GAME VIDEOS REFERENCE STORAGE ---
+  gameVideos: [
+    {
+      id: "vid_104",
+      gameId: "gam_104",
+      clubId: "clb_pune_1",
+      courtId: "crt_pune_301",
+      title: "Pune Indoor Futsal Showcase - Official Match Highlights",
+      videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+      videoStatus: "AVAILABLE",
+      uploadedBy: "Rajesh Sharma (Club Manager)",
+      uploadDate: getTodayDate(-2),
+      description: "Full match highlights and thrilling final goals from Deccan Pitch Red."
+    }
+  ],
   
-  // Audit Logs Array (Read-only timestamped admin activity log)
+  // Audit Logs Array
   auditLogs: [
     {
       id: "log_1",
@@ -37,7 +106,7 @@ export const useDataStore = create((set, get) => ({
       status: "OPEN",
       assignedStaff: "Unassigned",
       priority: "HIGH",
-      createdAt: "2026-08-25"
+      createdAt: getTodayDate(-3)
     },
     {
       id: "tk-102",
@@ -46,7 +115,7 @@ export const useDataStore = create((set, get) => ({
       status: "ASSIGNED",
       assignedStaff: "Vikram Sethi (Ops)",
       priority: "MEDIUM",
-      createdAt: "2026-08-24"
+      createdAt: getTodayDate(-4)
     },
     {
       id: "tk-103",
@@ -55,7 +124,7 @@ export const useDataStore = create((set, get) => ({
       status: "RESOLVED",
       assignedStaff: "Kavita Rao (Finance)",
       priority: "LOW",
-      createdAt: "2026-08-22"
+      createdAt: getTodayDate(-6)
     }
   ],
 
@@ -69,7 +138,7 @@ export const useDataStore = create((set, get) => ({
       disputedScore: "Team A 4 - 3 Team B",
       reason: "Team B claimed time was over before 4th goal",
       status: "OPEN",
-      createdAt: "2026-08-26"
+      createdAt: getTodayDate(-1)
     }
   ],
 
@@ -83,14 +152,14 @@ export const useDataStore = create((set, get) => ({
       city: "Raipur",
       userId: "usr_player_demo",
       userName: "Arjun Mehta",
-      date: "2026-08-29",
+      date: getTodayDate(1),
       startTime: "19:00",
       endTime: "20:30",
       amountPaid: 750,
       status: "REFUND_PENDING",
       refundTier: "100%",
       cancellationReason: "User cancelled > 24h prior",
-      createdAt: "2026-08-25"
+      createdAt: getTodayDate(-2)
     },
     {
       id: "bkg_102",
@@ -101,14 +170,62 @@ export const useDataStore = create((set, get) => ({
       city: "Bangalore",
       userId: "usr_p2",
       userName: "Siddharth Rao",
-      date: "2026-08-26",
+      date: getTodayDate(0),
       startTime: "20:00",
       endTime: "21:30",
       amountPaid: 1050,
       status: "CONFIRMED",
-      createdAt: "2026-08-24"
+      createdAt: getTodayDate(-3)
     }
   ],
+
+  // --- NOTIFICATION ACTIONS ---
+  addNotification: (notifData) => {
+    const newNotif = {
+      id: `notif_${Date.now()}`,
+      date: "Just now",
+      read: false,
+      ...notifData
+    };
+    set({ notifications: [newNotif, ...get().notifications] });
+  },
+
+  markNotificationRead: (notifId) => {
+    set({
+      notifications: get().notifications.map(n => n.id === notifId ? { ...n, read: true } : n)
+    });
+  },
+
+  markAllNotificationsRead: (userId) => {
+    set({
+      notifications: get().notifications.map(n => (!userId || n.userId === userId) ? { ...n, read: true } : n)
+    });
+  },
+
+  // --- GAME VIDEO ACTIONS ---
+  addGameVideo: (videoData) => {
+    const newVid = {
+      id: `vid_${Date.now()}`,
+      videoStatus: 'AVAILABLE',
+      uploadDate: new Date().toISOString().split('T')[0],
+      ...videoData
+    };
+
+    set({ gameVideos: [newVid, ...get().gameVideos] });
+
+    // Trigger Notification for Video Release
+    get().addNotification({
+      userId: null,
+      title: `🎥 Match Video Highlights Released`,
+      message: `Official match video for "${videoData.title || 'Game'}" is now available to view!`,
+      linkUrl: `/games/${videoData.gameId}`,
+      clubId: videoData.clubId,
+      gameId: videoData.gameId
+    });
+
+    toast.success('Match video recorded & linked successfully!');
+    return newVid;
+  },
 
   // --- AUDIT LOG HELPER ---
   addAuditLog: (action, target, details, adminName = "Aaditya Verma") => {
@@ -159,7 +276,6 @@ export const useDataStore = create((set, get) => ({
     const target = bookings.find(b => b.id === bookingId);
     if (!target) return;
 
-    // Refund reversal into user's wallet
     if (updateUsersListFn && usersList) {
       const updated = usersList.map(u => u.id === target.userId ? { ...u, walletBalance: (u.walletBalance || 0) + target.amountPaid } : u);
       updateUsersListFn(updated);
@@ -264,8 +380,84 @@ export const useDataStore = create((set, get) => ({
     toast.success('Peak pricing multipliers updated!');
   },
 
-  // --- GAME ACTIONS & WAITLIST PROMOTION ---
-  joinGame: (gameId, player) => {
+  // --- MATCH LIFECYCLE MANAGEMENT ---
+  updateGameLifecycle: (gameId, newStatus) => {
+    const games = get().games;
+    const target = games.find(g => g.id === gameId);
+    if (!target) return;
+
+    set({
+      games: games.map(g => g.id === gameId ? { ...g, status: newStatus } : g)
+    });
+
+    get().addNotification({
+      userId: null,
+      title: `⚡ Match Status: ${newStatus}`,
+      message: `Match "${target.title}" is now ${newStatus}.`,
+      linkUrl: `/games/${gameId}`,
+      clubId: target.venueReference?.clubId,
+      gameId
+    });
+
+    toast.success(`Match status updated to ${newStatus}`);
+  },
+
+  updateGameDetails: (gameId, updatedFields) => {
+    const games = get().games;
+    const target = games.find(g => g.id === gameId);
+    if (!target) return;
+
+    set({
+      games: games.map(g => g.id === gameId ? { ...g, ...updatedFields } : g)
+    });
+
+    get().addNotification({
+      userId: null,
+      title: `✏️ Match Details Updated`,
+      message: `Host updated match details for "${updatedFields.title || target.title}".`,
+      linkUrl: `/games/${gameId}`,
+      clubId: target.venueReference?.clubId,
+      gameId
+    });
+
+    toast.success('Game details updated successfully!');
+  },
+
+  removeGame: (gameId, reason = 'Cancelled by venue manager') => {
+    const games = get().games;
+    const target = games.find(g => g.id === gameId);
+    if (!target) return false;
+
+    set({
+      games: games.filter(g => g.id !== gameId)
+    });
+
+    if (target.confirmedPlayers?.length > 0) {
+      target.confirmedPlayers.forEach(player => {
+        get().addNotification({
+          userId: player.id,
+          title: `❌ Match Session Cancelled`,
+          message: `Match "${target.title}" scheduled for ${target.dateTime?.date} at ${target.venueReference?.clubName || 'Venue'} was cancelled by the venue manager.`,
+          linkUrl: `/games`,
+          clubId: target.venueReference?.clubId
+        });
+      });
+    }
+
+    get().addAuditLog('GAME_CANCELLED_BY_MANAGER', target.title, `Manager removed game ID ${gameId}. Reason: ${reason}`);
+    toast.success(`Game session "${target.title}" removed!`);
+    return true;
+  },
+
+  // --- GAME ACTIONS, CONCURRENCY, TEAM SELECTION & WAITLIST ---
+  joinGame: (gameId, player, targetTeam) => {
+    if (!player) return { success: false, message: 'Must be logged in to join games' };
+    
+    // STRICT AUTHORIZATION RULE: CLUB_MANAGER CANNOT JOIN GAMES AS A PLAYER
+    if (player.role === 'CLUB_MANAGER') {
+      return { success: false, message: 'Club Managers are not allowed to join games as players or occupy player slots.' };
+    }
+
     const games = get().games;
     const targetGame = games.find(g => g.id === gameId);
     if (!targetGame) return { success: false, message: 'Game not found' };
@@ -278,17 +470,35 @@ export const useDataStore = create((set, get) => ({
     }
 
     const currentCount = targetGame.confirmedPlayers?.length || 0;
-    const isFull = currentCount >= targetGame.maxPlayers;
+    const maxSlots = targetGame.maxPlayers || MATCH_FORMAT_SLOTS[targetGame.format] || 10;
+    const teamCap = Math.ceil(maxSlots / 2);
+    const isFull = currentCount >= maxSlots;
 
     if (!isFull) {
+      const teamACount = (targetGame.confirmedPlayers || []).filter((p, i) => (p.team === 'TEAM_A' || (!p.team && i < teamCap))).length;
+      const teamBCount = (targetGame.confirmedPlayers || []).filter((p, i) => (p.team === 'TEAM_B' || (!p.team && i >= teamCap))).length;
+
+      let assignedTeam = targetTeam;
+      if (assignedTeam === 'TEAM_A' && teamACount >= teamCap) {
+        return { success: false, message: `Team A is already full (${teamACount}/${teamCap}). Please select Team B!` };
+      }
+      if (assignedTeam === 'TEAM_B' && teamBCount >= teamCap) {
+        return { success: false, message: `Team B is already full (${teamBCount}/${teamCap}). Please select Team A!` };
+      }
+
+      if (!assignedTeam) {
+        assignedTeam = teamACount <= teamBCount ? 'TEAM_A' : 'TEAM_B';
+      }
+
       const newConfirmed = [...(targetGame.confirmedPlayers || []), {
         id: player.id,
         name: player.name,
         avatar: player.profileImageUrl || player.avatar,
-        position: player.playingHand?.split('/')[1]?.trim() || 'MID'
+        position: player.playingHand?.split('/')[1]?.trim() || 'MID',
+        team: assignedTeam
       }];
 
-      const newStatus = newConfirmed.length >= targetGame.maxPlayers ? 'FULL' : 'OPEN_FOR_JOINING';
+      const newStatus = newConfirmed.length >= maxSlots ? 'FULL' : 'OPEN_FOR_JOINING';
 
       set({
         games: games.map(g => g.id === gameId ? {
@@ -297,7 +507,29 @@ export const useDataStore = create((set, get) => ({
           status: newStatus
         } : g)
       });
-      return { success: true, promoted: false, message: 'Successfully joined match roster!' };
+
+      // Notification Event 2 & 3 & 6
+      get().addNotification({
+        userId: player.id,
+        title: `💳 Payment Successful & Slot Secured`,
+        message: `Your payment of ₹${targetGame.entryFee} for "${targetGame.title}" was processed. Slot confirmed in ${assignedTeam === 'TEAM_A' ? 'Team A' : 'Team B'}!`,
+        linkUrl: `/games/${gameId}`,
+        clubId: targetGame.venueReference?.clubId,
+        gameId
+      });
+
+      if (newStatus === 'FULL') {
+        get().addNotification({
+          userId: null,
+          title: `🔥 Game Roster Full`,
+          message: `Match "${targetGame.title}" has reached full capacity (${maxSlots}/${maxSlots} slots occupied).`,
+          linkUrl: `/games/${gameId}`,
+          clubId: targetGame.venueReference?.clubId,
+          gameId
+        });
+      }
+
+      return { success: true, promoted: false, message: `Successfully joined ${assignedTeam === 'TEAM_A' ? 'Team A' : 'Team B'} roster!` };
     } else {
       const waitlistPos = (targetGame.waitlist?.length || 0) + 1;
       const newWaitlist = [...(targetGame.waitlist || []), {
@@ -317,6 +549,31 @@ export const useDataStore = create((set, get) => ({
     }
   },
 
+  switchPlayerTeam: (gameId, playerId, targetTeam) => {
+    const games = get().games;
+    const targetGame = games.find(g => g.id === gameId);
+    if (!targetGame) return { success: false, message: 'Game not found' };
+
+    const maxSlots = targetGame.maxPlayers || 10;
+    const teamCap = Math.ceil(maxSlots / 2);
+    const targetTeamCount = (targetGame.confirmedPlayers || []).filter(p => p.team === targetTeam).length;
+
+    if (targetTeamCount >= teamCap) {
+      return { success: false, message: `${targetTeam === 'TEAM_A' ? 'Team A' : 'Team B'} lineup is full (${teamCap}/${teamCap})!` };
+    }
+
+    const updatedConfirmed = (targetGame.confirmedPlayers || []).map(p => 
+      p.id === playerId ? { ...p, team: targetTeam } : p
+    );
+
+    set({
+      games: games.map(g => g.id === gameId ? { ...g, confirmedPlayers: updatedConfirmed } : g)
+    });
+
+    toast.success(`Switched to ${targetTeam === 'TEAM_A' ? 'Team A' : 'Team B'} lineup!`);
+    return { success: true, message: `Switched to ${targetTeam}` };
+  },
+
   leaveGame: (gameId, userId) => {
     const games = get().games;
     const targetGame = games.find(g => g.id === gameId);
@@ -332,7 +589,8 @@ export const useDataStore = create((set, get) => ({
       newConfirmed.push(promotedPlayer);
     }
 
-    const newStatus = newConfirmed.length >= targetGame.maxPlayers ? 'FULL' : 'OPEN_FOR_JOINING';
+    const maxSlots = targetGame.maxPlayers || MATCH_FORMAT_SLOTS[targetGame.format] || 10;
+    const newStatus = newConfirmed.length >= maxSlots ? 'FULL' : 'OPEN_FOR_JOINING';
 
     set({
       games: games.map(g => g.id === gameId ? {
@@ -345,19 +603,71 @@ export const useDataStore = create((set, get) => ({
 
     if (promotedPlayer) {
       toast.success(`🎉 Automated Waitlist Promotion: ${promotedPlayer.name} was promoted to confirmed roster!`);
+      get().addNotification({
+        userId: promotedPlayer.id,
+        title: `🎉 Waitlist Promotion Confirmed!`,
+        message: `You were promoted to the confirmed match roster for "${targetGame.title}"!`,
+        linkUrl: `/games/${gameId}`,
+        clubId: targetGame.venueReference?.clubId,
+        gameId
+      });
     }
   },
 
-  createGame: (newGameData) => {
+  createGame: (newGameData, creatorUser) => {
+    const format = newGameData.format || '5v5';
+    const computedMaxPlayers = newGameData.maxPlayers || MATCH_FORMAT_SLOTS[format] || 10;
+    const isPlayerCreator = creatorUser?.role === 'PLAYER';
+    const isManagerCreator = creatorUser?.role === 'CLUB_MANAGER' || creatorUser?.role === 'SUPER_ADMIN';
+
+    let confirmedPlayers = [];
+    if (isPlayerCreator && creatorUser) {
+      confirmedPlayers = [{
+        id: creatorUser.id,
+        name: creatorUser.name,
+        avatar: creatorUser.profileImageUrl || creatorUser.avatar,
+        position: creatorUser.playingHand?.split('/')[1]?.trim() || 'ST'
+      }];
+    }
+    // Note: If Manager/Admin creates, confirmedPlayers is [] (0 slots taken by manager, 100% slots available for players)
+
     const newGame = {
       id: `gam_${Date.now()}`,
       status: 'OPEN_FOR_JOINING',
-      confirmedPlayers: [newGameData.organizer],
+      format,
+      maxPlayers: computedMaxPlayers,
+      confirmedPlayers,
       waitlist: [],
       score: null,
+      privacy: newGameData.privacy || 'PUBLIC',
+      organizer: {
+        id: creatorUser?.id || 'usr_club_mgr_101',
+        name: creatorUser?.name || 'Club Manager',
+        avatar: creatorUser?.profileImageUrl || creatorUser?.avatar
+      },
       ...newGameData
     };
+
     set({ games: [newGame, ...get().games] });
+
+    // Broadcast Notification to all eligible community players
+    get().addNotification({
+      userId: null,
+      title: isManagerCreator 
+        ? `📢 New Match Session at ${newGame.venueReference?.clubName || 'Club Turf'}`
+        : `⚽ New ${format} Game Hosted by ${creatorUser?.name || 'Player'}`,
+      message: `A new ${format} pick-up session "${newGame.title}" has been published for ${newGame.dateTime?.date} at ${newGame.dateTime?.startTime}. Entry Fee: ₹${newGame.entryFee}. All ${computedMaxPlayers} slots open — Join now!`,
+      linkUrl: `/games/${newGame.id}`,
+      clubId: newGame.venueReference?.clubId,
+      gameId: newGame.id
+    });
+
+    if (isManagerCreator) {
+      toast.success(`Official Game "${newGame.title}" published! All ${computedMaxPlayers} slots open for players.`);
+    } else {
+      toast.success(`Match "${newGame.title}" published! You are confirmed in Slot #1.`);
+    }
+
     return newGame;
   },
 
@@ -407,6 +717,17 @@ export const useDataStore = create((set, get) => ({
         score: { teamA: teamAScore, teamB: teamBScore }
       } : g)
     });
+
+    // Broadcast Notification Events 10 & 11: Game Completed & Result Published
+    get().addNotification({
+      userId: null,
+      title: `🏆 Official Match Score Published`,
+      message: `Final Score for "${game.title}": Team A ${teamAScore} - ${teamBScore} Team B. Winner: ${isDraw ? 'Draw' : (isTeamAWin ? 'Team A' : 'Team B')}.`,
+      linkUrl: `/games/${gameId}`,
+      clubId: game.venueReference?.clubId,
+      gameId
+    });
+
     toast.success('Match score recorded & Elo ratings updated!');
   },
 
@@ -508,4 +829,9 @@ export const useDataStore = create((set, get) => ({
       })
     });
   }
-}));
+}),
+    {
+      name: 'fifa_all_stars_data_storage'
+    }
+  )
+);

@@ -13,8 +13,8 @@ export const GameCard = ({ game }) => {
 
   const getStatusBadge = () => {
     if (game.status === 'COMPLETED') return <Badge variant="default" size="sm">COMPLETED</Badge>;
-    if (game.status === 'IN_PROGRESS') return <Badge variant="emerald" size="sm">LIVE MATCH</Badge>;
-    if (isFull) return <Badge variant="danger" size="sm">FULL</Badge>;
+    if (game.status === 'IN_PROGRESS' || game.status === 'ONGOING') return <Badge variant="emerald" size="sm">🔥 LIVE MATCH</Badge>;
+    if (isFull) return <Badge variant="danger" size="sm">ROSTER FULL</Badge>;
     if (spotsLeft <= 2) return <Badge variant="waitlist" size="sm">{spotsLeft} SPOTS LEFT</Badge>;
     return <Badge variant="emerald" size="sm">OPEN ({spotsLeft} SPOTS)</Badge>;
   };

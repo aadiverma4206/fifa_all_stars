@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Calendar, User, MapPin, DollarSign, Search, Filter, RotateCcw, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import ManagerNav from '../../components/club/ManagerNav';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 
@@ -30,7 +29,6 @@ export const BookingsPage = () => {
 
   return (
     <div className="space-y-6 py-4 max-w-6xl mx-auto">
-      <ManagerNav />
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

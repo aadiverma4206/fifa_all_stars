@@ -1,17 +1,18 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, MapPin, DollarSign, Calendar } from 'lucide-react';
+import { LayoutDashboard, Building2, MapPin, DollarSign, Calendar, Flame } from 'lucide-react';
 
 export const ManagerNav = () => {
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
 
   const links = [
-    { name: 'Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
-    { name: 'Manage Venue', path: '/manager/club', icon: Building2 },
-    { name: 'Courts & Pitches', path: '/manager/courts', icon: MapPin },
-    { name: 'Peak Pricing', path: '/manager/pricing', icon: DollarSign },
-    { name: 'Reservations', path: '/manager/bookings', icon: Calendar },
+    { name: 'Dashboard', path: '/club/dashboard', icon: LayoutDashboard },
+    { name: 'Game Sessions', path: '/club/games', icon: Flame },
+    { name: 'Manage Venue', path: '/club/manage', icon: Building2 },
+    { name: 'Courts & Pitches', path: '/club/courts', icon: MapPin },
+    { name: 'Peak Pricing', path: '/club/pricing', icon: DollarSign },
+    { name: 'Reservations', path: '/club/bookings', icon: Calendar },
   ];
 
   return (
