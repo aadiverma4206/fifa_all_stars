@@ -283,324 +283,469 @@ export const GameDetailsPage = () => {
   };
 
   return (
-    <div className="space-y-8 py-4 max-w-5xl mx-auto">
-      
-      {/* Back button */}
-      <BackButton fallback="/player/find-games" label="Back to All Pick-Up Games" />
-
-      {/* Main Banner Header */}
-      <div className="footy-card p-6 sm:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={game.format === '5v5' ? 'emerald' : 'blue'}>{game.format}</Badge>
-              <Badge variant={game.privacy === 'PRIVATE' ? 'danger' : 'gold'}>
-                {game.privacy || 'PUBLIC'}
-              </Badge>
-              
-              {game.status === 'ONGOING' ? (
-                <Badge variant="danger" size="sm">🔥 MATCH IN PROGRESS (ONGOING)</Badge>
-              ) : game.status === 'COMPLETED' ? (
-                <Badge variant="emerald" size="sm">🏆 MATCH COMPLETED</Badge>
-              ) : (
-                <Badge variant={isFull ? 'danger' : 'emerald'} size="sm">
-                  {isFull ? 'ROSTER FULL' : `${spotsLeft} Slots Available`}
-                </Badge>
-              )}
-            </div>
-            
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase">
-              {game.title}
-            </h1>
-
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center space-x-1.5">
-              <MapPin className="w-4 h-4 text-sport-500 flex-shrink-0" />
-              <span>{game.venueReference?.clubName} • {game.venueReference?.courtName || 'Pitch Alpha'} ({game.venueReference?.city})</span>
-            </p>
-          </div>
-
-          <div className="text-left sm:text-right">
-            <span className="text-xs font-bold text-slate-400 block uppercase">Entry Fee</span>
-            <span className="text-3xl font-black text-sport-500">
-              ₹{game.entryFee}
-            </span>
-          </div>
+    <div className="w-full max-w-[1700px] mx-auto py-2 px-2 sm:px-4 space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-slate-200/60 dark:border-slate-800/60">
+        <BackButton fallback="/player/find-games" label="Back to All Pick-Up Games" />
+        <div className="flex items-center space-x-2">
+          <Badge variant={game.format === '5v5' ? 'emerald' : 'blue'}>{game.format}</Badge>
+          <Badge variant={game.privacy === 'PRIVATE' ? 'danger' : 'gold'}>
+            {game.privacy || 'PUBLIC'}
+          </Badge>
+          {game.status === 'ONGOING' ? (
+            <Badge variant="danger" size="sm">🔥 LIVE MATCH</Badge>
+          ) : game.status === 'COMPLETED' ? (
+            <Badge variant="emerald" size="sm">🏆 COMPLETED</Badge>
+          ) : (
+            <Badge variant={isFull ? 'danger' : 'emerald'} size="sm">
+              {isFull ? 'ROSTER FULL' : `${spotsLeft} SLOTS LEFT`}
+            </Badge>
+          )}
         </div>
+      </div>
 
-        {/* Detailed Info Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">
-          <div>
-            <span className="block text-slate-400 font-semibold">Date</span>
-            <span className="text-slate-900 dark:text-white">{game.dateTime?.date}</span>
-          </div>
-          <div>
-            <span className="block text-slate-400 font-semibold">Time Slot</span>
-            <span className="text-slate-900 dark:text-white">{game.dateTime?.startTime} - {game.dateTime?.endTime || '20:30'}</span>
-          </div>
-          <div>
-            <span className="block text-slate-400 font-semibold">Format Capacity</span>
-            <span className="text-sport-500 font-black">{game.format} ({maxSlots} Slots)</span>
-          </div>
-          <div>
-            <span className="block text-slate-400 font-semibold">Roster Occupancy</span>
-            <span className="text-slate-900 dark:text-white">{confirmedPlayers.length} Joined / {spotsLeft} Open</span>
-          </div>
-          <div>
-            <span className="block text-slate-400 font-semibold">Host / Venue</span>
-            <span className="text-slate-900 dark:text-white">{game.organizer?.name}</span>
-          </div>
-        </div>
-
-        {/* Live Scoreboard Banner if Match is Live & In Progress */}
-        {game.liveScore && game.status !== 'COMPLETED' && (
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-950 via-slate-950 to-slate-900 text-white space-y-2 border-2 border-rose-500/60 text-center shadow-xl relative overflow-hidden">
-            <div className="flex items-center justify-center space-x-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-              </span>
-              <span className="text-xs font-black uppercase text-rose-400 tracking-widest">🔴 LIVE IN-GAME SCORE (SCREEN DISPLAY ONLY)</span>
-            </div>
-
-            <div className="flex items-center justify-center space-x-8 py-1">
-              <div className="text-center">
-                <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-1">TEAM A</span>
-                <span className="text-4xl font-black text-white">{game.liveScore.teamA}</span>
-              </div>
-              <div className="px-3 py-1 rounded-xl bg-rose-500/20 border border-rose-500/40">
-                <span className="text-lg font-black text-rose-400">VS</span>
-              </div>
-              <div className="text-center">
-                <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-1">TEAM B</span>
-                <span className="text-4xl font-black text-white">{game.liveScore.teamB}</span>
-              </div>
-            </div>
-
-            <p className="text-[11px] font-semibold text-slate-400">
-              ⏳ Live match score in progress. Match remains Active and will NOT enter Match History until "Enter Score & Finish Match" is submitted.
-            </p>
-          </div>
-        )}
-
-        {/* Official Scoreboard if Final Score Submitted & Completed */}
-        {game.score && (() => {
-          const outcomeInfo = (() => {
-            const teamA = parseInt(game.score.teamA, 10);
-            const teamB = parseInt(game.score.teamB, 10);
-            const isDraw = teamA === teamB;
-            const teamAWon = teamA > teamB;
-
-            const playerIndex = confirmedPlayers.findIndex(p => p.id === currentUser?.id);
-            if (currentUser && playerIndex !== -1) {
-              const playerObj = confirmedPlayers[playerIndex];
-              let playerTeam = playerObj.team;
-              if (!playerTeam) {
-                playerTeam = playerIndex < teamCapacity ? 'TEAM_A' : 'TEAM_B';
-              }
-
-              if (isDraw) return { text: '🤝 RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
-              
-              const won = (playerTeam === 'TEAM_A' && teamAWon) || (playerTeam === 'TEAM_B' && !teamAWon);
-              if (won) {
-                return { text: '🎉 VICTORY! YOU WON THIS MATCH', color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10' };
-              } else {
-                return { text: '❌ DEFEAT: YOU LOST THIS MATCH', color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/10' };
-              }
-            }
-
-            if (isDraw) return { text: '🏆 MATCH RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
-            return {
-              text: `🏆 WINNER: ${teamAWon ? 'TEAM A' : 'TEAM B'}`,
-              color: teamAWon ? 'text-sky-400' : 'text-rose-400',
-              border: teamAWon ? 'border-sky-500/30' : 'border-rose-500/30',
-              bg: teamAWon ? 'bg-sky-500/10' : 'bg-rose-500/10'
-            };
-          })();
-
-          return (
-            <div className="p-6 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-950 to-slate-900 text-white space-y-3 border border-amber-500/30 text-center shadow-xl relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-              
-              <div className="flex items-center justify-center space-x-2">
-                <Trophy className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-black uppercase text-amber-400 tracking-widest">OFFICIAL MATCH SCORE RESULT</span>
-              </div>
-
-              <div className="flex items-center justify-center space-x-8 py-2">
-                <div className="text-center">
-                  <span className="text-xs font-extrabold text-slate-400 block uppercase mb-1">TEAM A</span>
-                  <span className="text-5xl font-black text-white">{game.score.teamA}</span>
-                </div>
-                <div className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700">
-                  <span className="text-xl font-black text-amber-500">VS</span>
-                </div>
-                <div className="text-center">
-                  <span className="text-xs font-extrabold text-slate-400 block uppercase mb-1">TEAM B</span>
-                  <span className="text-5xl font-black text-white">{game.score.teamB}</span>
-                </div>
-              </div>
-
-              <div className={`inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full ${outcomeInfo.bg} border ${outcomeInfo.border} ${outcomeInfo.color} text-xs font-black`}>
-                <span>{outcomeInfo.text}</span>
-                <span>•</span>
-                <span>⚡ Elo Recalculated</span>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Description & Rules */}
-        {game.description && (
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
-            <span className="font-black text-slate-900 dark:text-white uppercase block mb-1">Match Rules & Guidance:</span>
-            <p>{game.description}</p>
-          </div>
-        )}
-
-        {/* LIVE SCORE UPDATE TIMELINE & AUDIT LOG */}
-        {game.liveScoreHistory?.length > 0 && (
-          <div className="p-5 rounded-2xl bg-slate-950 text-white border border-slate-800 space-y-3.5 shadow-lg">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-              <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-amber-500" />
-                <h4 className="font-black text-xs uppercase tracking-widest text-slate-200">
-                  ⏱️ Live Score Updates Timeline & Log ({game.liveScoreHistory.length} Record{game.liveScoreHistory.length > 1 ? 's' : ''})
-                </h4>
-              </div>
-              <Badge variant="gold" size="sm">Audit Log</Badge>
-            </div>
-
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {game.liveScoreHistory.map((item, idx) => (
-                <div 
-                  key={item.id || idx} 
-                  className={`p-3 rounded-xl flex items-center justify-between text-xs border ${
-                    item.isFinal 
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 font-bold' 
-                      : 'bg-slate-900 border-slate-800 text-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-800 font-mono text-[10px] font-bold text-amber-400">
-                      ⏰ {item.time}
-                    </span>
-                    <span className="font-bold text-slate-100">
-                      Team A <span className="font-mono text-amber-400 font-black text-sm px-1">{item.score?.teamA ?? 0}</span> – <span className="font-mono text-amber-400 font-black text-sm px-1">{item.score?.teamB ?? 0}</span> Team B
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-2 text-[10px] text-slate-400 font-semibold">
-                    <span>{item.isFinal ? '🏆 Final Result Published' : `Updated by ${item.updatedBy || 'Host'}`}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Status Alert Banner if Waitlisted */}
-        {isWaitlisted && (
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>You are currently <strong>#{waitlistIndex + 1}</strong> on the waitlist. If a confirmed player leaves, you will be promoted automatically!</span>
-            </div>
-          </div>
-        )}
-
-        {/* AUTHORIZED MANAGEMENT CONTROLS & PLAYER JOIN BAR */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* LEFT COLUMN: Player Lineups & Squad Names */}
+        <div className="lg:col-span-5 xl:col-span-5 space-y-5">
           
-          {/* Authorized Management Toolbar for Manager & Admin */}
-          {isAuthorizedManager && (
-            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase text-slate-900 dark:text-white flex items-center space-x-1.5">
-                  <Shield className="w-4 h-4 text-amber-500" />
-                  <span>Authorized Match Management Controls ({currentUser?.role})</span>
-                </span>
+          <div className="footy-card p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center space-x-2 uppercase">
+                <Users className="w-4 h-4 text-sport-500" />
+                <span>Match Lineups ({confirmedPlayers.length}/{maxSlots} Slots)</span>
+              </h3>
+              {isGameCompleted && <Badge variant="default" size="sm">🔒 Locked</Badge>}
+            </div>
+
+            <div className="space-y-4">
+              
+              {/* TEAM A ROSTER */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 border-l-4 border-l-sky-500 space-y-3">
+                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <div className="flex items-center space-x-2">
+                    <h4 className="font-black text-xs text-sky-500 uppercase tracking-wider">TEAM A LINEUP</h4>
+                    <Badge variant="blue" size="sm">{teamAPlayers.length} / {teamCapacity}</Badge>
+                  </div>
+                  
+                  {isGameCompleted ? (
+                    <Badge variant="default" size="sm">🔒 Locked</Badge>
+                  ) : currentUser && currentUser.role !== 'CLUB_MANAGER' && (
+                    isConfirmed ? (
+                      teamBPlayers.some(p => p.id === currentUser.id) && teamAPlayers.length < teamCapacity && (
+                        <button
+                          type="button"
+                          onClick={() => switchPlayerTeam(game.id, currentUser.id, 'TEAM_A')}
+                          className="px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 font-extrabold text-[10px] hover:bg-sky-500 hover:text-white transition-all cursor-pointer"
+                        >
+                          ⚡ Switch to Team A
+                        </button>
+                      )
+                    ) : (
+                      !isWaitlisted && teamAPlayers.length < teamCapacity && (
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedTeam('TEAM_A'); handleOpenPaymentModal(); }}
+                          className="px-2.5 py-1 rounded-lg bg-sky-500 text-white font-extrabold text-[10px] hover:bg-sky-600 shadow-sm transition-all cursor-pointer"
+                        >
+                          + Join Team A
+                        </button>
+                      )
+                    )
+                  )}
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {teamAPlayers.length > 0 ? (
+                    teamAPlayers.map((player, idx) => (
+                      <div key={idx} className="p-2.5 rounded-xl bg-white dark:bg-slate-950 flex items-center justify-between text-xs border border-slate-100 dark:border-slate-800/80 shadow-xs">
+                        <div className="flex items-center space-x-2.5">
+                          <Avatar src={player.avatar} name={player.name} size="sm" />
+                          <div>
+                            <span className="font-black text-slate-900 dark:text-white block text-xs">{player.name}</span>
+                            <span className="text-[10px] text-slate-400 font-bold">{player.position || 'ST'}</span>
+                          </div>
+                        </div>
+                        <Badge variant={player.id === game.organizer?.id ? 'gold' : 'emerald'} size="sm">
+                          {player.id === game.organizer?.id ? 'Host' : 'Confirmed'}
+                        </Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 italic py-2 text-center">No players assigned to Team A yet</p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                {isGameCompleted ? (
-                  <>
-                    <Link to="/history">
-                      <Button variant="emerald" size="sm" icon={Trophy}>
-                        🏆 View in Match History
-                      </Button>
-                    </Link>
+              {/* TEAM B ROSTER */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 border-l-4 border-l-rose-500 space-y-3">
+                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <div className="flex items-center space-x-2">
+                    <h4 className="font-black text-xs text-rose-500 uppercase tracking-wider">TEAM B LINEUP</h4>
+                    <Badge variant="danger" size="sm">{teamBPlayers.length} / {teamCapacity}</Badge>
+                  </div>
 
-                    {canUploadVideo && (
-                      <Button variant="outline" size="sm" icon={Plus} onClick={() => setIsVideoModalOpen(true)}>
-                        Link Match Video Reference
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {game.status !== 'ONGOING' && (
-                      <Button variant="primary" size="sm" icon={Play} onClick={handleStartMatch}>
-                        Start Match (Set ONGOING)
-                      </Button>
-                    )}
+                  {isGameCompleted ? (
+                    <Badge variant="default" size="sm">🔒 Locked</Badge>
+                  ) : currentUser && currentUser.role !== 'CLUB_MANAGER' && (
+                    isConfirmed ? (
+                      teamAPlayers.some(p => p.id === currentUser.id) && teamBPlayers.length < teamCapacity && (
+                        <button
+                          type="button"
+                          onClick={() => switchPlayerTeam(game.id, currentUser.id, 'TEAM_B')}
+                          className="px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 font-extrabold text-[10px] hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                        >
+                          ⚡ Switch to Team B
+                        </button>
+                      )
+                    ) : (
+                      !isWaitlisted && teamBPlayers.length < teamCapacity && (
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedTeam('TEAM_B'); handleOpenPaymentModal(); }}
+                          className="px-2.5 py-1 rounded-lg bg-rose-500 text-white font-extrabold text-[10px] hover:bg-rose-600 shadow-sm transition-all cursor-pointer"
+                        >
+                          + Join Team B
+                        </button>
+                      )
+                    )
+                  )}
+                </div>
 
-                    <Button variant="emerald" size="sm" icon={CheckCircle} onClick={handleOpenScoreModal}>
-                      🏁 Enter Score & Finish Match
-                    </Button>
-
-                    <Button variant="gold" size="sm" icon={Trophy} onClick={handleOpenLiveScoreModal}>
-                      🏆 Record Live Score
-                    </Button>
-
-                    <Button variant="outline" size="sm" icon={Edit2} onClick={handleOpenEditModal} className="border-sky-500/40 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10">
-                      Edit Game Details
-                    </Button>
-
-                    {canUploadVideo && (
-                      <Button variant="outline" size="sm" icon={Plus} onClick={() => setIsVideoModalOpen(true)}>
-                        Link Match Video Reference
-                      </Button>
-                    )}
-
-                    <Button 
-                      variant="danger" 
-                      size="sm" 
-                      icon={Trash2} 
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to cancel and remove game session "${game.title}"?`)) {
-                          removeGame(game.id, 'Cancelled by venue manager');
-                          toast.success(`Game session "${game.title}" removed!`);
-                          navigate('/games');
-                        }
-                      }}
-                    >
-                      Cancel & Remove Session
-                    </Button>
-                  </>
-                )}
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {teamBPlayers.length > 0 ? (
+                    teamBPlayers.map((player, idx) => (
+                      <div key={idx} className="p-2.5 rounded-xl bg-white dark:bg-slate-950 flex items-center justify-between text-xs border border-slate-100 dark:border-slate-800/80 shadow-xs">
+                        <div className="flex items-center space-x-2.5">
+                          <Avatar src={player.avatar} name={player.name} size="sm" />
+                          <div>
+                            <span className="font-black text-slate-900 dark:text-white block text-xs">{player.name}</span>
+                            <span className="text-[10px] text-slate-400 font-bold">{player.position || 'MID'}</span>
+                          </div>
+                        </div>
+                        <Badge variant="emerald" size="sm">Confirmed</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 italic py-2 text-center">No players assigned to Team B yet</p>
+                  )}
+                </div>
               </div>
+
+            </div>
+          </div>
+
+          {game.description && (
+            <div className="footy-card p-5 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+              <span className="font-black text-slate-900 dark:text-white uppercase block">Match Rules & Guidance:</span>
+              <p className="leading-relaxed text-slate-500 dark:text-slate-400">{game.description}</p>
             </div>
           )}
 
-          {/* Action Buttons Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
-              Wallet Balance: <span className="text-amber-500 font-black">₹{currentUser?.walletBalance?.toFixed(2)}</span>
+          {isWaitlisted && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>You are currently <strong>#{waitlistIndex + 1}</strong> on the waitlist.</span>
+            </div>
+          )}
+
+        </div>
+
+        {/* RIGHT COLUMN: Match Details, Scoreboard, Live Score & Controls */}
+        <div className="lg:col-span-7 xl:col-span-7 space-y-5">
+          
+          <div className="footy-card p-6 space-y-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    MATCH SESSION
+                  </span>
+                  <span className="text-xs font-bold text-slate-400">ID: {game.id}</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                  {game.title}
+                </h1>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center space-x-1.5">
+                  <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <span>{game.venueReference?.clubName} • {game.venueReference?.courtName || 'Pitch Alpha'} ({game.venueReference?.city})</span>
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-1">
+                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">ENTRY FEE</span>
+                <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                  ₹{game.entryFee}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 text-xs font-bold">
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-emerald-500" /> Date
+                </span>
+                <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block">{game.dateTime?.date}</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-sky-500" /> Time
+                </span>
+                <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block truncate">{game.dateTime?.startTime} - {game.dateTime?.endTime || '20:30'}</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+                  <Trophy className="w-3 h-3 text-amber-500" /> Format
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 text-xs font-black mt-0.5 block">{game.format} ({maxSlots})</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+                  <Users className="w-3 h-3 text-rose-500" /> Roster
+                </span>
+                <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block">{confirmedPlayers.length} / {maxSlots}</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+                  <Shield className="w-3 h-3 text-purple-500" /> Host
+                </span>
+                <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block truncate">{game.organizer?.name}</span>
+              </div>
+            </div>
+
+            {/* LIVE SCOREBOARD */}
+            {game.liveScore && game.status !== 'COMPLETED' && (
+              <div className="p-4 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white space-y-2 border-2 border-rose-500/60 text-center shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-center space-x-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                  </span>
+                  <span className="text-xs font-black uppercase text-rose-400 tracking-widest">🔴 LIVE IN-GAME SCORE (SCREEN DISPLAY ONLY)</span>
+                </div>
+
+                <div className="flex items-center justify-center space-x-8 py-2">
+                  <div className="text-center">
+                    <span className="text-[10px] font-black text-sky-400 block uppercase mb-0.5">TEAM A</span>
+                    <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.liveScore.teamA}</span>
+                  </div>
+                  <div className="px-3.5 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40">
+                    <span className="text-lg font-black text-rose-400">VS</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-[10px] font-black text-rose-400 block uppercase mb-0.5">TEAM B</span>
+                    <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.liveScore.teamB}</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] font-semibold text-slate-400">
+                  ⏳ Live match score in progress. Match remains Active and will NOT enter Match History until "Enter Score & Finish Match" is submitted.
+                </p>
+              </div>
+            )}
+
+            {/* OFFICIAL FINAL SCOREBOARD */}
+            {game.score && (() => {
+              const outcomeInfo = (() => {
+                const teamA = parseInt(game.score.teamA, 10);
+                const teamB = parseInt(game.score.teamB, 10);
+                const isDraw = teamA === teamB;
+                const teamAWon = teamA > teamB;
+
+                const playerIndex = confirmedPlayers.findIndex(p => p.id === currentUser?.id);
+                if (currentUser && playerIndex !== -1) {
+                  const playerObj = confirmedPlayers[playerIndex];
+                  let playerTeam = playerObj.team;
+                  if (!playerTeam) {
+                    playerTeam = playerIndex < teamCapacity ? 'TEAM_A' : 'TEAM_B';
+                  }
+
+                  if (isDraw) return { text: '🤝 RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
+                  
+                  const won = (playerTeam === 'TEAM_A' && teamAWon) || (playerTeam === 'TEAM_B' && !teamAWon);
+                  if (won) {
+                    return { text: '🎉 VICTORY! YOU WON THIS MATCH', color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10' };
+                  } else {
+                    return { text: '❌ DEFEAT: YOU LOST THIS MATCH', color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/10' };
+                  }
+                }
+
+                if (isDraw) return { text: '🏆 MATCH RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
+                return {
+                  text: `🏆 WINNER: ${teamAWon ? 'TEAM A' : 'TEAM B'}`,
+                  color: teamAWon ? 'text-sky-400' : 'text-rose-400',
+                  border: teamAWon ? 'border-sky-500/30' : 'border-rose-500/30',
+                  bg: teamAWon ? 'bg-sky-500/10' : 'bg-rose-500/10'
+                };
+              })();
+
+              return (
+                <div className="p-5 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white space-y-3 border border-slate-800 text-center shadow-lg relative overflow-hidden">
+                  
+                  <div className="flex items-center justify-center space-x-2">
+                    <Trophy className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-black uppercase text-amber-400 tracking-widest">OFFICIAL MATCH SCORE RESULT</span>
+                  </div>
+
+                  <div className="flex items-center justify-center space-x-8 py-2">
+                    <div className="text-center">
+                      <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-0.5">TEAM A</span>
+                      <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.score.teamA}</span>
+                    </div>
+                    <div className="px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700">
+                      <span className="text-lg font-black text-amber-500">VS</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-0.5">TEAM B</span>
+                      <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.score.teamB}</span>
+                    </div>
+                  </div>
+
+                  <div className={`inline-flex items-center space-x-2 px-4 py-1.5 rounded-full ${outcomeInfo.bg} border ${outcomeInfo.border} ${outcomeInfo.color} text-xs font-black`}>
+                    <span>{outcomeInfo.text}</span>
+                    <span>•</span>
+                    <span>⚡ Elo Recalculated</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* LIVE SCORE AUDIT TIMELINE */}
+            {game.liveScoreHistory?.length > 0 && (
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5 shadow-xs">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    <h4 className="font-black text-xs uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                      ⏱️ Live Score Updates Timeline & Log ({game.liveScoreHistory.length})
+                    </h4>
+                  </div>
+                  <Badge variant="gold" size="sm">Audit Log</Badge>
+                </div>
+
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {game.liveScoreHistory.map((item, idx) => (
+                    <div 
+                      key={item.id || idx} 
+                      className={`p-2.5 rounded-xl flex items-center justify-between text-xs border ${
+                        item.isFinal 
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold' 
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                          ⏰ {item.time}
+                        </span>
+                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                          Team A <span className="font-mono text-amber-500 font-black px-0.5">{item.score?.teamA ?? 0}</span> – <span className="font-mono text-amber-500 font-black px-0.5">{item.score?.teamB ?? 0}</span> Team B
+                        </span>
+                      </div>
+
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+                        <span>{item.isFinal ? '🏆 Final Result' : `by ${item.updatedBy || 'Host'}`}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ACTION & ENTRY HUB */}
+          <div className="footy-card p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase text-slate-900 dark:text-white flex items-center space-x-1.5">
+                <CreditCard className="w-4 h-4 text-emerald-500" />
+                <span>Match Action & Entry Hub</span>
+              </span>
+              <span className="text-xs font-bold text-slate-400">
+                Wallet: <strong className="text-emerald-500 font-black">₹{currentUser?.walletBalance?.toFixed(2)}</strong>
+              </span>
+            </div>
+
+            {isAuthorizedManager && (
+              <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <span className="text-[11px] font-black uppercase text-amber-500 flex items-center space-x-1">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Manager Controls ({currentUser?.role})</span>
+                </span>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {isGameCompleted ? (
+                    <>
+                      <Link to="/history" className="col-span-1">
+                        <Button variant="emerald" size="sm" icon={Trophy} className="w-full justify-center">
+                          View History
+                        </Button>
+                      </Link>
+
+                      {canUploadVideo && (
+                        <Button variant="outline" size="sm" icon={Plus} onClick={() => setIsVideoModalOpen(true)} className="w-full justify-center text-[11px]">
+                          Link Video
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {game.status !== 'ONGOING' && (
+                        <Button variant="primary" size="sm" icon={Play} onClick={handleStartMatch} className="w-full justify-center text-[11px]">
+                          Start Match
+                        </Button>
+                      )}
+
+                      <Button variant="emerald" size="sm" icon={CheckCircle} onClick={handleOpenScoreModal} className="w-full justify-center text-[11px]">
+                        Finish Match
+                      </Button>
+
+                      <Button variant="gold" size="sm" icon={Trophy} onClick={handleOpenLiveScoreModal} className="w-full justify-center text-[11px]">
+                        Live Score
+                      </Button>
+
+                      <Button variant="outline" size="sm" icon={Edit2} onClick={handleOpenEditModal} className="w-full justify-center text-[11px]">
+                        Edit Match
+                      </Button>
+
+                      {canUploadVideo && (
+                        <Button variant="outline" size="sm" icon={Plus} onClick={() => setIsVideoModalOpen(true)} className="w-full justify-center text-[11px]">
+                          Link Video
+                        </Button>
+                      )}
+
+                      <Button 
+                        variant="danger" 
+                        size="sm" 
+                        icon={Trash2} 
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to cancel and remove game session "${game.title}"?`)) {
+                            removeGame(game.id, 'Cancelled by venue manager');
+                            toast.success(`Game session "${game.title}" removed!`);
+                            navigate('/games');
+                          }
+                        }}
+                        className="w-full justify-center text-[11px]"
+                      >
+                        Cancel Match
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div>
               {isGameCompleted ? (
-                <div className="px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-extrabold text-xs flex items-center space-x-2 shadow-inner">
+                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-slate-300 font-extrabold text-xs flex items-center justify-center space-x-2 shadow-inner">
                   <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span>🔒 MATCH COMPLETED — ROSTER & LINEUPS ARE PERMANENTLY LOCKED</span>
+                  <span>MATCH COMPLETED — ROSTER LOCKED</span>
                 </div>
               ) : currentUser?.role === 'CLUB_MANAGER' ? (
-                <div className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-extrabold text-xs flex items-center space-x-2">
-                  <Shield className="w-4 h-4" />
-                  <span>Club Managers cannot join games as players or occupy player slots</span>
+                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center space-x-2">
+                  <Shield className="w-4 h-4 flex-shrink-0" />
+                  <span>Club Managers cannot join games as players.</span>
                 </div>
               ) : isConfirmed || isWaitlisted ? (
-                <Button variant="danger" size="md" onClick={handleLeaveMatch}>
+                <Button variant="danger" size="md" onClick={handleLeaveMatch} className="w-full justify-center">
                   Leave Match & Refund ₹{game.entryFee}
                 </Button>
               ) : (
@@ -609,171 +754,51 @@ export const GameDetailsPage = () => {
                   size="md"
                   icon={CheckCircle}
                   onClick={handleOpenPaymentModal}
+                  className="w-full justify-center py-3 text-sm font-black"
                 >
-                  {isFull ? `Join Waitlist (₹${game.entryFee})` : `Join Game (₹${game.entryFee})`}
+                  {isFull ? `Join Waitlist (₹${game.entryFee})` : `Join Match Now (₹${game.entryFee})`}
                 </Button>
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* TEAM A vs TEAM B ROSTER SPLIT GRID */}
-      <div className="space-y-6">
-        <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center space-x-2 uppercase">
-          <Users className="w-5 h-5 text-sport-500" />
-          <span>Match Lineups: Team A vs Team B ({confirmedPlayers.length}/{maxSlots} Slots)</span>
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* TEAM A ROSTER */}
-          <div className="footy-card p-5 space-y-4 border-l-4 border-l-sky-500">
-            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
-              <div className="flex items-center space-x-2">
-                <h4 className="font-black text-sm text-sky-500 uppercase tracking-wider">TEAM A LINEUP</h4>
-                <Badge variant="blue" size="sm">{teamAPlayers.length} / {teamCapacity} Players</Badge>
+          {/* VIDEO HIGHLIGHTS */}
+          {linkedVideos.length > 0 && (
+            <div className="footy-card p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase flex items-center space-x-2">
+                  <Film className="w-4 h-4 text-sky-500" />
+                  <span>Official Match Video Highlights {linkedVideos.length > 1 ? `(${linkedVideos.length} Videos)` : ''}</span>
+                </h3>
+                <Badge variant="emerald" size="sm">{linkedVideos[0].videoStatus || 'AVAILABLE'}</Badge>
               </div>
-              
-              {isGameCompleted ? (
-                <Badge variant="default" size="sm">🔒 Locked</Badge>
-              ) : currentUser && currentUser.role !== 'CLUB_MANAGER' && (
-                isConfirmed ? (
-                  teamBPlayers.some(p => p.id === currentUser.id) && teamAPlayers.length < teamCapacity && (
-                    <button
-                      type="button"
-                      onClick={() => switchPlayerTeam(game.id, currentUser.id, 'TEAM_A')}
-                      className="px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 font-extrabold text-[11px] hover:bg-sky-500 hover:text-white transition-all cursor-pointer"
-                    >
-                      ⚡ Switch to Team A
-                    </button>
-                  )
-                ) : (
-                  !isWaitlisted && teamAPlayers.length < teamCapacity && (
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedTeam('TEAM_A'); handleOpenPaymentModal(); }}
-                      className="px-2.5 py-1 rounded-lg bg-sky-500 text-white font-extrabold text-[11px] hover:bg-sky-600 shadow-sm transition-all cursor-pointer"
-                    >
-                      + Join Team A
-                    </button>
-                  )
-                )
-              )}
-            </div>
 
-            <div className="space-y-2">
-              {teamAPlayers.length > 0 ? (
-                teamAPlayers.map((player, idx) => (
-                  <div key={idx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-3">
-                      <Avatar src={player.avatar} name={player.name} size="sm" />
-                      <div>
-                        <span className="font-black text-slate-900 dark:text-white block">{player.name}</span>
-                        <span className="text-[10px] text-slate-400 font-bold">{player.position || 'ST'}</span>
-                      </div>
+              <div className="space-y-4">
+                {linkedVideos.map((videoItem, vIdx) => (
+                  <div key={videoItem.id || vIdx} className="space-y-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div className="rounded-2xl overflow-hidden bg-slate-950 aspect-video relative flex items-center justify-center border border-slate-800">
+                      <video
+                        src={videoItem.videoUrl}
+                        controls
+                        className="w-full h-full object-cover"
+                        poster="/src/assets/images/courts/court-1.jpg"
+                      />
                     </div>
-                    <Badge variant={player.id === game.organizer?.id ? 'gold' : 'emerald'} size="sm">
-                      {player.id === game.organizer?.id ? 'Host' : 'Confirmed'}
-                    </Badge>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-400 italic">No players assigned to Team A yet</p>
-              )}
-            </div>
-          </div>
 
-          {/* TEAM B ROSTER */}
-          <div className="footy-card p-5 space-y-4 border-l-4 border-l-rose-500">
-            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
-              <div className="flex items-center space-x-2">
-                <h4 className="font-black text-sm text-rose-500 uppercase tracking-wider">TEAM B LINEUP</h4>
-                <Badge variant="danger" size="sm">{teamBPlayers.length} / {teamCapacity} Players</Badge>
-              </div>
-
-              {isGameCompleted ? (
-                <Badge variant="default" size="sm">🔒 Locked</Badge>
-              ) : currentUser && currentUser.role !== 'CLUB_MANAGER' && (
-                isConfirmed ? (
-                  teamAPlayers.some(p => p.id === currentUser.id) && teamBPlayers.length < teamCapacity && (
-                    <button
-                      type="button"
-                      onClick={() => switchPlayerTeam(game.id, currentUser.id, 'TEAM_B')}
-                      className="px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 font-extrabold text-[11px] hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
-                    >
-                      ⚡ Switch to Team B
-                    </button>
-                  )
-                ) : (
-                  !isWaitlisted && teamBPlayers.length < teamCapacity && (
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedTeam('TEAM_B'); handleOpenPaymentModal(); }}
-                      className="px-2.5 py-1 rounded-lg bg-rose-500 text-white font-extrabold text-[11px] hover:bg-rose-600 shadow-sm transition-all cursor-pointer"
-                    >
-                      + Join Team B
-                    </button>
-                  )
-                )
-              )}
-            </div>
-
-            <div className="space-y-2">
-              {teamBPlayers.length > 0 ? (
-                teamBPlayers.map((player, idx) => (
-                  <div key={idx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-3">
-                      <Avatar src={player.avatar} name={player.name} size="sm" />
-                      <div>
-                        <span className="font-black text-slate-900 dark:text-white block">{player.name}</span>
-                        <span className="text-[10px] text-slate-400 font-bold">{player.position || 'MID'}</span>
-                      </div>
+                    <div className="space-y-1 text-xs">
+                      <h4 className="font-extrabold text-slate-900 dark:text-white">{videoItem.title}</h4>
+                      <p className="text-slate-400 font-semibold">{videoItem.description}</p>
+                      <span className="text-[10px] font-bold text-slate-500 block pt-0.5">Uploaded by: {videoItem.uploadedBy} • {videoItem.uploadDate}</span>
                     </div>
-                    <Badge variant="emerald" size="sm">Confirmed</Badge>
                   </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-400 italic">No players assigned to Team B yet</p>
-              )}
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {linkedVideos.length > 0 && (
-        <div className="footy-card p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase flex items-center space-x-2">
-              <Film className="w-5 h-5 text-sky-500" />
-              <span>Official Match Video Highlights {linkedVideos.length > 1 ? `(${linkedVideos.length} Videos)` : ''}</span>
-            </h3>
-            <Badge variant="emerald" size="sm">{linkedVideos[0].videoStatus || 'AVAILABLE'}</Badge>
-          </div>
-
-          <div className="space-y-6">
-            {linkedVideos.map((videoItem, vIdx) => (
-              <div key={videoItem.id || vIdx} className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="rounded-2xl overflow-hidden bg-slate-950 aspect-video relative flex items-center justify-center border border-slate-800">
-                  <video
-                    src={videoItem.videoUrl}
-                    controls
-                    className="w-full h-full object-cover"
-                    poster="/src/assets/images/courts/court-1.jpg"
-                  />
-                </div>
-
-                <div className="space-y-1 text-xs">
-                  <h4 className="font-extrabold text-slate-900 dark:text-white">{videoItem.title}</h4>
-                  <p className="text-slate-400 font-semibold">{videoItem.description}</p>
-                  <span className="text-[10px] font-bold text-slate-500 block pt-1">Uploaded by: {videoItem.uploadedBy} • {videoItem.uploadDate}</span>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
         </div>
-      )}
+
+      </div>
 
       {/* PAYMENT-BEFORE-CONFIRMED-SLOT MODAL */}
       <Modal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} title="Confirm Payment & Secure Player Slot">
