@@ -13,12 +13,18 @@ import toast from 'react-hot-toast';
 export const GameDetailsPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { games, gameVideos, joinGame, leaveGame, submitGameScore, updateGameLifecycle, addGameVideo, switchPlayerTeam, updateGameDetails, removeGame } = useDataStore();
+  const { games, gameVideos, joinGame, leaveGame, submitGameScore, updateLiveScore, updateGameLifecycle, addGameVideo, switchPlayerTeam, updateGameDetails, removeGame } = useDataStore();
   const { currentUser, updateWallet, usersList, setCurrentUser } = useAuthStore();
 
   const [scoreTeamA, setScoreTeamA] = useState('');
   const [scoreTeamB, setScoreTeamB] = useState('');
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
+
+  // Live Score Modal State (Screen Score Only)
+  const [isLiveScoreModalOpen, setIsLiveScoreModalOpen] = useState(false);
+  const [liveScoreTeamA, setLiveScoreTeamA] = useState('');
+  const [liveScoreTeamB, setLiveScoreTeamB] = useState('');
+
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState('TEAM_A');
@@ -54,9 +60,12 @@ export const GameDetailsPage = () => {
   const isWaitlisted = game?.waitlist?.some(p => p.id === currentUser?.id);
   const waitlistIndex = game?.waitlist?.findIndex(p => p.id === currentUser?.id);
   const isFull = confirmedPlayers.length >= maxSlots || game?.status === 'FULL';
-  
-  // Authorization check for Match Management Rights (Host, Manager or Super Admin)
-  const isAuthorizedManager = currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN' || game?.organizer?.id === currentUser?.id;
+  const isGameCompleted = game?.status === 'COMPLETED' || (game?.score !== null && game?.score !== undefined && game?.score?.teamA !== null && game?.score?.teamA !== undefined);
+  const linkedVideos = (gameVideos || []).filter(v => v.gameId === game?.id);
+  const hasLinkedVideo = linkedVideos.length > 0 || !!game?.videoReference;
+  const isManagerOrAdmin = currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN';
+  const canUploadVideo = isManagerOrAdmin || !hasLinkedVideo;
+  const isAuthorizedManager = isManagerOrAdmin || game?.organizer?.id === currentUser?.id;
 
   const handleOpenEditModal = () => {
     setEditTitle(game.title || '');
@@ -168,14 +177,47 @@ export const GameDetailsPage = () => {
     updateGameLifecycle(game.id, 'ONGOING');
   };
 
-  const handleCompleteGame = () => {
-    handleOpenScoreModal();
+  const handleOpenLiveScoreModal = () => {
+    if (game?.liveScore) {
+      setLiveScoreTeamA(game.liveScore.teamA !== undefined ? String(game.liveScore.teamA) : '0');
+      setLiveScoreTeamB(game.liveScore.teamB !== undefined ? String(game.liveScore.teamB) : '0');
+    } else if (game?.score) {
+      setLiveScoreTeamA(String(game.score.teamA));
+      setLiveScoreTeamB(String(game.score.teamB));
+    } else {
+      setLiveScoreTeamA('0');
+      setLiveScoreTeamB('0');
+    }
+    setIsLiveScoreModalOpen(true);
+  };
+
+  const handleSubmitLiveScore = (e) => {
+    e.preventDefault();
+
+    if (liveScoreTeamA === '' || liveScoreTeamA === null || liveScoreTeamB === '' || liveScoreTeamB === null) {
+      toast.error('Please enter live goals for both Team A and Team B.');
+      return;
+    }
+
+    const scoreA = parseInt(liveScoreTeamA, 10);
+    const scoreB = parseInt(liveScoreTeamB, 10);
+
+    if (isNaN(scoreA) || scoreA < 0 || scoreA > 99 || isNaN(scoreB) || scoreB < 0 || scoreB > 99) {
+      toast.error('Goals must be valid numbers between 0 and 99.');
+      return;
+    }
+
+    updateLiveScore(game.id, { teamAScore: scoreA, teamBScore: scoreB }, currentUser?.name || 'Host');
+    setIsLiveScoreModalOpen(false);
   };
 
   const handleOpenScoreModal = () => {
     if (game?.score) {
       setScoreTeamA(game.score.teamA !== undefined ? String(game.score.teamA) : '');
       setScoreTeamB(game.score.teamB !== undefined ? String(game.score.teamB) : '');
+    } else if (game?.liveScore) {
+      setScoreTeamA(String(game.liveScore.teamA));
+      setScoreTeamB(String(game.liveScore.teamB));
     } else {
       setScoreTeamA('');
       setScoreTeamB('');
@@ -209,7 +251,7 @@ export const GameDetailsPage = () => {
         const myUpdated = updatedUsers?.find(u => u.id === currentUser.id);
         if (myUpdated) setCurrentUser(myUpdated);
       }
-    });
+    }, currentUser?.name || 'Host');
 
     setIsScoreModalOpen(false);
   };
@@ -309,7 +351,38 @@ export const GameDetailsPage = () => {
           </div>
         </div>
 
-        {/* Scoreboard if Completed or Score Recorded */}
+        {/* Live Scoreboard Banner if Match is Live & In Progress */}
+        {game.liveScore && game.status !== 'COMPLETED' && (
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-950 via-slate-950 to-slate-900 text-white space-y-2 border-2 border-rose-500/60 text-center shadow-xl relative overflow-hidden">
+            <div className="flex items-center justify-center space-x-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+              </span>
+              <span className="text-xs font-black uppercase text-rose-400 tracking-widest">🔴 LIVE IN-GAME SCORE (SCREEN DISPLAY ONLY)</span>
+            </div>
+
+            <div className="flex items-center justify-center space-x-8 py-1">
+              <div className="text-center">
+                <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-1">TEAM A</span>
+                <span className="text-4xl font-black text-white">{game.liveScore.teamA}</span>
+              </div>
+              <div className="px-3 py-1 rounded-xl bg-rose-500/20 border border-rose-500/40">
+                <span className="text-lg font-black text-rose-400">VS</span>
+              </div>
+              <div className="text-center">
+                <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-1">TEAM B</span>
+                <span className="text-4xl font-black text-white">{game.liveScore.teamB}</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] font-semibold text-slate-400">
+              ⏳ Live match score in progress. Match remains Active and will NOT enter Match History until "Enter Score & Finish Match" is submitted.
+            </p>
+          </div>
+        )}
+
+        {/* Official Scoreboard if Final Score Submitted & Completed */}
         {game.score && (() => {
           const outcomeInfo = (() => {
             const teamA = parseInt(game.score.teamA, 10);
@@ -384,6 +457,47 @@ export const GameDetailsPage = () => {
           </div>
         )}
 
+        {/* LIVE SCORE UPDATE TIMELINE & AUDIT LOG */}
+        {game.liveScoreHistory?.length > 0 && (
+          <div className="p-5 rounded-2xl bg-slate-950 text-white border border-slate-800 space-y-3.5 shadow-lg">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-200">
+                  ⏱️ Live Score Updates Timeline & Log ({game.liveScoreHistory.length} Record{game.liveScoreHistory.length > 1 ? 's' : ''})
+                </h4>
+              </div>
+              <Badge variant="gold" size="sm">Audit Log</Badge>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {game.liveScoreHistory.map((item, idx) => (
+                <div 
+                  key={item.id || idx} 
+                  className={`p-3 rounded-xl flex items-center justify-between text-xs border ${
+                    item.isFinal 
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 font-bold' 
+                      : 'bg-slate-900 border-slate-800 text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-800 font-mono text-[10px] font-bold text-amber-400">
+                      ⏰ {item.time}
+                    </span>
+                    <span className="font-bold text-slate-100">
+                      Team A <span className="font-mono text-amber-400 font-black text-sm px-1">{item.score?.teamA ?? 0}</span> – <span className="font-mono text-amber-400 font-black text-sm px-1">{item.score?.teamB ?? 0}</span> Team B
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-2 text-[10px] text-slate-400 font-semibold">
+                    <span>{item.isFinal ? '🏆 Final Result Published' : `Updated by ${item.updatedBy || 'Host'}`}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Status Alert Banner if Waitlisted */}
         {isWaitlisted && (
           <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center justify-between">
@@ -408,50 +522,62 @@ export const GameDetailsPage = () => {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {game.status !== 'ONGOING' && game.status !== 'COMPLETED' && (
-                  <Button variant="primary" size="sm" icon={Play} onClick={handleStartMatch}>
-                    Start Match (Set ONGOING)
-                  </Button>
-                )}
+                {isGameCompleted ? (
+                  <>
+                    <Link to="/history">
+                      <Button variant="emerald" size="sm" icon={Trophy}>
+                        🏆 View in Match History
+                      </Button>
+                    </Link>
 
-                {game.status === 'COMPLETED' && game.score ? (
-                  <Link to="/history">
-                    <Button variant="emerald" size="sm" icon={Trophy}>
-                      🏆 View in Match History
-                    </Button>
-                  </Link>
+                    {canUploadVideo && (
+                      <Button variant="outline" size="sm" icon={Plus} onClick={() => setIsVideoModalOpen(true)}>
+                        Link Match Video Reference
+                      </Button>
+                    )}
+                  </>
                 ) : (
-                  <Button variant="emerald" size="sm" icon={CheckCircle} onClick={handleOpenScoreModal}>
-                    🏁 Enter Score & Finish Match
-                  </Button>
+                  <>
+                    {game.status !== 'ONGOING' && (
+                      <Button variant="primary" size="sm" icon={Play} onClick={handleStartMatch}>
+                        Start Match (Set ONGOING)
+                      </Button>
+                    )}
+
+                    <Button variant="emerald" size="sm" icon={CheckCircle} onClick={handleOpenScoreModal}>
+                      🏁 Enter Score & Finish Match
+                    </Button>
+
+                    <Button variant="gold" size="sm" icon={Trophy} onClick={handleOpenLiveScoreModal}>
+                      🏆 Record Live Score
+                    </Button>
+
+                    <Button variant="outline" size="sm" icon={Edit2} onClick={handleOpenEditModal} className="border-sky-500/40 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10">
+                      Edit Game Details
+                    </Button>
+
+                    {canUploadVideo && (
+                      <Button variant="outline" size="sm" icon={Plus} onClick={() => setIsVideoModalOpen(true)}>
+                        Link Match Video Reference
+                      </Button>
+                    )}
+
+                    <Button 
+                      variant="danger" 
+                      size="sm" 
+                      icon={Trash2} 
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to cancel and remove game session "${game.title}"?`)) {
+                          removeGame(game.id, 'Cancelled by venue manager');
+                          toast.success(`Game session "${game.title}" removed!`);
+                          navigate('/games');
+                        }
+                      }}
+                    >
+                      Cancel & Remove Session
+                    </Button>
+                  </>
                 )}
-
-                <Button variant="gold" size="sm" icon={Trophy} onClick={handleOpenScoreModal}>
-                  {game.score ? 'Edit / Update Match Score' : 'Record Live Score & Result'}
-                </Button>
-
-                <Button variant="outline" size="sm" icon={Edit2} onClick={handleOpenEditModal} className="border-sky-500/40 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10">
-                  Edit Game Details
-                </Button>
-
-                <Button variant="outline" size="sm" icon={Plus} onClick={() => setIsVideoModalOpen(true)}>
-                  Link Match Video Reference
-                </Button>
-
-                <Button 
-                  variant="danger" 
-                  size="sm" 
-                  icon={Trash2} 
-                  onClick={() => {
-                    if (window.confirm(`Are you sure you want to cancel and remove game session "${game.title}"?`)) {
-                      removeGame(game.id, 'Cancelled by venue manager');
-                      toast.success(`Game session "${game.title}" removed!`);
-                      navigate('/games');
-                    }
-                  }}
-                >
-                  Cancel & Remove Session
-                </Button>
               </div>
             </div>
           )}
@@ -463,7 +589,12 @@ export const GameDetailsPage = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              {currentUser?.role === 'CLUB_MANAGER' ? (
+              {isGameCompleted ? (
+                <div className="px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-extrabold text-xs flex items-center space-x-2 shadow-inner">
+                  <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span>🔒 MATCH COMPLETED — ROSTER & LINEUPS ARE PERMANENTLY LOCKED</span>
+                </div>
+              ) : currentUser?.role === 'CLUB_MANAGER' ? (
                 <div className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-extrabold text-xs flex items-center space-x-2">
                   <Shield className="w-4 h-4" />
                   <span>Club Managers cannot join games as players or occupy player slots</span>
@@ -478,7 +609,6 @@ export const GameDetailsPage = () => {
                   size="md"
                   icon={CheckCircle}
                   onClick={handleOpenPaymentModal}
-                  disabled={game.status === 'COMPLETED'}
                 >
                   {isFull ? `Join Waitlist (₹${game.entryFee})` : `Join Game (₹${game.entryFee})`}
                 </Button>
@@ -505,7 +635,9 @@ export const GameDetailsPage = () => {
                 <Badge variant="blue" size="sm">{teamAPlayers.length} / {teamCapacity} Players</Badge>
               </div>
               
-              {currentUser && currentUser.role !== 'CLUB_MANAGER' && (
+              {isGameCompleted ? (
+                <Badge variant="default" size="sm">🔒 Locked</Badge>
+              ) : currentUser && currentUser.role !== 'CLUB_MANAGER' && (
                 isConfirmed ? (
                   teamBPlayers.some(p => p.id === currentUser.id) && teamAPlayers.length < teamCapacity && (
                     <button
@@ -560,7 +692,9 @@ export const GameDetailsPage = () => {
                 <Badge variant="danger" size="sm">{teamBPlayers.length} / {teamCapacity} Players</Badge>
               </div>
 
-              {currentUser && currentUser.role !== 'CLUB_MANAGER' && (
+              {isGameCompleted ? (
+                <Badge variant="default" size="sm">🔒 Locked</Badge>
+              ) : currentUser && currentUser.role !== 'CLUB_MANAGER' && (
                 isConfirmed ? (
                   teamAPlayers.some(p => p.id === currentUser.id) && teamBPlayers.length < teamCapacity && (
                     <button
@@ -608,30 +742,35 @@ export const GameDetailsPage = () => {
         </div>
       </div>
 
-      {/* MATCH VIDEO PLAYER SECTION */}
-      {matchVideo && (
-        <div className="footy-card p-6 space-y-4">
+      {linkedVideos.length > 0 && (
+        <div className="footy-card p-6 space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase flex items-center space-x-2">
               <Film className="w-5 h-5 text-sky-500" />
-              <span>Official Match Video Highlights</span>
+              <span>Official Match Video Highlights {linkedVideos.length > 1 ? `(${linkedVideos.length} Videos)` : ''}</span>
             </h3>
-            <Badge variant="emerald" size="sm">{matchVideo.videoStatus}</Badge>
+            <Badge variant="emerald" size="sm">{linkedVideos[0].videoStatus || 'AVAILABLE'}</Badge>
           </div>
 
-          <div className="rounded-2xl overflow-hidden bg-slate-950 aspect-video relative flex items-center justify-center border border-slate-800">
-            <video
-              src={matchVideo.videoUrl}
-              controls
-              className="w-full h-full object-cover"
-              poster="/src/assets/images/courts/court-1.jpg"
-            />
-          </div>
+          <div className="space-y-6">
+            {linkedVideos.map((videoItem, vIdx) => (
+              <div key={videoItem.id || vIdx} className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                <div className="rounded-2xl overflow-hidden bg-slate-950 aspect-video relative flex items-center justify-center border border-slate-800">
+                  <video
+                    src={videoItem.videoUrl}
+                    controls
+                    className="w-full h-full object-cover"
+                    poster="/src/assets/images/courts/court-1.jpg"
+                  />
+                </div>
 
-          <div className="space-y-1 text-xs">
-            <h4 className="font-extrabold text-slate-900 dark:text-white">{matchVideo.title}</h4>
-            <p className="text-slate-400 font-semibold">{matchVideo.description}</p>
-            <span className="text-[10px] font-bold text-slate-500 block pt-1">Uploaded by: {matchVideo.uploadedBy} • {matchVideo.uploadDate}</span>
+                <div className="space-y-1 text-xs">
+                  <h4 className="font-extrabold text-slate-900 dark:text-white">{videoItem.title}</h4>
+                  <p className="text-slate-400 font-semibold">{videoItem.description}</p>
+                  <span className="text-[10px] font-bold text-slate-500 block pt-1">Uploaded by: {videoItem.uploadedBy} • {videoItem.uploadDate}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -731,36 +870,36 @@ export const GameDetailsPage = () => {
         </form>
       </Modal>
 
-      {/* Enter Match Score Modal */}
-      <Modal isOpen={isScoreModalOpen} onClose={() => setIsScoreModalOpen(false)} title="Record Match Outcome & Recalculate Elo">
+      {/* Enter Final Score & Finish Match Modal */}
+      <Modal isOpen={isScoreModalOpen} onClose={() => setIsScoreModalOpen(false)} title="🏁 Enter Final Score & Finish Match">
         <form onSubmit={handleSubmitScore} className="space-y-4 text-xs font-bold">
-          <p className="text-slate-400 font-semibold">
-            Entering the final score will trigger standard Elo rating calculations (K=32 factor) for all confirmed players and update match status to COMPLETED.
-          </p>
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-semibold">
+            🏆 <strong>FINAL RESULT SUBMISSION:</strong> Entering the final score will mark the match as <strong>COMPLETED</strong>, trigger standard Elo rating calculations (K=32 factor) for all confirmed players, and move the match into <strong>Match History</strong>.
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-700 dark:text-slate-300 mb-1">Team A Goals</label>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">Team A Final Goals</label>
               <input
                 type="number"
                 min="0"
                 max="99"
-                placeholder=""
+                placeholder="0"
                 value={scoreTeamA}
                 onChange={(e) => setScoreTeamA(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-lg font-black text-center"
+                className="w-full px-3 py-2 rounded-xl border border-amber-500/40 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xl font-black text-center"
               />
             </div>
             <div>
-              <label className="block text-slate-700 dark:text-slate-300 mb-1">Team B Goals</label>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">Team B Final Goals</label>
               <input
                 type="number"
                 min="0"
                 max="99"
-                placeholder=""
+                placeholder="0"
                 value={scoreTeamB}
                 onChange={(e) => setScoreTeamB(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-lg font-black text-center"
+                className="w-full px-3 py-2 rounded-xl border border-amber-500/40 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xl font-black text-center"
               />
             </div>
           </div>
@@ -769,8 +908,53 @@ export const GameDetailsPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsScoreModalOpen(false)}>
               Cancel
             </Button>
+            <Button type="submit" variant="emerald" size="sm">
+              🏁 Finish Match & Publish Final Score
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Record Live Score Modal (Screen Display Only) */}
+      <Modal isOpen={isLiveScoreModalOpen} onClose={() => setIsLiveScoreModalOpen(false)} title="🔴 Record Live Score (Screen Only)">
+        <form onSubmit={handleSubmitLiveScore} className="space-y-4 text-xs font-bold">
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 font-semibold">
+            ⚡ <strong>SCREEN SCORE ONLY:</strong> Live score updates the on-screen display for spectators & players. It will <strong>NOT</strong> mark the match as Completed, will <strong>NOT</strong> calculate Elo, and will <strong>NOT</strong> move it to Match History until you submit via "Enter Score & Finish Match".
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">Team A Live Goals</label>
+              <input
+                type="number"
+                min="0"
+                max="99"
+                placeholder="0"
+                value={liveScoreTeamA}
+                onChange={(e) => setLiveScoreTeamA(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-rose-500/40 bg-white dark:bg-slate-900 text-rose-500 text-xl font-black text-center"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">Team B Live Goals</label>
+              <input
+                type="number"
+                min="0"
+                max="99"
+                placeholder="0"
+                value={liveScoreTeamB}
+                onChange={(e) => setLiveScoreTeamB(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-rose-500/40 bg-white dark:bg-slate-900 text-rose-500 text-xl font-black text-center"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsLiveScoreModalOpen(false)}>
+              Cancel
+            </Button>
             <Button type="submit" variant="gold" size="sm">
-              Confirm Score & Publish Result
+              🔴 Update Live Screen Score
             </Button>
           </div>
         </form>
