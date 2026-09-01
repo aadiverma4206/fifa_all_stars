@@ -16,8 +16,8 @@ export const GameDetailsPage = () => {
   const { games, gameVideos, joinGame, leaveGame, submitGameScore, updateGameLifecycle, addGameVideo, switchPlayerTeam, updateGameDetails, removeGame } = useDataStore();
   const { currentUser, updateWallet, usersList, setCurrentUser } = useAuthStore();
 
-  const [scoreTeamA, setScoreTeamA] = useState('3');
-  const [scoreTeamB, setScoreTeamB] = useState('2');
+  const [scoreTeamA, setScoreTeamA] = useState('');
+  const [scoreTeamB, setScoreTeamB] = useState('');
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -168,8 +168,35 @@ export const GameDetailsPage = () => {
     updateGameLifecycle(game.id, 'ONGOING');
   };
 
+  const handleCompleteGame = () => {
+    if (game.status !== 'COMPLETED') {
+      updateGameLifecycle(game.id, 'COMPLETED');
+      toast.success(`Match "${game.title}" marked as COMPLETED & moved to Match History!`);
+    }
+    if (!game.score) {
+      handleOpenScoreModal();
+    }
+  };
+
+  const handleOpenScoreModal = () => {
+    if (game?.score) {
+      setScoreTeamA(game.score.teamA !== undefined ? String(game.score.teamA) : '');
+      setScoreTeamB(game.score.teamB !== undefined ? String(game.score.teamB) : '');
+    } else {
+      setScoreTeamA('');
+      setScoreTeamB('');
+    }
+    setIsScoreModalOpen(true);
+  };
+
   const handleSubmitScore = (e) => {
     e.preventDefault();
+
+    if (scoreTeamA === '' || scoreTeamA === null || scoreTeamB === '' || scoreTeamB === null) {
+      toast.error('Please enter goals for both Team A and Team B.');
+      return;
+    }
+
     const scoreA = parseInt(scoreTeamA, 10);
     const scoreB = parseInt(scoreTeamB, 10);
 
@@ -184,8 +211,10 @@ export const GameDetailsPage = () => {
     }
 
     submitGameScore(game.id, { teamAScore: scoreA, teamBScore: scoreB }, usersList, (updatedUsers) => {
-      const myUpdated = updatedUsers.find(u => u.id === currentUser.id);
-      if (myUpdated) setCurrentUser(myUpdated);
+      if (currentUser?.id) {
+        const myUpdated = updatedUsers?.find(u => u.id === currentUser.id);
+        if (myUpdated) setCurrentUser(myUpdated);
+      }
     });
 
     setIsScoreModalOpen(false);
@@ -287,36 +316,71 @@ export const GameDetailsPage = () => {
         </div>
 
         {/* Scoreboard if Completed or Score Recorded */}
-        {game.score && (
-          <div className="p-6 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-950 to-slate-900 text-white space-y-3 border border-amber-500/30 text-center shadow-xl relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-            
-            <div className="flex items-center justify-center space-x-2">
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-black uppercase text-amber-400 tracking-widest">OFFICIAL MATCH SCORE RESULT</span>
-            </div>
+        {game.score && (() => {
+          const outcomeInfo = (() => {
+            const teamA = parseInt(game.score.teamA, 10);
+            const teamB = parseInt(game.score.teamB, 10);
+            const isDraw = teamA === teamB;
+            const teamAWon = teamA > teamB;
 
-            <div className="flex items-center justify-center space-x-8 py-2">
-              <div className="text-center">
-                <span className="text-xs font-extrabold text-slate-400 block uppercase mb-1">TEAM A</span>
-                <span className="text-5xl font-black text-white">{game.score.teamA}</span>
-              </div>
-              <div className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700">
-                <span className="text-xl font-black text-amber-500">VS</span>
-              </div>
-              <div className="text-center">
-                <span className="text-xs font-extrabold text-slate-400 block uppercase mb-1">TEAM B</span>
-                <span className="text-5xl font-black text-white">{game.score.teamB}</span>
-              </div>
-            </div>
+            const playerIndex = confirmedPlayers.findIndex(p => p.id === currentUser?.id);
+            if (currentUser && playerIndex !== -1) {
+              const playerObj = confirmedPlayers[playerIndex];
+              let playerTeam = playerObj.team;
+              if (!playerTeam) {
+                playerTeam = playerIndex < teamCapacity ? 'TEAM_A' : 'TEAM_B';
+              }
 
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black">
-              <span>🏆 WINNER: {game.score.teamA > game.score.teamB ? 'TEAM A' : (game.score.teamA === game.score.teamB ? 'DRAW' : 'TEAM B')}</span>
-              <span>•</span>
-              <span>⚡ Elo Recalculated</span>
+              if (isDraw) return { text: '🤝 RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
+              
+              const won = (playerTeam === 'TEAM_A' && teamAWon) || (playerTeam === 'TEAM_B' && !teamAWon);
+              if (won) {
+                return { text: '🎉 VICTORY! YOU WON THIS MATCH', color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10' };
+              } else {
+                return { text: '❌ DEFEAT: YOU LOST THIS MATCH', color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/10' };
+              }
+            }
+
+            if (isDraw) return { text: '🏆 MATCH RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
+            return {
+              text: `🏆 WINNER: ${teamAWon ? 'TEAM A' : 'TEAM B'}`,
+              color: teamAWon ? 'text-sky-400' : 'text-rose-400',
+              border: teamAWon ? 'border-sky-500/30' : 'border-rose-500/30',
+              bg: teamAWon ? 'bg-sky-500/10' : 'bg-rose-500/10'
+            };
+          })();
+
+          return (
+            <div className="p-6 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-950 to-slate-900 text-white space-y-3 border border-amber-500/30 text-center shadow-xl relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="flex items-center justify-center space-x-2">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-black uppercase text-amber-400 tracking-widest">OFFICIAL MATCH SCORE RESULT</span>
+              </div>
+
+              <div className="flex items-center justify-center space-x-8 py-2">
+                <div className="text-center">
+                  <span className="text-xs font-extrabold text-slate-400 block uppercase mb-1">TEAM A</span>
+                  <span className="text-5xl font-black text-white">{game.score.teamA}</span>
+                </div>
+                <div className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700">
+                  <span className="text-xl font-black text-amber-500">VS</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-xs font-extrabold text-slate-400 block uppercase mb-1">TEAM B</span>
+                  <span className="text-5xl font-black text-white">{game.score.teamB}</span>
+                </div>
+              </div>
+
+              <div className={`inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full ${outcomeInfo.bg} border ${outcomeInfo.border} ${outcomeInfo.color} text-xs font-black`}>
+                <span>{outcomeInfo.text}</span>
+                <span>•</span>
+                <span>⚡ Elo Recalculated</span>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Description & Rules */}
         {game.description && (
@@ -356,7 +420,19 @@ export const GameDetailsPage = () => {
                   </Button>
                 )}
 
-                <Button variant="gold" size="sm" icon={Trophy} onClick={() => setIsScoreModalOpen(true)}>
+                {game.status !== 'COMPLETED' ? (
+                  <Button variant="emerald" size="sm" icon={CheckCircle} onClick={handleCompleteGame}>
+                    🏁 Complete & Archive Game
+                  </Button>
+                ) : (
+                  <Link to="/history">
+                    <Button variant="emerald" size="sm" icon={Trophy}>
+                      🏆 View in Match History
+                    </Button>
+                  </Link>
+                )}
+
+                <Button variant="gold" size="sm" icon={Trophy} onClick={handleOpenScoreModal}>
                   {game.score ? 'Edit / Update Match Score' : 'Record Live Score & Result'}
                 </Button>
 
@@ -673,20 +749,24 @@ export const GameDetailsPage = () => {
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Team A Goals</label>
               <input
                 type="number"
+                min="0"
+                max="99"
+                placeholder=""
                 value={scoreTeamA}
                 onChange={(e) => setScoreTeamA(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-lg font-black text-center"
-                required
               />
             </div>
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Team B Goals</label>
               <input
                 type="number"
+                min="0"
+                max="99"
+                placeholder=""
                 value={scoreTeamB}
                 onChange={(e) => setScoreTeamB(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-lg font-black text-center"
-                required
               />
             </div>
           </div>

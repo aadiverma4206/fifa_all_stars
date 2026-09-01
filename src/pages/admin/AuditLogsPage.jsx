@@ -12,44 +12,44 @@ export const AuditLogsPage = () => {
       <AdminNav />
 
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
           Super Admin Live Audit Logs
         </h1>
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
           Read-only, reverse-chronological session history recording role modifications, refund approvals, venue approvals, and dispute overrides
         </p>
       </div>
 
-      <div className="footy-card overflow-hidden">
+      <div className="admin-card rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-semibold">
-            <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-black uppercase text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs font-medium">
+            <thead className="bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="p-4">Timestamp</th>
-                <th className="p-4">Admin Name</th>
-                <th className="p-4">Action</th>
-                <th className="p-4">Target Component</th>
-                <th className="p-4">Log Details</th>
+                <th className="p-3.5">Timestamp</th>
+                <th className="p-3.5">Admin Name</th>
+                <th className="p-3.5">Action</th>
+                <th className="p-3.5">Target Component</th>
+                <th className="p-3.5">Log Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {auditLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="p-4 font-mono text-slate-400 text-[11px] whitespace-nowrap">
+                <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <td className="p-3.5 font-mono text-slate-400 text-[11px] whitespace-nowrap">
                     {log.timestamp}
                   </td>
-                  <td className="p-4 font-black text-amber-500 whitespace-nowrap">
+                  <td className="p-3.5 font-bold text-amber-500 whitespace-nowrap">
                     {log.adminName}
                   </td>
-                  <td className="p-4">
-                    <Badge variant="blue" size="sm">
+                  <td className="p-3.5">
+                    <Badge variant="blue" size="sm" className="rounded-md">
                       {log.action}
                     </Badge>
                   </td>
-                  <td className="p-4 font-extrabold text-slate-900 dark:text-white">
+                  <td className="p-3.5 font-bold text-slate-900 dark:text-white">
                     {log.target}
                   </td>
-                  <td className="p-4 text-slate-600 dark:text-slate-300 font-semibold">
+                  <td className="p-3.5 text-slate-600 dark:text-slate-300 font-medium">
                     {log.details}
                   </td>
                 </tr>

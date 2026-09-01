@@ -85,15 +85,15 @@ export const PlayerHomePage = () => {
   };
 
   return (
-    <div className="space-y-8 py-4 max-w-[1600px] mx-auto overflow-x-hidden">
+    <div className="w-full space-y-6 py-4 overflow-x-hidden">
       
       {/* 1. TOP PLAYER WELCOME & QUICK STATS BAR */}
       <motion.div 
-        initial={{ opacity: 0, y: -10 }}
+        initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
-        className="footy-card p-4 sm:p-6 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white border-slate-800 shadow-xl"
+        className="p-5 sm:p-6 rounded-lg bg-slate-950 text-white border border-slate-800 shadow-md relative overflow-hidden"
       >
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
           
           {/* Welcome User Info */}
           <div className="flex items-center space-x-4">
@@ -102,66 +102,66 @@ export const PlayerHomePage = () => {
               name={currentUser?.name} 
               size="lg" 
               status="active" 
-              className="ring-2 ring-sport-500 shadow-lg"
+              className="rounded-md ring-2 ring-sport-500 shadow-xs"
             />
             <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight uppercase">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight uppercase text-white">
                   Welcome, {currentUser?.name || 'Player'}!
                 </h1>
-                <span className="px-2 py-0.5 rounded-full bg-sport-500/20 text-sport-400 border border-sport-500/30 text-[10px] font-black uppercase">
+                <span className="px-2.5 py-0.5 rounded-md bg-sport-500/20 text-sport-400 border border-sport-500/30 text-[10px] font-bold uppercase">
                   {eloBadge.title}
                 </span>
               </div>
-              <p className="text-xs font-semibold text-slate-400 flex items-center space-x-1.5 mt-0.5">
+              <p className="text-xs font-medium text-slate-400 flex items-center space-x-1.5 mt-0.5">
                 <MapPin className="w-3.5 h-3.5 text-sport-500 flex-shrink-0" />
                 <span>{currentUser?.city || 'Raipur'}, India</span>
-                <span className="text-slate-600">•</span>
-                <span className="text-slate-300 font-extrabold">@{currentUser?.name?.toLowerCase()?.replace(/\s+/g, '') || 'player'}</span>
+                <span className="text-slate-700">•</span>
+                <span className="text-slate-300 font-semibold">@{currentUser?.name?.toLowerCase()?.replace(/\s+/g, '') || 'player'}</span>
               </p>
             </div>
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full xl:w-auto">
             
-            <div className="bg-slate-800/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700/80 flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-black">
+            <div className="bg-slate-900/90 p-3 rounded-md border border-slate-800 flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold">
                 ⚡
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase text-slate-400 block leading-tight">Elo Rating</span>
-                <span className="text-base font-black text-amber-400">{eloRating}</span>
+                <span className="text-[10px] font-semibold uppercase text-slate-400 block leading-tight">Elo Rating</span>
+                <span className="text-sm font-mono font-bold text-amber-400">{eloRating}</span>
               </div>
             </div>
 
-            <div className="bg-slate-800/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700/80 flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-sport-500/10 border border-sport-500/30 flex items-center justify-center text-sport-400">
+            <div className="bg-slate-900/90 p-3 rounded-md border border-slate-800 flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-md bg-sport-500/10 border border-sport-500/30 flex items-center justify-center text-sport-400">
                 <CheckCircle className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase text-slate-400 block leading-tight">Joined</span>
-                <span className="text-base font-black text-white">{myJoinedGames.length} Matches</span>
+                <span className="text-[10px] font-semibold uppercase text-slate-400 block leading-tight">Joined</span>
+                <span className="text-sm font-bold text-white">{myJoinedGames.length} Matches</span>
               </div>
             </div>
 
-            <div className="bg-slate-800/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700/80 flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+            <div className="bg-slate-900/90 p-3 rounded-md border border-slate-800 flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-md bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase text-slate-400 block leading-tight">Clubs</span>
-                <span className="text-base font-black text-white">{currentUser?.clubsJoined?.length || 1}</span>
+                <span className="text-[10px] font-semibold uppercase text-slate-400 block leading-tight">Clubs</span>
+                <span className="text-sm font-bold text-white">{currentUser?.clubsJoined?.length || 1}</span>
               </div>
             </div>
 
-            <div className="bg-slate-800/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700/80 flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="bg-slate-900/90 p-3 rounded-md border border-slate-800 flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <Wallet className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase text-slate-400 block leading-tight">Wallet</span>
-                <span className="text-base font-black text-emerald-400">₹{currentUser?.walletBalance?.toFixed(0) || '250'}</span>
+                <span className="text-[10px] font-semibold uppercase text-slate-400 block leading-tight">Wallet</span>
+                <span className="text-sm font-mono font-bold text-emerald-400">₹{currentUser?.walletBalance?.toFixed(0) || '250'}</span>
               </div>
             </div>
 
@@ -172,28 +172,28 @@ export const PlayerHomePage = () => {
 
 
       {/* 2. CINEMATIC HERO & SEARCH BAR */}
-      <section className="relative rounded-3xl overflow-hidden min-h-[460px] lg:min-h-[500px] flex items-center p-6 sm:p-10 border border-slate-800 shadow-2xl bg-slate-950 text-white">
+      <section className="relative rounded-lg overflow-hidden min-h-[380px] lg:min-h-[420px] flex items-center p-6 sm:p-8 border border-slate-800 shadow-md bg-slate-950 text-white">
         <div className="absolute inset-0 bg-radial from-sport-500/20 via-slate-950/80 to-slate-950" />
         <div className="absolute inset-0 bg-[radial-gradient(#22c55e_1px,transparent_1px)] [background-size:32px_32px] opacity-15 pointer-events-none" />
 
         <div className="relative z-10 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           {/* Left Text & Interactive Search */}
-          <div className="lg:col-span-7 space-y-6 text-left">
+          <div className="lg:col-span-7 space-y-5 text-left">
             
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-sport-500/10 border border-sport-500/30 text-sport-400 text-xs font-black uppercase tracking-widest">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-md bg-sport-500/10 border border-sport-500/30 text-sport-400 text-xs font-bold uppercase tracking-widest">
               <Sparkles className="w-3.5 h-3.5" />
               <span>FIFA ALL STARS MATCHMAKING</span>
             </div>
 
-            <div className="space-y-2">
-              <h2 className="text-3xl sm:text-5xl font-black tracking-tight uppercase leading-none text-white">
+            <div className="space-y-1.5">
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight uppercase leading-none text-white">
                 PLAY. CONNECT. <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-sport-400 via-amber-400 to-sky-400">
                   DOMINATE THE PITCH.
                 </span>
               </h2>
-              <p className="text-xs sm:text-sm font-bold text-slate-300 max-w-xl">
+              <p className="text-xs sm:text-sm font-medium text-slate-300 max-w-xl">
                 Join verified grassroots football matches near you, confirm your roster spot, and rise through the Division Leaderboard.
               </p>
             </div>
@@ -201,21 +201,21 @@ export const PlayerHomePage = () => {
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-3">
               <Link to="/games">
-                <Button variant="primary" size="md" icon={Play} effect="position-aware" className="px-6 shadow-xl shadow-sport-500/30">
+                <Button variant="primary" size="md" icon={Play} rainbowBorder={false} className="rounded-md font-bold text-xs uppercase px-5 py-2.5 shadow-sm">
                   FIND A GAME
                 </Button>
               </Link>
 
               <Link to="/courts">
-                <Button variant="outline" size="md" icon={Compass} effect="corners" className="px-6 border-slate-700 text-white hover:bg-slate-800">
+                <Button variant="outline" size="md" icon={Compass} className="rounded-md font-bold text-xs uppercase px-5 py-2.5 border-slate-700 text-white hover:bg-slate-800">
                   EXPLORE TURFS
                 </Button>
               </Link>
             </div>
 
             {/* Integrated Search Box */}
-            <form onSubmit={handleSearchSubmit} className="bg-slate-900/90 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-slate-800 shadow-2xl space-y-3 max-w-lg">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+            <form onSubmit={handleSearchSubmit} className="bg-slate-900/90 p-3.5 sm:p-4 rounded-md border border-slate-800 shadow-md space-y-3 max-w-xl">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
                 <Search className="w-3.5 h-3.5 text-sport-400" />
                 <span>Search Grassroots Matches Near You</span>
               </span>
@@ -225,7 +225,7 @@ export const PlayerHomePage = () => {
                   <select
                     value={selectedCity}
                     onChange={(e) => setSelectedCity(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-slate-100 font-bold text-xs focus:ring-2 focus:ring-sport-500 focus:outline-none"
+                    className="w-full px-3 py-2 rounded-md border border-slate-800 bg-slate-950 text-slate-100 font-medium text-xs focus:ring-2 focus:ring-sport-500 focus:outline-none"
                   >
                     <option value="">All Cities</option>
                     {citiesList.map((city, idx) => (
@@ -240,13 +240,13 @@ export const PlayerHomePage = () => {
                     placeholder="Search match or venue..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-slate-100 placeholder-slate-500 font-bold text-xs focus:ring-2 focus:ring-sport-500 focus:outline-none"
+                    className="w-full px-3 py-2 rounded-md border border-slate-800 bg-slate-950 text-slate-100 placeholder-slate-500 font-medium text-xs focus:ring-2 focus:ring-sport-500 focus:outline-none"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-sport-500 hover:bg-sport-600 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-sport-500/30 flex items-center justify-center space-x-1"
+                  className="px-5 py-2 rounded-md bg-sport-500 hover:bg-sport-600 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-sm flex items-center justify-center space-x-1 cursor-pointer"
                 >
                   <span>Search</span>
                 </button>
@@ -256,7 +256,7 @@ export const PlayerHomePage = () => {
           </div>
 
           {/* Right 3D Football Scene */}
-          <div className="lg:col-span-5 flex items-center justify-center relative min-h-[280px] sm:min-h-[340px]">
+          <div className="lg:col-span-5 flex items-center justify-center relative min-h-[260px] sm:min-h-[300px]">
             <FootballScene />
           </div>
 
@@ -265,37 +265,37 @@ export const PlayerHomePage = () => {
 
 
       {/* 3. MAIN DASHBOARD CONTENT (2-COLUMN GRID) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT / CENTER COLUMN: MATCH DISCOVERY FEED (8 COLS) */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-4">
           
           {/* Feed Filter Header & Tabs */}
-          <div className="footy-card p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div className="admin-card p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
               
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-xl bg-sport-500/10 text-sport-500 flex items-center justify-center font-black">
-                  <Flame className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-md bg-sport-500/10 text-sport-500 flex items-center justify-center font-bold border border-sport-500/20">
+                  <Flame className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase leading-tight">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
                     Match Discovery Feed
                   </h3>
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                     Showing {displayedGames.length} active pitch sessions
                   </p>
                 </div>
               </div>
 
-              <Link to="/games" className="text-xs font-extrabold text-sport-500 hover:underline flex items-center space-x-1">
+              <Link to="/games" className="text-xs font-bold text-sport-500 hover:underline flex items-center space-x-1">
                 <span>View All Games</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
 
-            {/* Filter Tabs Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-black scrollbar-none">
+            {/* Filter Tabs Ribbon */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-md border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto">
               {[
                 { id: 'all', label: 'All Open Games', count: accessibleGames.length, icon: Flame },
                 { id: 'my_club', label: 'My Club Games', count: myClubGames.length, icon: ShieldCheck },
@@ -308,16 +308,16 @@ export const PlayerHomePage = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveFeedTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl border transition-all flex items-center space-x-2 whitespace-nowrap ${
+                    className={`px-3.5 py-1.5 rounded-sm text-xs font-bold transition-all uppercase whitespace-nowrap flex items-center space-x-2 cursor-pointer ${
                       isActive
-                        ? 'bg-sport-500 text-white border-sport-500 shadow-md shadow-sport-500/20'
-                        : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
                     }`}
                   >
                     <IconComponent className="w-3.5 h-3.5" />
                     <span>{tab.label}</span>
-                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                    <span className={`px-1.5 py-0.5 rounded-xs text-[10px] ${
+                      isActive ? 'bg-white/20 text-white dark:bg-slate-900/20 dark:text-slate-900' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                     }`}>
                       {tab.count}
                     </span>
@@ -335,27 +335,27 @@ export const PlayerHomePage = () => {
               ))}
             </div>
           ) : (
-            <div className="footy-card p-12 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
-                <Search className="w-8 h-8" />
+            <div className="admin-card p-12 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-center space-y-3">
+              <div className="w-12 h-12 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto border border-slate-200 dark:border-slate-700">
+                <Search className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-base font-black text-slate-900 dark:text-white uppercase">
+                <h4 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">
                   No Matches Found
                 </h4>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   There are no matches matching your active filters or search query.
                 </p>
               </div>
               <div className="flex justify-center gap-3 pt-2">
                 <button
                   onClick={() => { setActiveFeedTab('all'); setSelectedCity(''); setSearchQuery(''); }}
-                  className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-extrabold text-xs"
+                  className="px-4 py-2 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs uppercase cursor-pointer"
                 >
                   Reset Filters
                 </button>
                 <Link to="/games">
-                  <Button variant="primary" size="sm">Explore All Matches</Button>
+                  <Button variant="primary" size="sm" className="rounded-md font-bold text-xs uppercase">Explore All Matches</Button>
                 </Link>
               </div>
             </div>
@@ -365,85 +365,86 @@ export const PlayerHomePage = () => {
 
 
         {/* RIGHT COLUMN: PLAYER PROFILE & SIDEBAR WIDGETS (4 COLS) */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-4 space-y-4">
           
           {/* 1. PLAYER PROFILE CARD WIDGET */}
-          <div className="footy-card p-6 space-y-5">
-            <div className="flex items-center space-x-4">
+          <div className="admin-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+            <div className="flex items-center space-x-3.5">
               <Avatar 
                 src={currentUser?.profileImageUrl || currentUser?.avatar} 
                 name={currentUser?.name} 
                 size="lg" 
                 status="active" 
+                className="rounded-md"
               />
               <div className="space-y-1 min-w-0 flex-1">
-                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase leading-tight truncate">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase leading-tight truncate">
                   {currentUser?.name}
                 </h3>
-                <span className="text-xs font-bold text-slate-400 block truncate">
+                <span className="text-xs font-medium text-slate-400 block truncate">
                   @{currentUser?.name?.toLowerCase()?.replace(/\s+/g, '') || 'player'}
                 </span>
-                <span className="inline-block px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[10px] font-black uppercase">
+                <span className="inline-block px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-bold uppercase">
                   {eloBadge.title} ({eloRating} ELO)
                 </span>
               </div>
             </div>
 
-            <div className="space-y-2 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs font-semibold">
-              <div className="flex justify-between text-slate-600 dark:text-slate-300">
+            <div className="space-y-2 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs font-medium">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>📍 Location</span>
-                <span className="font-extrabold text-slate-900 dark:text-white">{currentUser?.city || 'Raipur'}, India</span>
+                <span className="font-bold text-slate-900 dark:text-white">{currentUser?.city || 'Raipur'}, India</span>
               </div>
-              <div className="flex justify-between text-slate-600 dark:text-slate-300">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>⚽ Games Joined</span>
-                <span className="font-extrabold text-sport-500">{myJoinedGames.length}</span>
+                <span className="font-bold text-sport-500">{myJoinedGames.length}</span>
               </div>
-              <div className="flex justify-between text-slate-600 dark:text-slate-300">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>🛡️ Clubs Joined</span>
-                <span className="font-extrabold text-slate-900 dark:text-white">{currentUser?.clubsJoined?.length || 1}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{currentUser?.clubsJoined?.length || 1}</span>
               </div>
             </div>
 
             <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase text-slate-400 block">Wallet Balance</span>
-                <span className="text-xl font-black text-amber-500">₹{currentUser?.walletBalance?.toFixed(2) || '250.00'}</span>
+                <span className="text-[10px] font-bold uppercase text-slate-400 block">Wallet Balance</span>
+                <span className="text-lg font-mono font-bold text-amber-500">₹{currentUser?.walletBalance?.toFixed(2) || '250.00'}</span>
               </div>
               <Link to="/profile">
-                <Button variant="gold" size="sm" effect="collision">Profile & Wallet</Button>
+                <Button variant="gold" size="sm" className="rounded-md font-bold text-xs uppercase">Profile & Wallet</Button>
               </Link>
             </div>
           </div>
 
           {/* 2. UPCOMING MATCH REMINDER WIDGET */}
           {nextMatch && (
-            <div className="footy-card p-5 space-y-3 bg-gradient-to-br from-sport-500/10 via-slate-900 to-slate-950 border-sport-500/30 text-white">
+            <div className="admin-card p-5 rounded-lg border border-slate-800 bg-slate-950 text-white shadow-sm space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase text-sport-400 flex items-center space-x-1.5">
+                <span className="text-xs font-bold uppercase text-sport-400 flex items-center space-x-1.5">
                   <Calendar className="w-4 h-4 text-sport-400" />
                   <span>Next Upcoming Match</span>
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-sport-500 text-white text-[10px] font-black uppercase">
+                <Badge variant="emerald" size="sm" className="rounded-md">
                   CONFIRMED
-                </span>
+                </Badge>
               </div>
 
               <div className="space-y-1">
-                <h4 className="text-sm font-black text-white line-clamp-1">
+                <h4 className="text-sm font-bold text-white truncate">
                   {nextMatch.title}
                 </h4>
-                <p className="text-xs font-semibold text-slate-300 flex items-center space-x-1">
-                  <MapPin className="w-3 h-3 text-sport-400 flex-shrink-0" />
+                <p className="text-xs font-medium text-slate-300 flex items-center space-x-1">
+                  <MapPin className="w-3.5 h-3.5 text-sport-400 flex-shrink-0" />
                   <span className="truncate">{nextMatch.venueReference?.clubName || 'Bernabeu Arena'}</span>
                 </p>
               </div>
 
-              <div className="flex items-center justify-between text-xs font-bold pt-2 border-t border-slate-800 text-slate-300">
+              <div className="flex items-center justify-between text-xs font-medium pt-2 border-t border-slate-800 text-slate-300">
                 <div className="flex items-center space-x-1">
                   <Clock className="w-3.5 h-3.5 text-sport-400" />
                   <span>{nextMatch.dateTime?.date} • {nextMatch.dateTime?.startTime}</span>
                 </div>
-                <Link to={`/games/${nextMatch.id}`} className="text-sport-400 hover:underline text-xs font-black">
+                <Link to={`/games/${nextMatch.id}`} className="text-sport-400 hover:underline text-xs font-bold">
                   Match Details →
                 </Link>
               </div>
@@ -451,13 +452,13 @@ export const PlayerHomePage = () => {
           )}
 
           {/* 3. RECENT NOTIFICATIONS WIDGET */}
-          <div className="footy-card p-5 space-y-4">
+          <div className="admin-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black uppercase text-slate-900 dark:text-white flex items-center space-x-1.5">
+              <span className="text-xs font-bold uppercase text-slate-900 dark:text-white flex items-center space-x-1.5">
                 <Bell className="w-4 h-4 text-sport-500" />
                 <span>Recent Activity</span>
               </span>
-              <span className="text-[10px] font-bold text-slate-400">
+              <span className="text-[10px] font-semibold text-slate-400">
                 {userNotifs.length} Alerts
               </span>
             </div>
@@ -468,41 +469,41 @@ export const PlayerHomePage = () => {
                   <div
                     key={n.id}
                     onClick={() => { markNotificationRead(n.id); if (n.linkUrl) navigate(n.linkUrl); }}
-                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-sport-500/50 cursor-pointer transition-all space-y-1"
+                    className="p-3 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-sport-500/50 cursor-pointer transition-colors space-y-1"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-black text-slate-900 dark:text-white text-xs line-clamp-1">{n.title}</span>
-                      <span className="text-[9px] font-bold text-slate-400 flex-shrink-0">{n.date}</span>
+                      <span className="font-bold text-slate-900 dark:text-white text-xs line-clamp-1">{n.title}</span>
+                      <span className="text-[9px] font-medium text-slate-400 flex-shrink-0">{n.date}</span>
                     </div>
-                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 line-clamp-2">{n.message}</p>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 line-clamp-2">{n.message}</p>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-slate-400 italic text-center py-4">No recent notifications</p>
+                <p className="text-xs text-slate-400 font-medium italic text-center py-4">No recent notifications</p>
               )}
             </div>
           </div>
 
           {/* 4. NEARBY FEATURED PITCH TURFS */}
-          <div className="footy-card p-5 space-y-4">
+          <div className="admin-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black uppercase text-slate-900 dark:text-white flex items-center space-x-1.5">
+              <span className="text-xs font-bold uppercase text-slate-900 dark:text-white flex items-center space-x-1.5">
                 <Compass className="w-4 h-4 text-sport-500" />
                 <span>Top Nearby Turfs</span>
               </span>
-              <Link to="/courts" className="text-[11px] font-extrabold text-sport-500 hover:underline">
+              <Link to="/courts" className="text-[11px] font-bold text-sport-500 hover:underline">
                 View All
               </Link>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {topClubs.map(club => (
-                <div key={club.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                <div key={club.id} className="flex items-center justify-between p-3 rounded-md bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                   <div className="space-y-0.5 min-w-0 flex-1 pr-2">
-                    <h5 className="text-xs font-black text-slate-900 dark:text-white truncate">
+                    <h5 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                       {club.name}
                     </h5>
-                    <p className="text-[10px] font-semibold text-slate-400 flex items-center space-x-1 truncate">
+                    <p className="text-[10px] font-medium text-slate-400 flex items-center space-x-1 truncate">
                       <MapPin className="w-3 h-3 text-sport-500 flex-shrink-0" />
                       <span>{club.city || 'Raipur'}</span>
                       <span>•</span>
@@ -510,7 +511,7 @@ export const PlayerHomePage = () => {
                     </p>
                   </div>
                   <Link to={`/courts/book/${club.id || 'crt_rp_101'}`}>
-                    <Button variant="outline" size="sm" effect="swipe" className="text-[11px] px-2.5 py-1">
+                    <Button variant="outline" size="sm" className="rounded-md text-[11px] px-2.5 py-1 border-slate-300 dark:border-slate-700">
                       Book
                     </Button>
                   </Link>

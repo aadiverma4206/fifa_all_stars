@@ -676,7 +676,17 @@ export const useDataStore = create(
     const game = games.find(g => g.id === gameId);
     if (!game) return;
 
-    const { teamAScore, teamBScore } = scoreData;
+    let teamAScore = 0;
+    let teamBScore = 0;
+
+    if (typeof scoreData === 'object' && scoreData !== null) {
+      teamAScore = parseInt(scoreData.teamAScore ?? scoreData.teamA ?? 0, 10);
+      teamBScore = parseInt(scoreData.teamBScore ?? scoreData.teamB ?? 0, 10);
+    } else {
+      teamAScore = parseInt(scoreData, 10) || 0;
+      teamBScore = parseInt(usersList, 10) || 0;
+    }
+
     const isTeamAWin = teamAScore > teamBScore;
     const isDraw = teamAScore === teamBScore;
 
@@ -687,7 +697,7 @@ export const useDataStore = create(
     const avgEloA = teamA.reduce((sum, p) => sum + (p.elo || 1500), 0) / (teamA.length || 1);
     const avgEloB = teamB.reduce((sum, p) => sum + (p.elo || 1500), 0) / (teamB.length || 1);
 
-    if (updateUsersListFn && usersList) {
+    if (updateUsersListFn && typeof updateUsersListFn === 'function' && Array.isArray(usersList)) {
       const updatedUsers = usersList.map(u => {
         const inA = teamA.some(p => p.id === u.id);
         const inB = teamB.some(p => p.id === u.id);
@@ -835,3 +845,16 @@ export const useDataStore = create(
     }
   )
 );
+
+// Cross-tab Synchronization Event Listener for Real-time Data Sharing
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'fifa_all_stars_data_storage') {
+      try {
+        useDataStore.persist.rehydrate();
+      } catch (err) {
+        console.error('Error rehydrating data store across tabs:', err);
+      }
+    }
+  });
+}

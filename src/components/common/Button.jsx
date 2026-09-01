@@ -13,6 +13,7 @@ export const Button = ({
   rainbowBorder = true,
   effect,
   onClick,
+  loadingText,
   ...props
 }) => {
   const buttonRef = useRef(null);
@@ -86,29 +87,36 @@ export const Button = ({
   };
 
   return (
-    <button
-      ref={buttonRef}
-      disabled={disabled || showLoading}
-      className={clsx(baseStyles, variants[variant], sizes[size], className)}
-      onClick={handleClick}
-      {...props}
-    >
-      {hasRainbowBorder && (
-        <>
-          <span className="btn-border-top"    aria-hidden="true" />
-          <span className="btn-border-right"  aria-hidden="true" />
-          <span className="btn-border-bottom" aria-hidden="true" />
-          <span className="btn-border-left"   aria-hidden="true" />
-        </>
-      )}
+    <>
+      <button
+        ref={buttonRef}
+        disabled={disabled || showLoading}
+        className={clsx(baseStyles, variants[variant], sizes[size], className)}
+        onClick={handleClick}
+        {...props}
+      >
+        {hasRainbowBorder && (
+          <>
+            <span className="btn-border-top"    aria-hidden="true" />
+            <span className="btn-border-right"  aria-hidden="true" />
+            <span className="btn-border-bottom" aria-hidden="true" />
+            <span className="btn-border-left"   aria-hidden="true" />
+          </>
+        )}
 
-      {showLoading ? (
-        <FootballKickLoader size="sm" inline={true} />
-      ) : Icon ? (
-        <Icon className="w-4 h-4 flex-shrink-0 relative z-10 pointer-events-none" />
-      ) : null}
-      <span className="relative z-10 pointer-events-none">{children}</span>
-    </button>
+        {showLoading ? (
+          <FootballKickLoader size="sm" inline={true} />
+        ) : Icon ? (
+          <Icon className="w-4 h-4 flex-shrink-0 relative z-10 pointer-events-none" />
+        ) : null}
+        <span className="relative z-10 pointer-events-none">{children}</span>
+      </button>
+
+      {/* Screen-centered Football Kick animation with 3% (3px) backdrop blur */}
+      {showLoading && (
+        <FootballKickLoader fullScreen={true} size="lg" text={loadingText || "Processing Football Action..."} />
+      )}
+    </>
   );
 };
 

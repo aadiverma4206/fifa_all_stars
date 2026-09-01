@@ -32,43 +32,43 @@ export const DisputesPage = () => {
       <AdminNav />
 
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
           Match Disputes & Result Overrides
         </h1>
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
           Review disputed pick-up games, override match winners, and adjust player Elo ratings
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {disputes.map((dsp) => {
           const isResolved = dsp.status === 'RESOLVED';
 
           return (
-            <div key={dsp.id} className="footy-card p-6 space-y-4">
+            <div key={dsp.id} className="admin-card p-5 rounded-lg space-y-3">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white">{dsp.gameTitle}</h3>
-                    <Badge variant={isResolved ? 'emerald' : 'danger'} size="sm">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{dsp.gameTitle}</h3>
+                    <Badge variant={isResolved ? 'emerald' : 'danger'} size="sm" className="rounded-md">
                       {dsp.status}
                     </Badge>
                   </div>
-                  <p className="text-xs font-semibold text-slate-400">
-                    Reported by: <span className="text-sport-500 font-extrabold">{dsp.reportedBy}</span> • Date: {dsp.createdAt}
+                  <p className="text-xs font-medium text-slate-400">
+                    Reported by: <span className="text-sport-500 font-semibold">{dsp.reportedBy}</span> • Date: {dsp.createdAt}
                   </p>
-                  <p className="text-xs text-rose-500 font-bold pt-1">
+                  <p className="text-xs text-rose-500 font-semibold pt-1">
                     Dispute Reason: "{dsp.reason}" (Claimed score: {dsp.disputedScore})
                   </p>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   {!isResolved ? (
-                    <Button variant="primary" size="sm" icon={CheckCircle2} onClick={() => handleOpenResolve(dsp)}>
+                    <Button variant="primary" size="sm" icon={CheckCircle2} onClick={() => handleOpenResolve(dsp)} className="rounded-md text-xs font-semibold">
                       Resolve Dispute
                     </Button>
                   ) : (
-                    <Badge variant="emerald" size="sm">
+                    <Badge variant="emerald" size="sm" className="rounded-md">
                       Winner: {dsp.winnerOverride} (Resolved)
                     </Badge>
                   )}

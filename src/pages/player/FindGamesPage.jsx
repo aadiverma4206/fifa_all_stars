@@ -62,16 +62,19 @@ export const FindGamesPage = () => {
     }
   };
 
+  const [viewTab, setViewTab] = useState('active');
+
   const dateTabs = dynamicDateTabs;
 
   const filteredGames = games.filter(g => {
+    const matchesTab = viewTab === 'history' ? g.status === 'COMPLETED' : g.status !== 'COMPLETED';
     const matchesFormat = selectedFormat === 'all' || g.format === selectedFormat;
     const matchesType = selectedType === 'all' || g.venueReference?.city?.toLowerCase() === selectedType.toLowerCase();
     const matchesDate = activeDate === 'all' || g.dateTime?.date === activeDate;
     const matchesSearch = !searchQuery.trim() || 
       g.title?.toLowerCase()?.includes(searchQuery.toLowerCase()) || 
       g.venueReference?.clubName?.toLowerCase()?.includes(searchQuery.toLowerCase());
-    return matchesFormat && matchesType && matchesDate && matchesSearch;
+    return matchesTab && matchesFormat && matchesType && matchesDate && matchesSearch;
   });
 
   const handleHostGame = (e) => {
@@ -188,8 +191,34 @@ export const FindGamesPage = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center space-x-3">
+        {/* Action Buttons & History Toggle */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setViewTab('active')}
+              className={`px-3 py-1.5 rounded-md text-xs font-black uppercase transition-all cursor-pointer ${
+                viewTab === 'active' 
+                  ? 'bg-sport-500 text-white shadow-sm' 
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              🟢 Active Games ({games.filter(g => g.status !== 'COMPLETED').length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewTab('history')}
+              className={`px-3 py-1.5 rounded-md text-xs font-black uppercase transition-all cursor-pointer ${
+                viewTab === 'history' 
+                  ? 'bg-amber-500 text-white shadow-sm' 
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              🏆 Match History ({games.filter(g => g.status === 'COMPLETED').length})
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={handleOpenCreateGameModal}

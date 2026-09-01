@@ -275,3 +275,17 @@ export const useAuthStore = create(
     }
   )
 );
+
+// Cross-tab Synchronization Event Listener for Auth State
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'fifa_all_stars_auth_storage') {
+      try {
+        useAuthStore.persist.rehydrate();
+      } catch (err) {
+        console.error('Error rehydrating auth store across tabs:', err);
+      }
+    }
+  });
+}
+
