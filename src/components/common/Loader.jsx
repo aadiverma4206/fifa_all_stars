@@ -1,4 +1,5 @@
 import React from 'react';
+import FootballKickLoader from './FootballKickLoader';
 
 export const SkeletonCard = () => (
   <div className="footy-card p-6 space-y-4 animate-pulse">
@@ -29,7 +30,7 @@ export const SkeletonRow = () => (
   </div>
 );
 
-export const Loader = ({ text = "Loading pitch data...", type = "spinner" }) => {
+export const Loader = ({ text = "Loading pitch data...", type = "spinner", fullScreen = false }) => {
   if (type === "skeleton-grid") {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
@@ -51,15 +52,7 @@ export const Loader = ({ text = "Loading pitch data...", type = "spinner" }) => 
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-12 space-y-4">
-      <div className="relative w-14 h-14">
-        <div className="absolute inset-0 rounded-full border-4 border-sport-500/20 animate-ping" />
-        <div className="w-14 h-14 rounded-full border-4 border-t-sport-500 border-r-sport-500 border-b-transparent border-l-transparent animate-spin" />
-      </div>
-      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wider uppercase animate-pulse">
-        {text}
-      </p>
-    </div>
+    <FootballKickLoader fullScreen={fullScreen} size="lg" text={text} />
   );
 };
 

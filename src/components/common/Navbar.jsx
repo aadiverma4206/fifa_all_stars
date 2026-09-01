@@ -47,21 +47,21 @@ export const Navbar = () => {
           
           {/* Brand Logo */}
           <Link to={currentUser ? homeRedirectRoute : '/'} className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sport-600 to-emerald-400 flex items-center justify-center shadow-md shadow-sport-500/20 group-hover:scale-105 transition-transform">
-              <Trophy className="w-6 h-6 text-white" />
+            <div className="w-9 h-9 rounded-md bg-gradient-to-tr from-sport-600 to-emerald-400 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+              <Trophy className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-xl font-black tracking-wider text-slate-900 dark:text-white uppercase font-sans">
+              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white uppercase font-sans">
                 FIFA <span className="text-sport-500">ALL STARS</span>
               </span>
-              <span className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 tracking-widest -mt-1 uppercase">
+              <span className="block text-[9px] font-semibold text-slate-400 dark:text-slate-500 tracking-widest -mt-1 uppercase">
                 Footy Match Hub
               </span>
             </div>
           </Link>
 
           {/* Navigation Links Generated Strictly from ROLE_OPERATIONS */}
-          <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+          <nav className="hidden md:flex items-center space-x-1 sm:space-x-1.5">
             {currentUser ? (
               roleNavLinks.map((link) => {
                 const active = isActive(link.path);
@@ -69,10 +69,10 @@ export const Navbar = () => {
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`flex items-center space-x-2 px-3.5 py-2 rounded-2xl text-xs font-black uppercase transition-all ${
+                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
                       active
-                        ? 'bg-sport-500/10 text-sport-600 dark:text-sport-400 border border-sport-500/30'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-500/30 font-bold'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                     }`}
                   >
                     <span>{link.label}</span>
@@ -80,12 +80,12 @@ export const Navbar = () => {
                 );
               })
             ) : (
-              <Link to="/" className="px-3.5 py-2 text-xs font-black uppercase text-slate-700 dark:text-slate-200 hover:text-sport-500">Home</Link>
+              <Link to="/" className="px-3.5 py-2 text-xs font-bold uppercase text-slate-700 dark:text-slate-200 hover:text-sport-500">Home</Link>
             )}
           </nav>
 
           {/* Right Actions */}
-          <div className="hidden md:flex items-center space-x-3">
+          <div className="hidden md:flex items-center space-x-2.5">
             
             <ThemeToggle />
 
@@ -93,21 +93,21 @@ export const Navbar = () => {
 
             {currentUser ? (
               <>
-                {/* Data Transparency & Role Badge - Access control starts strictly at Login */}
-                <div className="flex items-center space-x-2 px-3 py-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-black">
+                {/* Data Transparency & Role Badge */}
+                <div className="flex items-center space-x-2 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold">
                   {userRole === 'SUPER_ADMIN' ? (
-                    <span className="flex items-center space-x-1.5 text-amber-500">
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span className="flex items-center space-x-1.5 text-amber-500 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                       <span>🛡️ Super Admin</span>
                     </span>
                   ) : userRole === 'CLUB_MANAGER' ? (
-                    <span className="flex items-center space-x-1.5 text-sky-500">
-                      <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+                    <span className="flex items-center space-x-1.5 text-sky-500 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
                       <span>🏟️ Club Manager</span>
                     </span>
                   ) : (
-                    <span className="flex items-center space-x-1.5 text-emerald-500">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="flex items-center space-x-1.5 text-emerald-500 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                       <span>⚽ Player</span>
                     </span>
                   )}
@@ -115,24 +115,24 @@ export const Navbar = () => {
 
                 {/* Wallet Balance Badge for Players */}
                 {userRole === 'PLAYER' && (
-                  <Link to="/player/profile" className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-black hover:bg-amber-500/20 transition-all">
-                    <Wallet className="w-4 h-4 text-amber-500" />
+                  <Link to="/player/profile" className="flex items-center space-x-1.5 px-3 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold hover:bg-amber-500/20 transition-all">
+                    <Wallet className="w-3.5 h-3.5 text-amber-500" />
                     <span>₹{currentUser?.walletBalance?.toFixed(2)}</span>
                   </Link>
                 )}
 
-                {/* User Profile Dropdown Menu with Data Transparency */}
+                {/* User Profile Dropdown Menu */}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="flex items-center space-x-1.5 focus:outline-none p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    className="flex items-center space-x-1.5 focus:outline-none p-1 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
-                    <Avatar src={currentUser?.profileImageUrl || currentUser?.avatar} name={currentUser?.name} size="sm" status="active" />
+                    <Avatar src={currentUser?.profileImageUrl || currentUser?.avatar} name={currentUser?.name} size="sm" status="active" className="rounded-md" />
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                   </button>
 
                   {profileDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl py-2 z-50 text-xs font-bold space-y-1">
+                    <div className="absolute right-0 mt-2 w-64 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-2 z-50 text-xs font-semibold space-y-1">
                       <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-800">
                         <span className="block font-black text-slate-900 dark:text-white truncate">{currentUser.name}</span>
                         <span className="text-[10px] text-slate-400 block font-semibold truncate">{currentUser.email}</span>

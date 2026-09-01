@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, ChevronDown, ChevronUp, MapPin, Play, Compass, Sparkles, CheckCircle2, Shield } from 'lucide-react';
 import Button from '../../components/common/Button';
+import FootballKickLoader from '../../components/common/FootballKickLoader';
 import FootballScene from '../../components/football3d/FootballScene';
 
 export const LandingPage = () => {
@@ -115,17 +116,17 @@ export const LandingPage = () => {
               </form>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-1 justify-center lg:justify-start">
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-1 justify-center lg:justify-start">
               <Link to="/login" className="w-full sm:w-auto">
                 <Button variant="primary" size="lg" icon={Play} className="w-full sm:w-auto px-6 shadow-xl shadow-sport-500/20 cursor-pointer">
                   Sign In to Play
                 </Button>
               </Link>
-              <Link to="/player/find-games" className="w-full sm:w-auto">
-                <Button variant="outline" size="lg" icon={Compass} className="w-full sm:w-auto px-6 border-slate-700 text-white hover:bg-slate-800 cursor-pointer">
-                  Browse Pick-Up Games
-                </Button>
-              </Link>
+              
+              {/* Football Kick Loading Animation (Without Background) */}
+              <div className="flex items-center justify-center p-1 bg-transparent select-none">
+                <FootballKickLoader size="lg" inline={true} />
+              </div>
             </div>
           </div>
 

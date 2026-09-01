@@ -462,6 +462,10 @@ export const useDataStore = create(
     const targetGame = games.find(g => g.id === gameId);
     if (!targetGame) return { success: false, message: 'Game not found' };
 
+    if (targetGame.status === 'COMPLETED' || (targetGame.score && targetGame.score.teamA !== null)) {
+      return { success: false, message: 'This match is completed! Player entry and roster joins are permanently locked.' };
+    }
+
     const isAlreadyConfirmed = targetGame.confirmedPlayers?.some(p => p.id === player.id);
     const isAlreadyWaitlisted = targetGame.waitlist?.some(p => p.id === player.id);
 
@@ -554,6 +558,10 @@ export const useDataStore = create(
     const targetGame = games.find(g => g.id === gameId);
     if (!targetGame) return { success: false, message: 'Game not found' };
 
+    if (targetGame.status === 'COMPLETED' || (targetGame.score && targetGame.score.teamA !== null)) {
+      return { success: false, message: 'This match is completed! Team lineups are permanently locked.' };
+    }
+
     const maxSlots = targetGame.maxPlayers || 10;
     const teamCap = Math.ceil(maxSlots / 2);
     const targetTeamCount = (targetGame.confirmedPlayers || []).filter(p => p.team === targetTeam).length;
@@ -578,6 +586,11 @@ export const useDataStore = create(
     const games = get().games;
     const targetGame = games.find(g => g.id === gameId);
     if (!targetGame) return;
+
+    if (targetGame.status === 'COMPLETED' || (targetGame.score && targetGame.score.teamA !== null)) {
+      toast.error('This match is completed! Roster is permanently locked.');
+      return;
+    }
 
     const wasConfirmed = targetGame.confirmedPlayers?.some(p => p.id === userId);
     let newConfirmed = targetGame.confirmedPlayers?.filter(p => p.id !== userId) || [];
@@ -671,12 +684,66 @@ export const useDataStore = create(
     return newGame;
   },
 
-  submitGameScore: (gameId, scoreData, usersList, updateUsersListFn) => {
+  updateLiveScore: (gameId, scoreData, updaterName = 'Host/Manager') => {
     const games = get().games;
     const game = games.find(g => g.id === gameId);
     if (!game) return;
 
-    const { teamAScore, teamBScore } = scoreData;
+    let teamAScore = 0;
+    let teamBScore = 0;
+
+    if (typeof scoreData === 'object' && scoreData !== null) {
+      teamAScore = parseInt(scoreData.teamAScore ?? scoreData.teamA ?? 0, 10);
+      teamBScore = parseInt(scoreData.teamBScore ?? scoreData.teamB ?? 0, 10);
+    }
+
+    const historyEntry = {
+      id: `lsh_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      score: { teamA: teamAScore, teamB: teamBScore },
+      updatedBy: updaterName,
+      isFinal: false
+    };
+
+    const newHistory = [historyEntry, ...(game.liveScoreHistory || [])];
+
+    set({
+      games: games.map(g => g.id === gameId ? {
+        ...g,
+        status: g.status === 'COMPLETED' ? 'COMPLETED' : 'ONGOING',
+        liveScore: { teamA: teamAScore, teamB: teamBScore },
+        liveScoreHistory: newHistory
+      } : g)
+    });
+
+    get().addNotification({
+      userId: null,
+      title: `🔴 Live Match Score Updated (${teamAScore} - ${teamBScore})`,
+      message: `Current live score for "${game.title}": Team A ${teamAScore} - ${teamBScore} Team B (Updated at ${historyEntry.time}).`,
+      linkUrl: `/games/${gameId}`,
+      clubId: game.venueReference?.clubId,
+      gameId
+    });
+
+    toast.success(`Live score updated: Team A ${teamAScore} - ${teamBScore} Team B (Log saved at ${historyEntry.time})`);
+  },
+
+  submitGameScore: (gameId, scoreData, usersList, updateUsersListFn, updaterName = 'Host/Manager') => {
+    const games = get().games;
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    let teamAScore = 0;
+    let teamBScore = 0;
+
+    if (typeof scoreData === 'object' && scoreData !== null) {
+      teamAScore = parseInt(scoreData.teamAScore ?? scoreData.teamA ?? 0, 10);
+      teamBScore = parseInt(scoreData.teamBScore ?? scoreData.teamB ?? 0, 10);
+    } else {
+      teamAScore = parseInt(scoreData, 10) || 0;
+      teamBScore = parseInt(usersList, 10) || 0;
+    }
+
     const isTeamAWin = teamAScore > teamBScore;
     const isDraw = teamAScore === teamBScore;
 
@@ -687,7 +754,7 @@ export const useDataStore = create(
     const avgEloA = teamA.reduce((sum, p) => sum + (p.elo || 1500), 0) / (teamA.length || 1);
     const avgEloB = teamB.reduce((sum, p) => sum + (p.elo || 1500), 0) / (teamB.length || 1);
 
-    if (updateUsersListFn && usersList) {
+    if (updateUsersListFn && typeof updateUsersListFn === 'function' && Array.isArray(usersList)) {
       const updatedUsers = usersList.map(u => {
         const inA = teamA.some(p => p.id === u.id);
         const inB = teamB.some(p => p.id === u.id);
@@ -710,11 +777,21 @@ export const useDataStore = create(
       updateUsersListFn(updatedUsers);
     }
 
+    const finalHistoryEntry = {
+      id: `lsh_final_${Date.now()}`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      score: { teamA: teamAScore, teamB: teamBScore },
+      updatedBy: updaterName || 'Final Result Published',
+      isFinal: true
+    };
+
     set({
       games: games.map(g => g.id === gameId ? {
         ...g,
         status: 'COMPLETED',
-        score: { teamA: teamAScore, teamB: teamBScore }
+        score: { teamA: teamAScore, teamB: teamBScore },
+        liveScore: { teamA: teamAScore, teamB: teamBScore },
+        liveScoreHistory: [finalHistoryEntry, ...(g.liveScoreHistory || [])]
       } : g)
     });
 
@@ -835,3 +912,16 @@ export const useDataStore = create(
     }
   )
 );
+
+// Cross-tab Synchronization Event Listener for Real-time Data Sharing
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'fifa_all_stars_data_storage') {
+      try {
+        useDataStore.persist.rehydrate();
+      } catch (err) {
+        console.error('Error rehydrating data store across tabs:', err);
+      }
+    }
+  });
+}

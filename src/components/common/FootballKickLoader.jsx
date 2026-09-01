@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export const FootballKickLoader = ({ size = 'md', text = '', inline = false }) => {
+export const FootballKickLoader = ({ size = 'md', text = '', inline = false, fullScreen = false }) => {
   const sizeDimensions = {
     sm: { bootW: 36, bootH: 20, ballSize: 18, jumpY: -16, font: 'text-[10px]' },
     md: { bootW: 56, bootH: 30, ballSize: 28, jumpY: -26, font: 'text-xs' },
@@ -150,6 +150,16 @@ export const FootballKickLoader = ({ size = 'md', text = '', inline = false }) =
 
     </div>
   );
+
+  if (fullScreen) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 dark:bg-slate-950/30 backdrop-blur-[3px] transition-all duration-300 pointer-events-auto select-none">
+        <div className="p-6 sm:p-8 rounded-3xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/60 dark:border-slate-800/60 shadow-2xl backdrop-blur-md flex flex-col items-center justify-center space-y-3">
+          {content}
+        </div>
+      </div>
+    );
+  }
 
   if (inline) {
     return content;

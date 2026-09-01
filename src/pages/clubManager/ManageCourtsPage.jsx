@@ -51,19 +51,19 @@ export const ManageCourtsPage = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 py-6 max-w-[1700px] w-full mx-auto px-4 sm:px-8 lg:px-10 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
-            <Settings className="w-8 h-8 text-emerald-500" />
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2.5">
+            <Settings className="w-6 h-6 text-sport-500" />
             <span>Courts & Pitches Management</span>
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage pitch formats, surface specifications, and court availability
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+            Manage pitch formats, surface specifications, hourly rates, and court availability
           </p>
         </div>
 
-        <Button variant="primary" size="md" icon={Plus} onClick={() => setIsAddCourtModalOpen(true)}>
+        <Button variant="primary" size="md" icon={Plus} rainbowBorder={false} onClick={() => setIsAddCourtModalOpen(true)} className="rounded-md font-bold text-xs uppercase px-4 py-2.5 shadow-sm">
           Add New Court
         </Button>
       </div>

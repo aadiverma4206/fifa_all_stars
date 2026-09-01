@@ -33,6 +33,7 @@ export const ROLE_OPERATIONS = {
     navItems: [
       { label: "Home", path: "/player/home", icon: "Flame" },
       { label: "Find Games", path: "/player/find-games", icon: "Search" },
+      { label: "Match History", path: "/history", icon: "Trophy" },
       { label: "Turfs & Courts", path: "/player/courts", icon: "MapPin" },
       { label: "Tournaments", path: "/player/tournaments", icon: "Trophy" },
       { label: "My Profile", path: "/player/profile", icon: "User" }

@@ -19,7 +19,7 @@ export const ThemeToggle = ({ className = "" }) => {
       type="button"
       aria-label="Toggle theme mode"
       title={`Current Theme: ${theme.toUpperCase()} (Click to toggle Light / Dark / System)`}
-      className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-all duration-200 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-sport-500 text-xs font-bold ${className}`}
+      className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md transition-colors duration-150 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-sport-500 text-xs font-semibold ${className}`}
     >
       {theme === 'dark' ? (
         <>

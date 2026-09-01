@@ -36,16 +36,16 @@ export const ClubApprovalsPage = () => {
       <AdminNav />
 
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
           Venue & Club Approvals
         </h1>
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
           Review new venue registration requests, approve/reject pitches, and assign general managers
         </p>
       </div>
 
       {/* Clubs List */}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {clubs.map((club) => {
           const isPending = club.status === 'PENDING';
           const managerNames = usersList
@@ -54,39 +54,40 @@ export const ClubApprovalsPage = () => {
             .join(', ') || 'Unassigned';
 
           return (
-            <div key={club.id} className="footy-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div key={club.id} className="admin-card p-5 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
               
               <div className="flex items-start space-x-4">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-800">
+                <div className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-800">
                   <img src={club.clubImageUrl || '/src/assets/images/courts/court-1.jpg'} alt={club.name} className="w-full h-full object-cover" />
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white">{club.name}</h3>
-                    <Badge variant={isPending ? 'gold' : 'emerald'} size="sm">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{club.name}</h3>
+                    <Badge variant={isPending ? 'gold' : 'emerald'} size="sm" className="rounded-md">
                       {club.status || 'ACTIVE'}
                     </Badge>
                   </div>
 
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center space-x-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center space-x-1">
                     <MapPin className="w-3.5 h-3.5 text-sport-500" />
                     <span>{club.address} ({club.city})</span>
                   </p>
 
-                  <p className="text-[11px] text-slate-400 font-bold">
-                    Assigned Manager: <span className="text-sport-500">{managerNames}</span>
+                  <p className="text-[11px] text-slate-400 font-medium">
+                    Assigned Manager: <span className="text-sport-500 font-semibold">{managerNames}</span>
                   </p>
                 </div>
               </div>
 
               {/* Approval Actions */}
-              <div className="flex items-center space-x-3 w-full md:w-auto justify-end pt-3 md:pt-0 border-t md:border-t-0 border-slate-200 dark:border-slate-800">
+              <div className="flex items-center space-x-2.5 w-full md:w-auto justify-end pt-3 md:pt-0 border-t md:border-t-0 border-slate-200 dark:border-slate-800">
                 <Button
                   variant="primary"
                   size="sm"
                   icon={CheckCircle2}
                   onClick={() => handleOpenApproveModal(club)}
+                  className="rounded-md text-xs font-semibold"
                 >
                   Approve & Assign Manager
                 </Button>
@@ -96,6 +97,7 @@ export const ClubApprovalsPage = () => {
                   size="sm"
                   icon={XCircle}
                   onClick={() => rejectClub(club.id, 'Venue fails minimum 3G synthetic standards')}
+                  className="rounded-md text-xs font-semibold"
                 >
                   Reject
                 </Button>

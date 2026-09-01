@@ -23,27 +23,27 @@ export const RefundsPage = () => {
       <AdminNav />
 
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
           Refund Approval & Wallet Reversals
         </h1>
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
           Review player cancellation requests, refund tiers (100% / 50% / 0%), and execute wallet balance reversals
         </p>
       </div>
 
       {/* Refunds Table */}
-      <div className="footy-card overflow-hidden">
+      <div className="admin-card rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-semibold">
-            <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-black uppercase text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs font-medium">
+            <thead className="bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="p-4">Booking Ref</th>
-                <th className="p-4">Player</th>
-                <th className="p-4">Court & Venue</th>
-                <th className="p-4">Refund Tier</th>
-                <th className="p-4">Amount (INR)</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-3.5">Booking Ref</th>
+                <th className="p-3.5">Player</th>
+                <th className="p-3.5">Court & Venue</th>
+                <th className="p-3.5">Refund Tier</th>
+                <th className="p-3.5">Amount (INR)</th>
+                <th className="p-3.5">Status</th>
+                <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -52,37 +52,37 @@ export const RefundsPage = () => {
                   const isPending = b.status === 'REFUND_PENDING' || b.status === 'CANCELLED';
 
                   return (
-                    <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                       
-                      <td className="p-4 font-mono font-black text-slate-900 dark:text-white">
+                      <td className="p-3.5 font-mono font-bold text-slate-900 dark:text-white text-xs">
                         {b.id}
                       </td>
 
-                      <td className="p-4 font-extrabold text-slate-900 dark:text-white">
+                      <td className="p-3.5 font-bold text-slate-900 dark:text-white">
                         {b.userName}
                       </td>
 
-                      <td className="p-4 text-slate-600 dark:text-slate-300">
+                      <td className="p-3.5 text-slate-600 dark:text-slate-300">
                         {b.courtName} ({b.clubName})
                       </td>
 
-                      <td className="p-4">
-                        <Badge variant="gold" size="sm">
+                      <td className="p-3.5">
+                        <Badge variant="gold" size="sm" className="rounded-md">
                           {b.refundTier || '100% Full Tier'}
                         </Badge>
                       </td>
 
-                      <td className="p-4 font-black text-rose-500 text-sm">
+                      <td className="p-3.5 font-bold text-rose-500 text-xs">
                         ₹{b.amountPaid?.toFixed(2)}
                       </td>
 
-                      <td className="p-4">
-                        <Badge variant={b.status === 'REFUNDED' ? 'emerald' : 'danger'} size="sm">
+                      <td className="p-3.5">
+                        <Badge variant={b.status === 'REFUNDED' ? 'emerald' : 'danger'} size="sm" className="rounded-md">
                           {b.status}
                         </Badge>
                       </td>
 
-                      <td className="p-4 text-right space-x-2">
+                      <td className="p-3.5 text-right space-x-2">
                         {isPending ? (
                           <>
                             <Button
@@ -90,6 +90,7 @@ export const RefundsPage = () => {
                               size="sm"
                               icon={CheckCircle2}
                               onClick={() => handleApprove(b.id)}
+                              className="rounded-md text-xs font-semibold"
                             >
                               Approve Refund
                             </Button>
@@ -99,12 +100,13 @@ export const RefundsPage = () => {
                               size="sm"
                               icon={XCircle}
                               onClick={() => rejectRefund(b.id, 'Cancellation request submitted post match deadline')}
+                              className="rounded-md text-xs font-semibold"
                             >
                               Reject
                             </Button>
                           </>
                         ) : (
-                          <span className="text-slate-400 font-bold italic text-xs">Processed</span>
+                          <span className="text-slate-400 font-medium italic text-xs">Processed</span>
                         )}
                       </td>
 
@@ -113,7 +115,7 @@ export const RefundsPage = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-slate-400 font-bold">
+                  <td colSpan="7" className="p-8 text-center text-slate-400 font-medium">
                     No pending refund requests.
                   </td>
                 </tr>

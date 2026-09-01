@@ -117,14 +117,19 @@ export const ManagerGamesPage = () => {
 
   const handleOpenScoreModal = (game) => {
     setSelectedGame(game);
-    setScoreA(game.score?.teamA?.toString() || '');
-    setScoreB(game.score?.teamB?.toString() || '');
+    setScoreA(game.score?.teamA !== undefined ? game.score.teamA.toString() : '');
+    setScoreB(game.score?.teamB !== undefined ? game.score.teamB.toString() : '');
     setIsScoreModalOpen(true);
   };
 
   const handleSubmitScore = (e) => {
     e.preventDefault();
     if (!selectedGame) return;
+
+    if (scoreA === '' || scoreA === null || scoreB === '' || scoreB === null) {
+      toast.error('Please enter scores for both Team A and Team B.');
+      return;
+    }
 
     const parsedA = parseInt(scoreA, 10);
     const parsedB = parseInt(scoreB, 10);
@@ -139,7 +144,7 @@ export const ManagerGamesPage = () => {
       return;
     }
 
-    submitGameScore(selectedGame.id, parsedA, parsedB);
+    submitGameScore(selectedGame.id, { teamAScore: parsedA, teamBScore: parsedB });
     setIsScoreModalOpen(false);
     setSelectedGame(null);
   };
@@ -543,9 +548,9 @@ export const ManagerGamesPage = () => {
                 <label className="block text-xs font-black text-slate-400 uppercase mb-1">Team A</label>
                 <input
                   type="number" min="0" max="99"
+                  placeholder=""
                   value={scoreA}
                   onChange={e => setScoreA(e.target.value)}
-                  required
                   className="w-full px-4 py-4 rounded-2xl border-2 border-sport-500/40 bg-slate-50 dark:bg-slate-900 text-3xl font-black text-sport-500 text-center focus:ring-2 focus:ring-sport-500 focus:outline-none"
                 />
               </div>
@@ -554,9 +559,9 @@ export const ManagerGamesPage = () => {
                 <label className="block text-xs font-black text-slate-400 uppercase mb-1">Team B</label>
                 <input
                   type="number" min="0" max="99"
+                  placeholder=""
                   value={scoreB}
                   onChange={e => setScoreB(e.target.value)}
-                  required
                   className="w-full px-4 py-4 rounded-2xl border-2 border-blue-500/40 bg-slate-50 dark:bg-slate-900 text-3xl font-black text-blue-500 text-center focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>

@@ -23,6 +23,7 @@ import TournamentDetailsPage from './pages/player/TournamentDetailsPage';
 import ProfilePage from './pages/player/ProfilePage';
 import LeaderboardPage from './pages/player/LeaderboardPage';
 import CommunityPage from './pages/player/CommunityPage';
+import MatchHistoryPage from './pages/player/MatchHistoryPage';
 
 // Manager Pages
 import ClubDashboardPage from './pages/club/ClubDashboardPage';
@@ -69,22 +70,7 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           
           {/* Public Landing Page at "/" */}
-          <Route
-            path="/"
-            element={
-              currentUser ? (
-                currentUser.role === 'SUPER_ADMIN' ? (
-                  <Navigate to="/admin/dashboard" replace />
-                ) : currentUser.role === 'CLUB_MANAGER' ? (
-                  <Navigate to="/club/dashboard" replace />
-                ) : (
-                  <Navigate to="/player/home" replace />
-                )
-              ) : (
-                <LandingPage />
-              )
-            }
-          />
+          <Route path="/" element={<LandingPage />} />
 
           {/* Public & Player Browse Routes (Publicly Accessible with Rich Dummy Data) */}
           <Route path="/player/find-games" element={<FindGamesPage />} />
@@ -105,6 +91,10 @@ function App() {
 
           <Route path="/player/community" element={<CommunityPage />} />
           <Route path="/community" element={<CommunityPage />} />
+
+          <Route path="/player/history" element={<MatchHistoryPage />} />
+          <Route path="/history" element={<MatchHistoryPage />} />
+          <Route path="/games/history" element={<MatchHistoryPage />} />
 
           {/* Protected Private Account & Execution Routes */}
           <Route path="/player/home" element={<ProtectedRoute><PlayerHomePage /></ProtectedRoute>} />
