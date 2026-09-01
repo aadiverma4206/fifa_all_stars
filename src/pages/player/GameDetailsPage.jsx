@@ -169,13 +169,7 @@ export const GameDetailsPage = () => {
   };
 
   const handleCompleteGame = () => {
-    if (game.status !== 'COMPLETED') {
-      updateGameLifecycle(game.id, 'COMPLETED');
-      toast.success(`Match "${game.title}" marked as COMPLETED & moved to Match History!`);
-    }
-    if (!game.score) {
-      handleOpenScoreModal();
-    }
+    handleOpenScoreModal();
   };
 
   const handleOpenScoreModal = () => {
@@ -420,16 +414,16 @@ export const GameDetailsPage = () => {
                   </Button>
                 )}
 
-                {game.status !== 'COMPLETED' ? (
-                  <Button variant="emerald" size="sm" icon={CheckCircle} onClick={handleCompleteGame}>
-                    🏁 Complete & Archive Game
-                  </Button>
-                ) : (
+                {game.status === 'COMPLETED' && game.score ? (
                   <Link to="/history">
                     <Button variant="emerald" size="sm" icon={Trophy}>
                       🏆 View in Match History
                     </Button>
                   </Link>
+                ) : (
+                  <Button variant="emerald" size="sm" icon={CheckCircle} onClick={handleOpenScoreModal}>
+                    🏁 Enter Score & Finish Match
+                  </Button>
                 )}
 
                 <Button variant="gold" size="sm" icon={Trophy} onClick={handleOpenScoreModal}>

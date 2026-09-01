@@ -62,12 +62,27 @@ export const FindGamesPage = () => {
     }
   };
 
+  const hasScoreEntered = (g) => {
+    return (
+      g.score !== null &&
+      g.score !== undefined &&
+      g.score.teamA !== null &&
+      g.score.teamA !== undefined &&
+      g.score.teamB !== null &&
+      g.score.teamB !== undefined
+    );
+  };
+
   const [viewTab, setViewTab] = useState('active');
 
   const dateTabs = dynamicDateTabs;
 
+  const historyGames = games.filter(g => (g.status === 'COMPLETED' || g.status === 'ONGOING') && hasScoreEntered(g));
+  const activeGames = games.filter(g => !((g.status === 'COMPLETED' || g.status === 'ONGOING') && hasScoreEntered(g)));
+
   const filteredGames = games.filter(g => {
-    const matchesTab = viewTab === 'history' ? g.status === 'COMPLETED' : g.status !== 'COMPLETED';
+    const isHistory = (g.status === 'COMPLETED' || g.status === 'ONGOING') && hasScoreEntered(g);
+    const matchesTab = viewTab === 'history' ? isHistory : !isHistory;
     const matchesFormat = selectedFormat === 'all' || g.format === selectedFormat;
     const matchesType = selectedType === 'all' || g.venueReference?.city?.toLowerCase() === selectedType.toLowerCase();
     const matchesDate = activeDate === 'all' || g.dateTime?.date === activeDate;
@@ -203,7 +218,7 @@ export const FindGamesPage = () => {
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              🟢 Active Games ({games.filter(g => g.status !== 'COMPLETED').length})
+              🟢 Active Games ({activeGames.length})
             </button>
 
             <button
@@ -215,7 +230,7 @@ export const FindGamesPage = () => {
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              🏆 Match History ({games.filter(g => g.status === 'COMPLETED').length})
+              🏆 Match History ({historyGames.length})
             </button>
           </div>
 

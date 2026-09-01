@@ -33,7 +33,11 @@ export const ProfilePage = () => {
   // Player Game History Filtering
   const createdGames = games.filter(g => g.organizer?.id === currentUser?.id);
   const joinedGames = games.filter(g => g.confirmedPlayers?.some(p => p.id === currentUser?.id));
-  const completedMatches = games.filter(g => g.status === 'COMPLETED' && g.confirmedPlayers?.some(p => p.id === currentUser?.id));
+  const completedMatches = games.filter(g => 
+    g.status === 'COMPLETED' && 
+    g.score !== null && g.score !== undefined && g.score.teamA !== null && g.score.teamA !== undefined &&
+    g.confirmedPlayers?.some(p => p.id === currentUser?.id)
+  );
   const myVideos = gameVideos.filter(v => {
     const targetGame = games.find(g => g.id === v.gameId);
     return targetGame?.confirmedPlayers?.some(p => p.id === currentUser?.id) || v.uploadedBy?.includes(currentUser?.name);

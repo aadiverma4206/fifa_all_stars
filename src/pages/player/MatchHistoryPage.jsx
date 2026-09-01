@@ -16,10 +16,24 @@ export const MatchHistoryPage = () => {
   const [formatFilter, setFormatFilter] = useState('all');
   const [resultFilter, setResultFilter] = useState('all');
 
-  // All COMPLETED or ONGOING games (publicly visible match history)
-  const completedGames = games.filter(g => g.status === 'COMPLETED' || g.status === 'ONGOING');
+  // Helper to check if a game has a score entered
+  const hasScoreEntered = (g) => {
+    return (
+      g.score !== null &&
+      g.score !== undefined &&
+      g.score.teamA !== null &&
+      g.score.teamA !== undefined &&
+      g.score.teamB !== null &&
+      g.score.teamB !== undefined
+    );
+  };
 
-  // My games: matches I participated in (if logged in)
+  // All COMPLETED or ONGOING games that have a valid score entered (publicly visible match history)
+  const completedGames = games.filter(
+    g => (g.status === 'COMPLETED' || g.status === 'ONGOING') && hasScoreEntered(g)
+  );
+
+  // My games: matches I participated in (if logged in) that have a score entered
   const myCompletedGames = currentUser
     ? completedGames.filter(g =>
         g.confirmedPlayers?.some(p => p.id === currentUser.id) ||
@@ -31,23 +45,8 @@ export const MatchHistoryPage = () => {
 
   const sourceGames = activeTab === 'mine' ? myCompletedGames : completedGames;
 
-  const filtered = sourceGames.filter(g => {
-    const search = searchTerm.toLowerCase();
-    const matchTitle = g.title?.toLowerCase().includes(search);
-    const matchVenue = g.venueReference?.clubName?.toLowerCase().includes(search);
-    const matchCity = g.venueReference?.city?.toLowerCase().includes(search);
-    const matchesSearch = matchTitle || matchVenue || matchCity || !searchTerm;
-
-    const matchesFormat = formatFilter === 'all' || g.format === formatFilter;
-
-    const hasScore = g.score && (g.score.teamA !== null || g.score.teamB !== null);
-    const matchesResult = resultFilter === 'all' || (resultFilter === 'with_score' && hasScore) || (resultFilter === 'no_score' && !hasScore);
-
-    return matchesSearch && matchesFormat && matchesResult;
-  });
-
   const getResultLabel = (game) => {
-    if (!game.score || game.score.teamA === undefined || game.score.teamA === null) return null;
+    if (!hasScoreEntered(game)) return null;
     const teamA = parseInt(game.score.teamA, 10);
     const teamB = parseInt(game.score.teamB, 10);
 
@@ -131,6 +130,25 @@ export const MatchHistoryPage = () => {
       bgColor: teamAWon ? 'bg-sky-500/10' : 'bg-rose-500/10'
     };
   };
+
+  const filtered = sourceGames.filter(g => {
+    const search = searchTerm.toLowerCase();
+    const matchTitle = g.title?.toLowerCase().includes(search);
+    const matchVenue = g.venueReference?.clubName?.toLowerCase().includes(search);
+    const matchCity = g.venueReference?.city?.toLowerCase().includes(search);
+    const matchesSearch = matchTitle || matchVenue || matchCity || !searchTerm;
+
+    const matchesFormat = formatFilter === 'all' || g.format === formatFilter;
+
+    const result = getResultLabel(g);
+    const matchesResult =
+      resultFilter === 'all' ||
+      (resultFilter === 'won' && (result?.type === 'WON' || result?.type === 'TEAM_A' || result?.type === 'TEAM_B')) ||
+      (resultFilter === 'lost' && result?.type === 'LOST') ||
+      (resultFilter === 'draw' && result?.type === 'DRAW');
+
+    return matchesSearch && matchesFormat && matchesResult;
+  });
 
   const formats = ['all', '5v5', '7v7', '3v3', '1v1'];
 
@@ -224,11 +242,12 @@ export const MatchHistoryPage = () => {
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Score:</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Result:</span>
               {[
-                { key: 'all', label: 'All' },
-                { key: 'with_score', label: '✅ With Score' },
-                { key: 'no_score', label: '⏳ No Score Yet' }
+                { key: 'all', label: 'All Results' },
+                { key: 'won', label: '🎉 Wins' },
+                { key: 'lost', label: '💔 Defeats' },
+                { key: 'draw', label: '🤝 Draws' }
               ].map(opt => (
                 <button
                   key={opt.key}
@@ -286,29 +305,19 @@ export const MatchHistoryPage = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
 
                       {/* Score Block */}
-                      <div className={`flex-shrink-0 w-full sm:w-28 flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 p-3 rounded-md border ${
-                        hasScore
-                          ? 'bg-slate-950 text-white border-slate-800'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
-                      }`}>
-                        {hasScore ? (
-                          <>
-                            <div className="flex items-center space-x-1.5">
-                              <span className="text-xl sm:text-2xl font-mono font-bold text-white leading-none">
-                                {game.score.teamA}
-                              </span>
-                              <span className="text-xs font-bold text-slate-400">–</span>
-                              <span className="text-xl sm:text-2xl font-mono font-bold text-white leading-none">
-                                {game.score.teamB}
-                              </span>
-                            </div>
-                            <span className="hidden sm:block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                              FINAL SCORE
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-xs font-bold uppercase tracking-wide text-slate-400">No Score</span>
-                        )}
+                      <div className="flex-shrink-0 w-full sm:w-28 flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 p-3 rounded-md border bg-slate-950 text-white border-slate-800">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-xl sm:text-2xl font-mono font-bold text-white leading-none">
+                            {game.score?.teamA ?? 0}
+                          </span>
+                          <span className="text-xs font-bold text-slate-400">–</span>
+                          <span className="text-xl sm:text-2xl font-mono font-bold text-white leading-none">
+                            {game.score?.teamB ?? 0}
+                          </span>
+                        </div>
+                        <span className="hidden sm:block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                          FINAL SCORE
+                        </span>
                       </div>
 
                       {/* Match Info */}

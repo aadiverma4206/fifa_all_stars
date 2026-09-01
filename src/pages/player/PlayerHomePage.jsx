@@ -46,7 +46,10 @@ export const PlayerHomePage = () => {
     currentUser?.clubsJoined?.includes(g.venueReference?.clubId)
   );
 
-  const completedGames = accessibleGames.filter(g => g.status === 'COMPLETED');
+  const completedGames = accessibleGames.filter(g => 
+    g.status === 'COMPLETED' && 
+    g.score !== null && g.score !== undefined && g.score.teamA !== null && g.score.teamA !== undefined
+  );
   
   // Next upcoming match for current user
   const nextMatch = myJoinedGames.find(g => g.status !== 'COMPLETED');
