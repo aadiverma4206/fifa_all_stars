@@ -47,8 +47,8 @@ export const PlayerHomePage = () => {
   );
 
   const completedGames = accessibleGames.filter(g => 
-    g.status === 'COMPLETED' && 
-    g.score !== null && g.score !== undefined && g.score.teamA !== null && g.score.teamA !== undefined
+    g.status === 'COMPLETED' || 
+    (g.score !== null && g.score !== undefined && g.score.teamA !== null && g.score.teamA !== undefined)
   );
   
   // Next upcoming match for current user

@@ -64,24 +64,28 @@ export const FindGamesPage = () => {
 
   const hasScoreEntered = (g) => {
     return (
-      g.score !== null &&
-      g.score !== undefined &&
-      g.score.teamA !== null &&
-      g.score.teamA !== undefined &&
-      g.score.teamB !== null &&
-      g.score.teamB !== undefined
+      g?.score !== null &&
+      g?.score !== undefined &&
+      g?.score?.teamA !== null &&
+      g?.score?.teamA !== undefined &&
+      g?.score?.teamB !== null &&
+      g?.score?.teamB !== undefined
     );
+  };
+
+  const isHistoryGame = (g) => {
+    return g.status === 'COMPLETED' || (g.status === 'ONGOING' && hasScoreEntered(g)) || hasScoreEntered(g);
   };
 
   const [viewTab, setViewTab] = useState('active');
 
   const dateTabs = dynamicDateTabs;
 
-  const historyGames = games.filter(g => (g.status === 'COMPLETED' || g.status === 'ONGOING') && hasScoreEntered(g));
-  const activeGames = games.filter(g => !((g.status === 'COMPLETED' || g.status === 'ONGOING') && hasScoreEntered(g)));
+  const historyGames = games.filter(isHistoryGame);
+  const activeGames = games.filter(g => !isHistoryGame(g));
 
   const filteredGames = games.filter(g => {
-    const isHistory = (g.status === 'COMPLETED' || g.status === 'ONGOING') && hasScoreEntered(g);
+    const isHistory = isHistoryGame(g);
     const matchesTab = viewTab === 'history' ? isHistory : !isHistory;
     const matchesFormat = selectedFormat === 'all' || g.format === selectedFormat;
     const matchesType = selectedType === 'all' || g.venueReference?.city?.toLowerCase() === selectedType.toLowerCase();
@@ -340,12 +344,22 @@ export const FindGamesPage = () => {
                         <Badge variant={game.privacy === 'PRIVATE' ? 'danger' : 'gold'}>
                           {game.privacy || 'PUBLIC'}
                         </Badge>
-                        {game.score && (
+                        {game.status === 'COMPLETED' ? (
+                          <Badge variant="emerald" size="sm">🏆 COMPLETED</Badge>
+                        ) : game.status === 'ONGOING' ? (
+                          <Badge variant="danger" size="sm">🔥 LIVE</Badge>
+                        ) : null}
+                        {game.score ? (
                           <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase flex items-center space-x-1">
                             <Trophy className="w-3 h-3 text-amber-500" />
                             <span>Score: {game.score.teamA} - {game.score.teamB}</span>
                           </span>
-                        )}
+                        ) : game.liveScore ? (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase flex items-center space-x-1">
+                            <Trophy className="w-3 h-3 text-amber-500" />
+                            <span>Live: {game.liveScore.teamA} - {game.liveScore.teamB}</span>
+                          </span>
+                        ) : null}
                         <span className="text-xs font-bold text-slate-400">
                           {game.venueReference?.city || 'Raipur'}
                         </span>

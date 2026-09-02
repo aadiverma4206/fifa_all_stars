@@ -112,6 +112,9 @@ function App() {
           <Route path="/club/games" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><ManagerGamesPage /></ProtectedRoute>} />
           <Route path="/manager/games" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><ManagerGamesPage /></ProtectedRoute>} />
 
+          <Route path="/club/history" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><MatchHistoryPage /></ProtectedRoute>} />
+          <Route path="/manager/history" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><MatchHistoryPage /></ProtectedRoute>} />
+
           <Route path="/club/manage" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><ManageClubPage /></ProtectedRoute>} />
           <Route path="/manager/club" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><ManageClubPage /></ProtectedRoute>} />
 
@@ -123,6 +126,9 @@ function App() {
 
           <Route path="/club/bookings" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><BookingsPage /></ProtectedRoute>} />
           <Route path="/manager/bookings" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><BookingsPage /></ProtectedRoute>} />
+
+          <Route path="/club/profile" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><ProfilePage /></ProtectedRoute>} />
+          <Route path="/manager/profile" element={<ProtectedRoute allowedRoles={['CLUB_MANAGER', 'SUPER_ADMIN']}><ProfilePage /></ProtectedRoute>} />
 
           {/* Super Admin Routes (Protected) */}
           <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><AdminDashboardPage /></ProtectedRoute>} />

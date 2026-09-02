@@ -271,22 +271,75 @@ export const useDataStore = create(
     toast.success(`Club "${target.name}" rejected.`);
   },
 
-  approveRefund: (bookingId, usersList, updateUsersListFn) => {
+  addClub: (clubData) => {
+    const newClub = {
+      id: `clb_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      name: clubData.name || 'New Venue',
+      address: clubData.address || '',
+      city: clubData.city || 'Raipur',
+      geoCoordinates: clubData.geoCoordinates || { lat: 21.2514, lng: 81.6296 },
+      operatingHours: clubData.operatingHours || { open: "06:00", close: "23:00" },
+      amenities: clubData.amenities || ["Floodlights", "Washrooms", "Parking"],
+      status: clubData.status || "ACTIVE",
+      managerIds: clubData.managerIds || [],
+      clubImageUrl: clubData.clubImageUrl || "/src/assets/images/courts/court-1.jpg",
+      rating: 5.0,
+      reviewsCount: 1,
+      description: clubData.description || "Official sports arena."
+    };
+    set({ clubs: [newClub, ...get().clubs] });
+    get().addAuditLog('CLUB_CREATED', newClub.name, `Added new venue in ${newClub.city}`);
+    toast.success(`Venue "${newClub.name}" created successfully!`);
+    return newClub;
+  },
+
+  toggleClubStatus: (clubId, newStatus) => {
+    const target = get().clubs.find(c => c.id === clubId);
+    if (!target) return;
+    set({
+      clubs: get().clubs.map(c => c.id === clubId ? { ...c, status: newStatus } : c)
+    });
+    get().addAuditLog('CLUB_STATUS_CHANGED', target.name, `Status set to ${newStatus}`);
+    toast.success(`Venue "${target.name}" status changed to ${newStatus}`);
+  },
+
+  assignClubManager: (clubId, managerId) => {
+    const target = get().clubs.find(c => c.id === clubId);
+    if (!target) return;
+    set({
+      clubs: get().clubs.map(c => c.id === clubId ? {
+        ...c,
+        managerIds: managerId ? [managerId] : []
+      } : c)
+    });
+    get().addAuditLog('CLUB_MANAGER_ASSIGNED', target.name, `Assigned manager ID: ${managerId}`);
+    toast.success(`Manager assigned to ${target.name}`);
+  },
+
+  approveRefund: (bookingId, usersList, updateUsersListFn, customAmount, refundTier) => {
     const bookings = get().bookings;
     const target = bookings.find(b => b.id === bookingId);
     if (!target) return;
 
+    const amountToRefund = customAmount !== undefined ? customAmount : target.amountPaid;
+
     if (updateUsersListFn && usersList) {
-      const updated = usersList.map(u => u.id === target.userId ? { ...u, walletBalance: (u.walletBalance || 0) + target.amountPaid } : u);
+      const updated = usersList.map(u => u.id === target.userId ? { ...u, walletBalance: (u.walletBalance || 0) + amountToRefund } : u);
       updateUsersListFn(updated);
     }
 
     set({
-      bookings: bookings.map(b => b.id === bookingId ? { ...b, status: 'REFUNDED' } : b)
+      bookings: bookings.map(b => b.id === bookingId ? { 
+        ...b, 
+        status: 'REFUNDED',
+        refundAmount: amountToRefund,
+        refundTier: refundTier || b.refundTier || '100%',
+        refundedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      } : b)
     });
 
-    get().addAuditLog('REFUND_APPROVED', target.id, `Approved ₹${target.amountPaid} refund to ${target.userName}`);
-    toast.success(`Refund of ₹${target.amountPaid} approved and credited to ${target.userName}`);
+    get().addAuditLog('REFUND_APPROVED', target.id, `Approved ₹${amountToRefund} refund to ${target.userName} (${refundTier || target.refundTier || '100%'})`);
+    toast.success(`Refund of ₹${amountToRefund} approved and credited to ${target.userName}'s wallet!`);
   },
 
   rejectRefund: (bookingId, reason) => {
@@ -295,24 +348,54 @@ export const useDataStore = create(
     if (!target) return;
 
     set({
-      bookings: bookings.map(b => b.id === bookingId ? { ...b, status: 'REFUND_REJECTED' } : b)
+      bookings: bookings.map(b => b.id === bookingId ? { 
+        ...b, 
+        status: 'REFUND_REJECTED',
+        rejectionReason: reason,
+        rejectedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      } : b)
     });
 
     get().addAuditLog('REFUND_REJECTED', target.id, `Rejected refund request: ${reason}`);
-    toast.success(`Refund request rejected.`);
+    toast.success(`Refund request for ${target.id} rejected.`);
   },
 
-  resolveDispute: (disputeId, winnerTeam, scoreStr) => {
+  resolveDispute: (disputeId, winnerTeam, scoreStr, notes) => {
     const disputes = get().disputes;
     const target = disputes.find(d => d.id === disputeId);
     if (!target) return;
 
     set({
-      disputes: disputes.map(d => d.id === disputeId ? { ...d, status: 'RESOLVED', winnerOverride: winnerTeam } : d)
+      disputes: disputes.map(d => d.id === disputeId ? { 
+        ...d, 
+        status: 'RESOLVED', 
+        winnerOverride: winnerTeam,
+        scoreOverride: scoreStr,
+        adjudicatorNotes: notes || '',
+        resolvedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      } : d)
     });
 
     get().addAuditLog('DISPUTE_RESOLVED', target.gameTitle, `Overrode match result: ${winnerTeam} declared winner (${scoreStr}). Elo adjusted.`);
-    toast.success(`Dispute resolved! ${winnerTeam} declared winner.`);
+    toast.success(`Dispute resolved! ${winnerTeam} declared winner (${scoreStr}).`);
+  },
+
+  dismissDispute: (disputeId, reason) => {
+    const disputes = get().disputes;
+    const target = disputes.find(d => d.id === disputeId);
+    if (!target) return;
+
+    set({
+      disputes: disputes.map(d => d.id === disputeId ? { 
+        ...d, 
+        status: 'DISMISSED',
+        dismissalReason: reason || 'Dismissed by match commissioner after video evidence review',
+        resolvedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      } : d)
+    });
+
+    get().addAuditLog('DISPUTE_DISMISSED', target.gameTitle, `Dispute dismissed: ${reason}`);
+    toast.success(`Dispute dismissed. Original match result stands.`);
   },
 
   assignTicketStaff: (ticketId, staffName) => {
@@ -323,12 +406,43 @@ export const useDataStore = create(
     toast.success(`Ticket ${ticketId} assigned to ${staffName}`);
   },
 
-  resolveTicket: (ticketId) => {
+  resolveTicket: (ticketId, resolutionNotes) => {
     set({
-      tickets: get().tickets.map(t => t.id === ticketId ? { ...t, status: 'RESOLVED' } : t)
+      tickets: get().tickets.map(t => t.id === ticketId ? { 
+        ...t, 
+        status: 'RESOLVED',
+        resolutionNotes: resolutionNotes || 'Resolved by support team',
+        resolvedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      } : t)
     });
-    get().addAuditLog('TICKET_RESOLVED', ticketId, `Closed & resolved support ticket`);
-    toast.success(`Ticket ${ticketId} resolved!`);
+    get().addAuditLog('TICKET_RESOLVED', ticketId, `Closed & resolved support ticket: ${resolutionNotes || 'Resolved'}`);
+    toast.success(`Ticket ${ticketId} resolved successfully!`);
+  },
+
+  createTicket: (ticketData) => {
+    const newTk = {
+      id: `tk-${Date.now().toString().slice(-4)}`,
+      subject: ticketData.subject || 'Support Query',
+      user: ticketData.user || 'Player User',
+      status: 'OPEN',
+      assignedStaff: ticketData.assignedStaff || 'Unassigned',
+      priority: ticketData.priority || 'MEDIUM',
+      category: ticketData.category || 'GENERAL',
+      description: ticketData.description || '',
+      createdAt: new Date().toISOString().substring(0, 10)
+    };
+    set({ tickets: [newTk, ...get().tickets] });
+    get().addAuditLog('TICKET_CREATED', newTk.id, `Created support ticket for ${newTk.user}`);
+    toast.success(`Ticket ${newTk.id} created successfully!`);
+    return newTk;
+  },
+
+  reopenTicket: (ticketId) => {
+    set({
+      tickets: get().tickets.map(t => t.id === ticketId ? { ...t, status: 'OPEN' } : t)
+    });
+    get().addAuditLog('TICKET_REOPENED', ticketId, `Re-opened support ticket`);
+    toast.success(`Ticket ${ticketId} re-opened.`);
   },
 
   // --- CLUB MANAGER ACTIONS ---
@@ -371,6 +485,14 @@ export const useDataStore = create(
     });
     get().addAuditLog('COURT_STATUS_CHANGED', courtId, `Status set to ${newStatus}`);
     toast.success(`Court status updated to ${newStatus}`);
+  },
+
+  removeCourt: (courtId) => {
+    set({
+      courts: get().courts.filter(c => c.courtId !== courtId && c.id !== courtId)
+    });
+    get().addAuditLog('COURT_REMOVED', courtId, `Pitch deleted by manager.`);
+    toast.success('Pitch removed successfully.');
   },
 
   updatePricingSettings: (courtId, pricingData) => {
@@ -758,17 +880,32 @@ export const useDataStore = create(
       const updatedUsers = usersList.map(u => {
         const inA = teamA.some(p => p.id === u.id);
         const inB = teamB.some(p => p.id === u.id);
+        const isOrganizer = game.organizer?.id === u.id;
 
-        if (inA || inB) {
+        if (inA || inB || isOrganizer) {
           const outcome = isDraw ? 0.5 : (inA ? (isTeamAWin ? 1 : 0) : (isTeamAWin ? 0 : 1));
           const oppElo = inA ? avgEloB : avgEloA;
           const currentElo = u.eloRating || u.elo || 1500;
-          const newElo = calculateNewElo(currentElo, oppElo, outcome, 32);
+          const newElo = (inA || inB) ? calculateNewElo(currentElo, oppElo, outcome, 32) : currentElo;
           
+          const historyEntry = {
+            gameId: game.id,
+            title: game.title,
+            date: game.dateTime?.date || new Date().toISOString().split('T')[0],
+            score: `${teamAScore} - ${teamBScore}`,
+            format: game.format,
+            venue: game.venueReference?.clubName || 'Turf Hub',
+            role: isOrganizer ? 'Host' : (inA ? 'Team A' : 'Team B')
+          };
+
+          const existingHistory = u.gameHistory || [];
+          const updatedHistory = [historyEntry, ...existingHistory.filter(h => h.gameId !== game.id)];
+
           return {
             ...u,
             eloRating: newElo,
-            elo: newElo
+            elo: newElo,
+            gameHistory: updatedHistory
           };
         }
         return u;
