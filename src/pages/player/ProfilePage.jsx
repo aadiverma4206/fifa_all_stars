@@ -34,13 +34,14 @@ export const ProfilePage = () => {
   const createdGames = games.filter(g => g.organizer?.id === currentUser?.id);
   const joinedGames = games.filter(g => g.confirmedPlayers?.some(p => p.id === currentUser?.id));
   const completedMatches = games.filter(g => 
-    g.status === 'COMPLETED' && 
-    g.score !== null && g.score !== undefined && g.score.teamA !== null && g.score.teamA !== undefined &&
-    g.confirmedPlayers?.some(p => p.id === currentUser?.id)
+    (g.status === 'COMPLETED' || (g.score && g.score.teamA !== null)) && 
+    (g.confirmedPlayers?.some(p => p.id === currentUser?.id) || g.organizer?.id === currentUser?.id)
   );
   const myVideos = gameVideos.filter(v => {
     const targetGame = games.find(g => g.id === v.gameId);
-    return targetGame?.confirmedPlayers?.some(p => p.id === currentUser?.id) || v.uploadedBy?.includes(currentUser?.name);
+    return targetGame?.confirmedPlayers?.some(p => p.id === currentUser?.id) || 
+           targetGame?.organizer?.id === currentUser?.id ||
+           v.uploadedBy?.includes(currentUser?.name);
   });
 
   const handleTopUp = (e) => {
@@ -249,22 +250,38 @@ export const ProfilePage = () => {
         {activeHistoryTab === 'completed' && (
           <div className="space-y-3">
             {completedMatches.length > 0 ? (
-              completedMatches.map(g => (
-                <div key={g.id} className="admin-card p-4 rounded-lg flex items-center justify-between text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">{g.title}</h4>
-                      <Badge variant="emerald" size="sm" className="rounded-md">COMPLETED</Badge>
+              completedMatches.map(g => {
+                const scoreA = g.score?.teamA ?? (g.liveScore?.teamA ?? 0);
+                const scoreB = g.score?.teamB ?? (g.liveScore?.teamB ?? 0);
+                const hasScore = g.score && g.score.teamA !== null && g.score.teamA !== undefined;
+                const hasVideo = (gameVideos || []).some(v => v.gameId === g.id) || !!g.videoReference || !!g.videoUrl;
+
+                return (
+                  <div key={g.id} className="admin-card p-4 rounded-lg flex items-center justify-between text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">{g.title}</h4>
+                        <Badge variant="emerald" size="sm" className="rounded-md">COMPLETED</Badge>
+                        <Badge variant="blue" size="sm" className="rounded-md">{g.format}</Badge>
+                        {hasVideo && (
+                          <Badge variant="gold" size="sm" className="rounded-md">🎥 Video</Badge>
+                        )}
+                      </div>
+                      <p className="text-slate-400 font-medium">
+                        {hasScore ? (
+                          <>Final Score: <span className="text-slate-900 dark:text-white font-bold">Team A {scoreA} - {scoreB} Team B</span></>
+                        ) : (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Match Finished • Score: Team A {scoreA} - {scoreB} Team B</span>
+                        )}
+                        <span className="text-slate-500 block text-[10px] mt-0.5">{g.venueReference?.clubName} • {g.dateTime?.date}</span>
+                      </p>
                     </div>
-                    <p className="text-slate-400 font-medium mt-1">
-                      Final Score: <span className="text-slate-900 dark:text-white font-bold">Team A {g.score?.teamA} - {g.score?.teamB} Team B</span>
-                    </p>
+                    <Link to={`/games/${g.id}`}>
+                      <Button variant="outline" size="sm" className="rounded-md font-semibold text-xs border-slate-300 dark:border-slate-700">View Match</Button>
+                    </Link>
                   </div>
-                  <Link to={`/games/${g.id}`}>
-                    <Button variant="ghost" size="sm" className="rounded-md font-semibold text-xs">View Result</Button>
-                  </Link>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-xs text-slate-400 font-medium italic p-6 admin-card rounded-lg text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">No completed match scores recorded yet.</p>
             )}

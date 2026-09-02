@@ -758,17 +758,32 @@ export const useDataStore = create(
       const updatedUsers = usersList.map(u => {
         const inA = teamA.some(p => p.id === u.id);
         const inB = teamB.some(p => p.id === u.id);
+        const isOrganizer = game.organizer?.id === u.id;
 
-        if (inA || inB) {
+        if (inA || inB || isOrganizer) {
           const outcome = isDraw ? 0.5 : (inA ? (isTeamAWin ? 1 : 0) : (isTeamAWin ? 0 : 1));
           const oppElo = inA ? avgEloB : avgEloA;
           const currentElo = u.eloRating || u.elo || 1500;
-          const newElo = calculateNewElo(currentElo, oppElo, outcome, 32);
+          const newElo = (inA || inB) ? calculateNewElo(currentElo, oppElo, outcome, 32) : currentElo;
           
+          const historyEntry = {
+            gameId: game.id,
+            title: game.title,
+            date: game.dateTime?.date || new Date().toISOString().split('T')[0],
+            score: `${teamAScore} - ${teamBScore}`,
+            format: game.format,
+            venue: game.venueReference?.clubName || 'Turf Hub',
+            role: isOrganizer ? 'Host' : (inA ? 'Team A' : 'Team B')
+          };
+
+          const existingHistory = u.gameHistory || [];
+          const updatedHistory = [historyEntry, ...existingHistory.filter(h => h.gameId !== game.id)];
+
           return {
             ...u,
             eloRating: newElo,
-            elo: newElo
+            elo: newElo,
+            gameHistory: updatedHistory
           };
         }
         return u;

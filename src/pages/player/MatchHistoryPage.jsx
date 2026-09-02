@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, Calendar, MapPin, Search, Filter, ChevronRight, Clock, Users, ArrowLeft, Star, Sparkles, TrendingDown, Zap, XCircle, Award } from 'lucide-react';
+import { Trophy, Calendar, MapPin, Search, Filter, ChevronRight, Clock, Users, ArrowLeft, Star, Sparkles, TrendingDown, Zap, XCircle, Award, Film } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import Badge from '../../components/common/Badge';
@@ -9,7 +9,7 @@ import Avatar from '../../components/common/Avatar';
 import BackButton from '../../components/common/BackButton';
 
 export const MatchHistoryPage = () => {
-  const { games } = useDataStore();
+  const { games, gameVideos } = useDataStore();
   const { currentUser } = useAuthStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,21 +19,26 @@ export const MatchHistoryPage = () => {
   // Helper to check if a game has a score entered
   const hasScoreEntered = (g) => {
     return (
-      g.score !== null &&
-      g.score !== undefined &&
-      g.score.teamA !== null &&
-      g.score.teamA !== undefined &&
-      g.score.teamB !== null &&
-      g.score.teamB !== undefined
+      g?.score !== null &&
+      g?.score !== undefined &&
+      g?.score?.teamA !== null &&
+      g?.score?.teamA !== undefined &&
+      g?.score?.teamB !== null &&
+      g?.score?.teamB !== undefined
     );
   };
 
-  // All COMPLETED or ONGOING games that have a valid score entered (publicly visible match history)
-  const completedGames = games.filter(
-    g => (g.status === 'COMPLETED' || g.status === 'ONGOING') && hasScoreEntered(g)
-  );
+  // Helper to check if a game belongs in match history:
+  // ANY COMPLETED match (whether score is entered or not, whether video is uploaded or not)
+  // OR any ONGOING match with live/final score
+  const isGameInHistory = (g) => {
+    return g.status === 'COMPLETED' || (g.status === 'ONGOING' && hasScoreEntered(g)) || hasScoreEntered(g);
+  };
 
-  // My games: matches I participated in (if logged in) that have a score entered
+  // All COMPLETED games (or ONGOING with scores) - publicly visible match history
+  const completedGames = games.filter(isGameInHistory);
+
+  // My games: matches I participated in (if logged in) or hosted that are completed
   const myCompletedGames = currentUser
     ? completedGames.filter(g =>
         g.confirmedPlayers?.some(p => p.id === currentUser.id) ||
@@ -46,12 +51,12 @@ export const MatchHistoryPage = () => {
   const sourceGames = activeTab === 'mine' ? myCompletedGames : completedGames;
 
   const getResultLabel = (game) => {
-    if (!hasScoreEntered(game)) return null;
-    const teamA = parseInt(game.score.teamA, 10);
-    const teamB = parseInt(game.score.teamB, 10);
+    const hasScore = hasScoreEntered(game);
+    const scoreA = hasScore ? parseInt(game.score.teamA, 10) : (game.liveScore?.teamA !== undefined ? parseInt(game.liveScore.teamA, 10) : 0);
+    const scoreB = hasScore ? parseInt(game.score.teamB, 10) : (game.liveScore?.teamB !== undefined ? parseInt(game.liveScore.teamB, 10) : 0);
 
-    const isDraw = teamA === teamB;
-    const teamAWon = teamA > teamB;
+    const isDraw = scoreA === scoreB;
+    const teamAWon = scoreA > scoreB;
 
     const confirmed = game.confirmedPlayers || [];
     const playerIndex = confirmed.findIndex(p => p.id === currentUser?.id);
@@ -71,7 +76,7 @@ export const MatchHistoryPage = () => {
           type: 'DRAW',
           label: '🤝 DRAW', 
           title: '🤝 DRAW',
-          subtitle: 'MATCH TIED',
+          subtitle: hasScore ? 'MATCH TIED' : 'MATCH COMPLETED',
           color: 'gold',
           borderColor: 'border-amber-500/60 dark:border-amber-400/60',
           textColor: 'text-amber-600 dark:text-amber-400',
@@ -104,6 +109,19 @@ export const MatchHistoryPage = () => {
           bgColor: 'bg-rose-500/10'
         };
       }
+    }
+
+    if (!hasScore && !game.liveScore) {
+      return { 
+        type: 'COMPLETED',
+        label: '✅ COMPLETED', 
+        title: '✅ COMPLETED',
+        subtitle: 'MATCH FINISHED',
+        color: 'emerald',
+        borderColor: 'border-emerald-500/60',
+        textColor: 'text-emerald-600 dark:text-emerald-400',
+        bgColor: 'bg-emerald-500/10'
+      };
     }
 
     if (isDraw) {
@@ -141,16 +159,19 @@ export const MatchHistoryPage = () => {
     const matchesFormat = formatFilter === 'all' || g.format === formatFilter;
 
     const result = getResultLabel(g);
+    const hasVideo = (gameVideos || []).some(v => v.gameId === g.id) || !!g.videoReference || !!g.videoUrl;
     const matchesResult =
       resultFilter === 'all' ||
       (resultFilter === 'won' && (result?.type === 'WON' || result?.type === 'TEAM_A' || result?.type === 'TEAM_B')) ||
       (resultFilter === 'lost' && result?.type === 'LOST') ||
-      (resultFilter === 'draw' && result?.type === 'DRAW');
+      (resultFilter === 'draw' && result?.type === 'DRAW') ||
+      (resultFilter === 'completed' && (result?.type === 'COMPLETED' || g.status === 'COMPLETED')) ||
+      (resultFilter === 'video' && hasVideo);
 
     return matchesSearch && matchesFormat && matchesResult;
   });
 
-  const formats = ['all', '5v5', '7v7', '3v3', '1v1'];
+  const formats = ['all', '5v5', '7v7', '3v3', '2v2', '1v1'];
 
   return (
     <div className="space-y-6 py-6 max-w-[1700px] w-full mx-auto px-4 sm:px-8 lg:px-10 overflow-x-hidden">
@@ -247,7 +268,8 @@ export const MatchHistoryPage = () => {
                 { key: 'all', label: 'All Results' },
                 { key: 'won', label: '🎉 Wins' },
                 { key: 'lost', label: '💔 Defeats' },
-                { key: 'draw', label: '🤝 Draws' }
+                { key: 'draw', label: '🤝 Draws' },
+                { key: 'video', label: '🎥 Highlights Video' }
               ].map(opt => (
                 <button
                   key={opt.key}
@@ -273,7 +295,7 @@ export const MatchHistoryPage = () => {
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">No matches found</h3>
             <p className="text-xs font-medium text-slate-400 mt-1">
-              {activeTab === 'mine' ? "You haven't participated in any completed matches yet." : 'No completed matches match your filters.'}
+              {activeTab === 'mine' ? "You haven't participated in or hosted any completed matches yet." : 'No completed matches match your filters.'}
             </p>
           </div>
           <button
@@ -287,11 +309,15 @@ export const MatchHistoryPage = () => {
         <div className="space-y-3.5">
           {filtered.map((game, idx) => {
             const result = getResultLabel(game);
-            const hasScore = game.score && game.score.teamA !== null;
+            const hasScore = hasScoreEntered(game);
+            const hasVideo = (gameVideos || []).some(v => v.gameId === game.id) || !!game.videoReference || !!game.videoUrl;
             const isMyGame = currentUser && (
               game.confirmedPlayers?.some(p => p.id === currentUser.id) ||
               game.organizer?.id === currentUser.id
             );
+
+            const displayScoreA = game.score?.teamA ?? (game.liveScore?.teamA ?? 0);
+            const displayScoreB = game.score?.teamB ?? (game.liveScore?.teamB ?? 0);
 
             return (
               <motion.div
@@ -308,22 +334,22 @@ export const MatchHistoryPage = () => {
                       <div className="flex-shrink-0 w-full sm:w-28 flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 p-3 rounded-md border bg-slate-950 text-white border-slate-800">
                         <div className="flex items-center space-x-1.5">
                           <span className="text-xl sm:text-2xl font-mono font-bold text-white leading-none">
-                            {game.score?.teamA ?? 0}
+                            {displayScoreA}
                           </span>
                           <span className="text-xs font-bold text-slate-400">–</span>
                           <span className="text-xl sm:text-2xl font-mono font-bold text-white leading-none">
-                            {game.score?.teamB ?? 0}
+                            {displayScoreB}
                           </span>
                         </div>
                         <span className="hidden sm:block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                          FINAL SCORE
+                          {hasScore ? 'FINAL SCORE' : 'COMPLETED'}
                         </span>
                       </div>
 
                       {/* Match Info */}
                       <div className="flex-1 min-w-0 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={game.format === '5v5' ? 'emerald' : 'blue'} size="sm" className="rounded-md">{game.format}</Badge>
+                          <Badge variant={game.format === '5v5' || game.format === '2v2' ? 'emerald' : 'blue'} size="sm" className="rounded-md">{game.format}</Badge>
                           {game.status === 'ONGOING' ? (
                             <Badge variant="danger" size="sm" className="rounded-md">🔴 LIVE / ONGOING</Badge>
                           ) : (
@@ -332,8 +358,14 @@ export const MatchHistoryPage = () => {
                           {result && (
                             <Badge variant={result.color} size="sm" className="rounded-md">🏆 {result.label}</Badge>
                           )}
+                          {hasVideo && (
+                            <Badge variant="gold" size="sm" className="rounded-md flex items-center space-x-1">
+                              <Film className="w-3 h-3 text-amber-500" />
+                              <span>🎥 Video Available</span>
+                            </Badge>
+                          )}
                           {isMyGame && (
-                            <Badge variant="gold" size="sm" className="rounded-md">⚡ My Match</Badge>
+                            <Badge variant="blue" size="sm" className="rounded-md">⚡ My Match</Badge>
                           )}
                         </div>
 
