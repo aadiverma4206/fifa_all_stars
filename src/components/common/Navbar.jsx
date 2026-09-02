@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Trophy, Wallet, Menu, X, LogOut, User, Settings, CreditCard, ChevronDown } from 'lucide-react';
+import { Trophy, Wallet, Menu, X, LogOut, User, Settings, CreditCard, ChevronDown, Building2 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getRoleNavItems, getDefaultRoleRoute } from '../../utils/permissions';
 import ThemeToggle from './ThemeToggle';
@@ -156,9 +156,9 @@ export const Navbar = () => {
                       </div>
 
                       <Link
-                        to={userRole === 'PLAYER' ? '/player/profile' : (userRole === 'CLUB_MANAGER' ? '/club/manage' : '/admin/dashboard')}
+                        to={userRole === 'CLUB_MANAGER' ? '/club/profile' : (userRole === 'PLAYER' ? '/player/profile' : '/profile')}
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center space-x-2.5 px-4 py-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="flex items-center space-x-2.5 px-4 py-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-bold"
                       >
                         <User className="w-4 h-4 text-sport-500" />
                         <span>Profile & Settings</span>

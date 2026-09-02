@@ -57,6 +57,7 @@ export const ROLE_OPERATIONS = {
     navItems: [
       { label: "Dashboard", path: "/club/dashboard", icon: "LayoutDashboard" },
       { label: "Game Sessions", path: "/club/games", icon: "Flame" },
+      { label: "Match History", path: "/club/history", icon: "Trophy" },
       { label: "Manage Venue", path: "/club/manage", icon: "Building2" },
       { label: "Courts & Pitches", path: "/club/courts", icon: "MapPin" },
       { label: "Peak Pricing", path: "/club/pricing", icon: "DollarSign" },

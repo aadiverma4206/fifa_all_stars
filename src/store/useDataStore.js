@@ -373,6 +373,14 @@ export const useDataStore = create(
     toast.success(`Court status updated to ${newStatus}`);
   },
 
+  removeCourt: (courtId) => {
+    set({
+      courts: get().courts.filter(c => c.courtId !== courtId && c.id !== courtId)
+    });
+    get().addAuditLog('COURT_REMOVED', courtId, `Pitch deleted by manager.`);
+    toast.success('Pitch removed successfully.');
+  },
+
   updatePricingSettings: (courtId, pricingData) => {
     set({
       courts: get().courts.map(c => (c.courtId === courtId || c.id === courtId) ? { ...c, ...pricingData } : c)
