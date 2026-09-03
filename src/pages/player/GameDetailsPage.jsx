@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Users, Shield, ArrowLeft, Send, CheckCircle, Trophy, UserCheck, AlertTriangle, CreditCard, Lock, Play, Film, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useDataStore, MATCH_FORMAT_SLOTS } from '../../store/useDataStore';
@@ -8,6 +8,9 @@ import BackButton from '../../components/common/BackButton';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
+import { validateTitle, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateUrl, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { validateFile, readFileAsDataUrl, ALLOWED_VIDEO_TYPES, ALLOWED_VIDEO_EXTENSIONS, DEFAULT_MAX_VIDEO_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
 import toast from 'react-hot-toast';
 
 export const GameDetailsPage = () => {
@@ -46,6 +49,73 @@ export const GameDetailsPage = () => {
   const [videoTitle, setVideoTitle] = useState('');
   const [videoUrl, setVideoUrl] = useState('https://www.w3schools.com/html/mov_bbb.mp4');
   const [videoDesc, setVideoDesc] = useState('');
+  const [videoFile, setVideoFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const videoFileInputRef = useRef(null);
+
+  const handleVideoFileChange = (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setVideoFile(null);
+      return;
+    }
+    const file = files[0];
+    const validation = validateFile(file, {
+      allowedTypes: ALLOWED_VIDEO_TYPES,
+      allowedExtensions: ALLOWED_VIDEO_EXTENSIONS,
+      maxSizeBytes: DEFAULT_MAX_VIDEO_SIZE,
+      fileCategoryName: 'video'
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      if (videoFileInputRef.current) videoFileInputRef.current.value = '';
+      setVideoFile(null);
+      return;
+    }
+
+    // Duplicate check
+    const isDuplicate = (gameVideos || []).some(
+      v => v.gameId === game?.id && v.title?.toLowerCase().trim() === file.name.toLowerCase().trim()
+    );
+    if (isDuplicate) {
+      toast.error(`"${file.name}" has already been uploaded for this match.`);
+      if (videoFileInputRef.current) videoFileInputRef.current.value = '';
+      setVideoFile(null);
+      return;
+    }
+
+    setVideoFile(file);
+    if (!videoTitle.trim()) {
+      const cleanName = file.name.replace(/\.[^/.]+$/, "");
+      setVideoTitle(cleanName);
+    }
+    toast.success(`Video "${file.name}" selected (${formatFileSize(file.size)})`);
+  };
+
+  // Button Safety & Loading States
+  const [isJoining, setIsJoining] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [isSubmittingScore, setIsSubmittingScore] = useState(false);
+  const [isSubmittingLiveScore, setIsSubmittingLiveScore] = useState(false);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isSubmittingVideo, setIsSubmittingVideo] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
+
+  // Concurrency Mutex Refs
+  const isJoiningRef = useRef(false);
+  const isLeavingRef = useRef(false);
+  const isSubmittingScoreRef = useRef(false);
+  const isSubmittingLiveScoreRef = useRef(false);
+  const isSubmittingEditRef = useRef(false);
+  const isSubmittingVideoRef = useRef(false);
+  const isActionLoadingRef = useRef(false);
+  const isSwitchingTeamRef = useRef(false);
+
+  // Confirmation Modal States
+  const [isCancelMatchModalOpen, setIsCancelMatchModalOpen] = useState(false);
+  const [isLeaveMatchModalOpen, setIsLeaveMatchModalOpen] = useState(false);
 
   const game = games.find(g => g.id === id) || games[0];
   const maxSlots = game?.maxPlayers || MATCH_FORMAT_SLOTS[game?.format] || 10;
@@ -81,45 +151,77 @@ export const GameDetailsPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEditGame = (e) => {
+  const handleSaveEditGame = async (e) => {
     e.preventDefault();
-    if (!editTitle || !editTitle.trim()) {
-      toast.error('Game Name cannot be empty.');
-      return;
-    }
+    if (isSubmittingEdit || isSubmittingEditRef.current) return;
 
-    if (editStartTime && editEndTime && editStartTime >= editEndTime) {
-      toast.error('End Time must be after Start Time!');
-      return;
-    }
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(editTitle, 'Game Name'), field: 'editTitle' },
+      { check: () => validateTimeRange(editStartTime, editEndTime), field: 'editStartTime' },
+      { check: () => validateIntegerRange(editMaxPlayers, 2, 50, 'Max Players'), field: 'editMaxPlayers' },
+      { check: () => validatePositiveAmount(editEntryFee, 'Entry Fee', true), field: 'editEntryFee' }
+    ]);
+
+    if (!isValid) return;
 
     const feeVal = parseFloat(editEntryFee) || 0;
-    if (feeVal < 0) {
-      toast.error('Entry fee cannot be negative.');
+    const computedSlots = parseInt(editMaxPlayers, 10) || MATCH_FORMAT_SLOTS[editFormat] || 10;
+    const trimmedTitle = editTitle.trim();
+    const trimmedDesc = editDescription.trim();
+
+    // Detect whether anything actually changed
+    const hasChanges =
+      trimmedTitle !== (game?.title || '').trim() ||
+      editFormat !== game?.format ||
+      computedSlots !== (game?.maxPlayers || MATCH_FORMAT_SLOTS[game?.format] || 10) ||
+      feeVal !== (game?.entryFee || 0) ||
+      editSkill !== game?.skill ||
+      editPrivacy !== game?.privacy ||
+      editDate !== game?.dateTime?.date ||
+      editStartTime !== game?.dateTime?.startTime ||
+      editEndTime !== game?.dateTime?.endTime ||
+      trimmedDesc !== (game?.description || '').trim();
+
+    if (!hasChanges) {
+      toast('No changes detected for this match.', { icon: 'ℹ️' });
+      setIsEditModalOpen(false);
       return;
     }
 
-    const computedSlots = parseInt(editMaxPlayers, 10) || MATCH_FORMAT_SLOTS[editFormat] || 10;
+    isSubmittingEditRef.current = true;
+    setIsSubmittingEdit(true);
+    try {
+      updateGameDetails(game.id, {
+        title: trimmedTitle,
+        format: editFormat,
+        maxPlayers: computedSlots,
+        entryFee: feeVal,
+        skill: editSkill,
+        privacy: editPrivacy,
+        dateTime: {
+          date: editDate,
+          startTime: editStartTime,
+          endTime: editEndTime
+        },
+        description: trimmedDesc
+      });
 
-    updateGameDetails(game.id, {
-      title: editTitle.trim(),
-      format: editFormat,
-      maxPlayers: computedSlots,
-      entryFee: feeVal,
-      skill: editSkill,
-      privacy: editPrivacy,
-      dateTime: {
-        date: editDate,
-        startTime: editStartTime,
-        endTime: editEndTime
-      },
-      description: editDescription.trim()
-    });
-
-    setIsEditModalOpen(false);
+      setIsEditModalOpen(false);
+      toast.success('Match details updated!');
+    } catch (err) {
+      logActionError('handleSaveEditGame', err);
+      toast.error(getErrorMessage(err, 'updating game details'));
+    } finally {
+      setIsSubmittingEdit(false);
+      setTimeout(() => {
+        isSubmittingEditRef.current = false;
+      }, 400);
+    }
   };
 
-  const matchVideo = gameVideos.find(v => v.gameId === game.id);
+  const matchVideo = (gameVideos || []).find(v => v.gameId === game?.id);
 
   const handleOpenPaymentModal = () => {
     if (!currentUser) {
@@ -140,9 +242,11 @@ export const GameDetailsPage = () => {
     setIsPaymentModalOpen(true);
   };
 
-  const handleConfirmPaymentAndJoin = (e) => {
+  const handleConfirmPaymentAndJoin = async (e) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!currentUser || isJoining || isJoiningRef.current) return;
+
+    if (!checkNetworkOnline()) return;
 
     const fee = game.entryFee || 0;
 
@@ -151,30 +255,107 @@ export const GameDetailsPage = () => {
       return;
     }
 
-    const res = joinGame(game.id, currentUser, selectedTeam);
+    isJoiningRef.current = true;
+    setIsJoining(true);
+    try {
+      const res = joinGame(game.id, currentUser, selectedTeam);
 
-    if (res.success) {
-      if (fee > 0) {
-        updateWallet(-fee, `Entry Fee: ${game.title}`);
+      if (res && res.success) {
+        if (fee > 0) {
+          updateWallet(-fee, `Entry Fee: ${game.title}`);
+        }
+        toast.success(fee > 0
+          ? `Payment of ₹${fee} confirmed! ${res.message || 'Slot reserved.'}`
+          : `${res.message || 'You have joined the match roster!'}`);
+        setIsPaymentModalOpen(false);
+      } else {
+        const safeMsg = (res?.message && res.message.length < 200)
+          ? res.message
+          : 'Unable to join match. Please try again.';
+        toast.error(safeMsg);
       }
-      toast.success(`Payment confirmed! ${res.message}`);
-      setIsPaymentModalOpen(false);
-    } else {
-      toast.error(res.message);
-      setIsPaymentModalOpen(false);
+    } catch (err) {
+      logActionError('handleConfirmPaymentAndJoin', err);
+      toast.error(getErrorMessage(err, 'joining match'));
+    } finally {
+      setIsJoining(false);
+      setTimeout(() => {
+        isJoiningRef.current = false;
+      }, 400);
     }
   };
 
-  const handleLeaveMatch = () => {
-    leaveGame(game.id, currentUser.id);
-    if (game.entryFee > 0) {
-      updateWallet(game.entryFee, `Refund: Left match ${game.title}`);
+  const handleLeaveMatch = async () => {
+    if (isLeaving || isLeavingRef.current) return;
+    if (!checkNetworkOnline()) return;
+
+    isLeavingRef.current = true;
+    setIsLeaving(true);
+    try {
+      leaveGame(game.id, currentUser.id);
+      if (game.entryFee > 0) {
+        updateWallet(game.entryFee, `Refund: Left match ${game.title}`);
+        toast.success(`You have left the match. ₹${game.entryFee} has been refunded to your wallet.`);
+      } else {
+        toast.success('You have left the match roster.');
+      }
+      setIsLeaveMatchModalOpen(false);
+    } catch (err) {
+      logActionError('handleLeaveMatch', err);
+      toast.error(getErrorMessage(err, 'leaving match'));
+    } finally {
+      setIsLeaving(false);
+      setTimeout(() => {
+        isLeavingRef.current = false;
+      }, 400);
     }
-    toast.success(`Left match roster. ₹${game.entryFee} refunded to your wallet!`);
+  };
+
+  const handleRequestCancelMatch = () => {
+    if (isActionLoading || isActionLoadingRef.current) return;
+    setIsCancelMatchModalOpen(true);
+  };
+
+  const handleConfirmCancelMatch = async () => {
+    if (isActionLoading || isActionLoadingRef.current) return;
+    if (!checkNetworkOnline()) return;
+
+    isActionLoadingRef.current = true;
+    setIsActionLoading(true);
+    try {
+      removeGame(game.id, 'Cancelled by venue manager');
+      toast.success(`Match session "${game.title}" has been cancelled and removed.`);
+      setIsCancelMatchModalOpen(false);
+      navigate('/games');
+    } catch (err) {
+      logActionError('handleConfirmCancelMatch', err);
+      toast.error(getErrorMessage(err, 'cancelling match'));
+    } finally {
+      setIsActionLoading(false);
+      setTimeout(() => {
+        isActionLoadingRef.current = false;
+      }, 400);
+    }
   };
 
   const handleStartMatch = () => {
-    updateGameLifecycle(game.id, 'ONGOING');
+    if (isActionLoading || isActionLoadingRef.current) return;
+    if (!checkNetworkOnline()) return;
+
+    isActionLoadingRef.current = true;
+    setIsActionLoading(true);
+    try {
+      updateGameLifecycle(game.id, 'ONGOING');
+      toast.success('Match is now LIVE! Good luck to both teams.');
+    } catch (err) {
+      logActionError('handleStartMatch', err);
+      toast.error(getErrorMessage(err, 'starting match'));
+    } finally {
+      setTimeout(() => {
+        setIsActionLoading(false);
+        isActionLoadingRef.current = false;
+      }, 500);
+    }
   };
 
   const handleOpenLiveScoreModal = () => {
@@ -193,22 +374,42 @@ export const GameDetailsPage = () => {
 
   const handleSubmitLiveScore = (e) => {
     e.preventDefault();
+    if (isSubmittingLiveScore || isSubmittingLiveScoreRef.current) return;
 
-    if (liveScoreTeamA === '' || liveScoreTeamA === null || liveScoreTeamB === '' || liveScoreTeamB === null) {
-      toast.error('Please enter live goals for both Team A and Team B.');
-      return;
-    }
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateIntegerRange(liveScoreTeamA, 0, 99, 'Team A Live Goals'), field: 'liveScoreTeamA' },
+      { check: () => validateIntegerRange(liveScoreTeamB, 0, 99, 'Team B Live Goals'), field: 'liveScoreTeamB' }
+    ]);
+
+    if (!isValid) return;
 
     const scoreA = parseInt(liveScoreTeamA, 10);
     const scoreB = parseInt(liveScoreTeamB, 10);
 
-    if (isNaN(scoreA) || scoreA < 0 || scoreA > 99 || isNaN(scoreB) || scoreB < 0 || scoreB > 99) {
-      toast.error('Goals must be valid numbers between 0 and 99.');
+    // Change Detection: if live score is already exactly identical
+    if (game?.liveScore && game.liveScore.teamA === scoreA && game.liveScore.teamB === scoreB) {
+      toast('Live score is already up to date.', { icon: 'ℹ️' });
+      setIsLiveScoreModalOpen(false);
       return;
     }
 
-    updateLiveScore(game.id, { teamAScore: scoreA, teamBScore: scoreB }, currentUser?.name || 'Host');
-    setIsLiveScoreModalOpen(false);
+    isSubmittingLiveScoreRef.current = true;
+    setIsSubmittingLiveScore(true);
+    try {
+      updateLiveScore(game.id, { teamAScore: scoreA, teamBScore: scoreB }, currentUser?.name || 'Host');
+      setIsLiveScoreModalOpen(false);
+      toast.success('Live score updated!');
+    } catch (err) {
+      logActionError('handleSubmitLiveScore', err);
+      toast.error(getErrorMessage(err, 'updating live score'));
+    } finally {
+      setIsSubmittingLiveScore(false);
+      setTimeout(() => {
+        isSubmittingLiveScoreRef.current = false;
+      }, 400);
+    }
   };
 
   const handleOpenScoreModal = () => {
@@ -227,60 +428,153 @@ export const GameDetailsPage = () => {
 
   const handleSubmitScore = (e) => {
     e.preventDefault();
+    if (isSubmittingScore || isSubmittingScoreRef.current) return;
 
-    if (scoreTeamA === '' || scoreTeamA === null || scoreTeamB === '' || scoreTeamB === null) {
-      toast.error('Please enter goals for both Team A and Team B.');
-      return;
-    }
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateIntegerRange(scoreTeamA, 0, 99, 'Team A Final Goals'), field: 'scoreTeamA' },
+      { check: () => validateIntegerRange(scoreTeamB, 0, 99, 'Team B Final Goals'), field: 'scoreTeamB' }
+    ]);
+
+    if (!isValid) return;
 
     const scoreA = parseInt(scoreTeamA, 10);
     const scoreB = parseInt(scoreTeamB, 10);
 
-    if (isNaN(scoreA) || scoreA < 0 || scoreA > 99) {
-      toast.error('Team A goals must be a valid number between 0 and 99.');
+    // Change Detection: if final score has already been submitted with identical numbers
+    if (game?.score && game.score.teamA === scoreA && game.score.teamB === scoreB && game.status === 'COMPLETED') {
+      toast('Final match score is already recorded.', { icon: 'ℹ️' });
+      setIsScoreModalOpen(false);
       return;
     }
 
-    if (isNaN(scoreB) || scoreB < 0 || scoreB > 99) {
-      toast.error('Team B goals must be a valid number between 0 and 99.');
-      return;
+    isSubmittingScoreRef.current = true;
+    setIsSubmittingScore(true);
+    try {
+      submitGameScore(game.id, { teamAScore: scoreA, teamBScore: scoreB }, usersList, (updatedUsers) => {
+        if (currentUser?.id) {
+          const myUpdated = updatedUsers?.find(u => u.id === currentUser.id);
+          if (myUpdated) setCurrentUser(myUpdated);
+        }
+      }, currentUser?.name || 'Host');
+      setIsScoreModalOpen(false);
+    } catch (err) {
+      logActionError('handleSubmitScore', err);
+      toast.error(getErrorMessage(err, 'submitting match score'));
+    } finally {
+      setIsSubmittingScore(false);
+      setTimeout(() => {
+        isSubmittingScoreRef.current = false;
+      }, 400);
     }
-
-    submitGameScore(game.id, { teamAScore: scoreA, teamBScore: scoreB }, usersList, (updatedUsers) => {
-      if (currentUser?.id) {
-        const myUpdated = updatedUsers?.find(u => u.id === currentUser.id);
-        if (myUpdated) setCurrentUser(myUpdated);
-      }
-    }, currentUser?.name || 'Host');
-
-    setIsScoreModalOpen(false);
   };
 
-  const handleAddVideoSubmit = (e) => {
+  const handleAddVideoSubmit = async (e) => {
     e.preventDefault();
-    if (!videoTitle || !videoTitle.trim()) {
-      toast.error('Video title is required.');
-      return;
+    if (isSubmittingVideo || isSubmittingVideoRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    if (videoFile) {
+      const fileCheck = validateFile(videoFile, {
+        allowedTypes: ALLOWED_VIDEO_TYPES,
+        allowedExtensions: ALLOWED_VIDEO_EXTENSIONS,
+        maxSizeBytes: DEFAULT_MAX_VIDEO_SIZE,
+        fileCategoryName: 'video'
+      });
+      if (!fileCheck.isValid) {
+        toast.error(fileCheck.message);
+        return;
+      }
+    } else {
+      const isValid = validateFormAndFocus(e, [
+        { check: () => validateTitle(videoTitle, 'Video Title'), field: 'videoTitle' },
+        { check: () => validateUrl(videoUrl, 'Video URL'), field: 'videoUrl' }
+      ]);
+      if (!isValid) return;
     }
 
-    if (!videoUrl || !videoUrl.trim()) {
-      toast.error('Video URL is required.');
-      return;
+    isSubmittingVideoRef.current = true;
+    setIsSubmittingVideo(true);
+    setUploadProgress(0);
+    try {
+      let finalVideoUrl = videoUrl.trim();
+      if (videoFile) {
+        finalVideoUrl = await readFileAsDataUrl(videoFile, (percent) => {
+          setUploadProgress(percent);
+        });
+      }
+
+      addGameVideo({
+        gameId: game.id,
+        clubId: game.venueReference?.clubId,
+        courtId: game.venueReference?.courtId,
+        title: videoTitle.trim(),
+        videoUrl: finalVideoUrl,
+        description: videoDesc.trim() || (videoFile ? `Uploaded file: ${videoFile.name} (${formatFileSize(videoFile.size)})` : 'Official match footage'),
+        uploadedBy: `${currentUser.name} (${currentUser.role})`
+      });
+
+      toast.success(videoFile ? `Video "${videoFile.name}" uploaded & linked!` : 'Match video linked successfully!');
+      setIsVideoModalOpen(false);
+      setVideoTitle('');
+      setVideoFile(null);
+      if (videoFileInputRef.current) videoFileInputRef.current.value = '';
+    } catch (err) {
+      logActionError('handleAddVideoSubmit', err);
+      toast.error(getErrorMessage(err, 'uploading video'));
+    } finally {
+      setIsSubmittingVideo(false);
+      setUploadProgress(0);
+      setTimeout(() => {
+        isSubmittingVideoRef.current = false;
+      }, 400);
     }
-
-    addGameVideo({
-      gameId: game.id,
-      clubId: game.venueReference?.clubId,
-      courtId: game.venueReference?.courtId,
-      title: videoTitle.trim(),
-      videoUrl: videoUrl.trim(),
-      description: videoDesc.trim() || 'Official match footage',
-      uploadedBy: `${currentUser.name} (${currentUser.role})`
-    });
-
-    setIsVideoModalOpen(false);
-    setVideoTitle('');
   };
+
+  const handleSwitchTeam = async (targetTeam) => {
+    if (isSwitchingTeam || isSwitchingTeamRef.current) return;
+    if (!checkNetworkOnline()) return;
+
+    isSwitchingTeamRef.current = true;
+    setIsSwitchingTeam(true);
+    try {
+      const res = switchPlayerTeam(game.id, currentUser.id, targetTeam);
+      if (res && !res.success) {
+        const safeMsg = (res?.message && res.message.length < 200)
+          ? res.message
+          : 'Unable to switch teams. Please try again.';
+        toast.error(safeMsg);
+      }
+    } catch (err) {
+      logActionError('handleSwitchTeam', err);
+      toast.error(getErrorMessage(err, 'switching team'));
+    } finally {
+      setIsSwitchingTeam(false);
+      setTimeout(() => {
+        isSwitchingTeamRef.current = false;
+      }, 400);
+    }
+  };
+
+  if (!game) {
+    return (
+      <div className="w-full max-w-[1200px] mx-auto py-12 px-4 text-center space-y-4">
+        <BackButton fallback="/player/find-games" label="Back to All Pick-Up Games" />
+        <div className="p-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 max-w-md mx-auto shadow-sm">
+          <div className="text-4xl">⚽</div>
+          <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase">Match Session Not Found</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            This match session may have ended, expired, or been removed by the host.
+          </p>
+          <Button variant="primary" size="md" onClick={() => navigate('/player/find-games')} className="font-bold text-xs uppercase">
+            Browse Live Matches
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[1700px] mx-auto py-2 px-2 sm:px-4 space-y-5">
@@ -305,20 +599,28 @@ export const GameDetailsPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* LEFT COLUMN: Player Lineups & Squad Names */}
-        <div className="lg:col-span-5 xl:col-span-5 space-y-5">
-          
+        {/* LEFT COLUMN: Player Lineups & Squad Names (8 COLS) */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* ROSTERS HEADER */}
           <div className="footy-card p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center space-x-2 uppercase">
-                <Users className="w-4 h-4 text-sport-500" />
-                <span>Match Lineups ({confirmedPlayers.length}/{maxSlots} Slots)</span>
-              </h3>
-              {isGameCompleted && <Badge variant="default" size="sm">🔒 Locked</Badge>}
+              <div>
+                <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white flex items-center gap-2">
+                  <Users className="w-4 h-4 text-sport-500" />
+                  <span>Squad Rosters ({confirmedPlayers.length} / {maxSlots} Confirmed)</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 font-semibold">Teams balance dynamically based on player Elo ratings</p>
+              </div>
+
+              {isConfirmed && !isGameCompleted && (
+                <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" /> Spot Confirmed
+                </span>
+              )}
             </div>
 
-            <div className="space-y-4">
-              
+            {/* 2 TEAMS BALANCED ROSTER CARDS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* TEAM A ROSTER */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 border-l-4 border-l-sky-500 space-y-3">
                 <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
@@ -326,7 +628,7 @@ export const GameDetailsPage = () => {
                     <h4 className="font-black text-xs text-sky-500 uppercase tracking-wider">TEAM A LINEUP</h4>
                     <Badge variant="blue" size="sm">{teamAPlayers.length} / {teamCapacity}</Badge>
                   </div>
-                  
+
                   {isGameCompleted ? (
                     <Badge variant="default" size="sm">🔒 Locked</Badge>
                   ) : currentUser && currentUser.role !== 'CLUB_MANAGER' && (
@@ -334,10 +636,17 @@ export const GameDetailsPage = () => {
                       teamBPlayers.some(p => p.id === currentUser.id) && teamAPlayers.length < teamCapacity && (
                         <button
                           type="button"
-                          onClick={() => switchPlayerTeam(game.id, currentUser.id, 'TEAM_A')}
-                          className="px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 font-extrabold text-[10px] hover:bg-sky-500 hover:text-white transition-all cursor-pointer"
+                          disabled={isSwitchingTeam}
+                          onClick={() => handleSwitchTeam('TEAM_A')}
+                          className="px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-600 dark:text-sky-400 font-extrabold text-[10px] hover:bg-sky-500 hover:text-white transition-all cursor-pointer disabled:opacity-50"
                         >
-                          ⚡ Switch to Team A
+                          {isSwitchingTeam ? (
+                            <span className="inline-flex items-center gap-1">
+                              <span className="animate-spin text-[10px]">⏳</span> Switching...
+                            </span>
+                          ) : (
+                            '⚡ Switch to Team A'
+                          )}
                         </button>
                       )
                     ) : (
@@ -391,10 +700,17 @@ export const GameDetailsPage = () => {
                       teamAPlayers.some(p => p.id === currentUser.id) && teamBPlayers.length < teamCapacity && (
                         <button
                           type="button"
-                          onClick={() => switchPlayerTeam(game.id, currentUser.id, 'TEAM_B')}
-                          className="px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 font-extrabold text-[10px] hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                          disabled={isSwitchingTeam}
+                          onClick={() => handleSwitchTeam('TEAM_B')}
+                          className="px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 font-extrabold text-[10px] hover:bg-rose-500 hover:text-white transition-all cursor-pointer disabled:opacity-50"
                         >
-                          ⚡ Switch to Team B
+                          {isSwitchingTeam ? (
+                            <span className="inline-flex items-center gap-1">
+                              <span className="animate-spin text-[10px]">⏳</span> Switching...
+                            </span>
+                          ) : (
+                            '⚡ Switch to Team B'
+                          )}
                         </button>
                       )
                     ) : (
@@ -689,7 +1005,15 @@ export const GameDetailsPage = () => {
                   ) : (
                     <>
                       {game.status !== 'ONGOING' && (
-                        <Button variant="primary" size="sm" icon={Play} onClick={handleStartMatch} className="w-full justify-center text-[11px]">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon={Play}
+                          isLoading={isActionLoading}
+                          disabled={isActionLoading}
+                          onClick={handleStartMatch}
+                          className="w-full justify-center text-[11px]"
+                        >
                           Start Match
                         </Button>
                       )}
@@ -716,13 +1040,9 @@ export const GameDetailsPage = () => {
                         variant="danger" 
                         size="sm" 
                         icon={Trash2} 
-                        onClick={() => {
-                          if (window.confirm(`Are you sure you want to cancel and remove game session "${game.title}"?`)) {
-                            removeGame(game.id, 'Cancelled by venue manager');
-                            toast.success(`Game session "${game.title}" removed!`);
-                            navigate('/games');
-                          }
-                        }}
+                        isLoading={isActionLoading}
+                        disabled={isActionLoading}
+                        onClick={handleRequestCancelMatch}
                         className="w-full justify-center text-[11px]"
                       >
                         Cancel Match
@@ -745,7 +1065,14 @@ export const GameDetailsPage = () => {
                   <span>Club Managers cannot join games as players.</span>
                 </div>
               ) : isConfirmed || isWaitlisted ? (
-                <Button variant="danger" size="md" onClick={handleLeaveMatch} className="w-full justify-center">
+                <Button
+                  variant="danger"
+                  size="md"
+                  isLoading={isLeaving}
+                  disabled={isLeaving}
+                  onClick={() => setIsLeaveMatchModalOpen(true)}
+                  className="w-full justify-center"
+                >
                   Leave Match & Refund ₹{game.entryFee}
                 </Button>
               ) : (
@@ -781,7 +1108,7 @@ export const GameDetailsPage = () => {
                         src={videoItem.videoUrl}
                         controls
                         className="w-full h-full object-cover"
-                        poster="/src/assets/images/courts/court-1.jpg"
+                        poster="/assets/images/courts/court-1.jpg"
                       />
                     </div>
 
@@ -887,7 +1214,8 @@ export const GameDetailsPage = () => {
               variant="primary"
               size="md"
               icon={CreditCard}
-              disabled={(currentUser?.walletBalance || 0) < game.entryFee}
+              isLoading={isJoining}
+              disabled={isJoining || (currentUser?.walletBalance || 0) < game.entryFee}
             >
               Pay ₹{game.entryFee} & Confirm Slot
             </Button>
@@ -906,6 +1234,7 @@ export const GameDetailsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Team A Final Goals</label>
               <input
+                name="scoreTeamA"
                 type="number"
                 min="0"
                 max="99"
@@ -918,6 +1247,7 @@ export const GameDetailsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Team B Final Goals</label>
               <input
+                name="scoreTeamB"
                 type="number"
                 min="0"
                 max="99"
@@ -933,7 +1263,7 @@ export const GameDetailsPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsScoreModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="emerald" size="sm">
+            <Button type="submit" variant="emerald" size="sm" isLoading={isSubmittingScore} disabled={isSubmittingScore}>
               🏁 Finish Match & Publish Final Score
             </Button>
           </div>
@@ -951,6 +1281,7 @@ export const GameDetailsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Team A Live Goals</label>
               <input
+                name="liveScoreTeamA"
                 type="number"
                 min="0"
                 max="99"
@@ -963,6 +1294,7 @@ export const GameDetailsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Team B Live Goals</label>
               <input
+                name="liveScoreTeamB"
                 type="number"
                 min="0"
                 max="99"
@@ -978,7 +1310,7 @@ export const GameDetailsPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsLiveScoreModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="gold" size="sm">
+            <Button type="submit" variant="gold" size="sm" isLoading={isSubmittingLiveScore} disabled={isSubmittingLiveScore}>
               🔴 Update Live Screen Score
             </Button>
           </div>
@@ -991,6 +1323,7 @@ export const GameDetailsPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1">Video Title</label>
             <input
+              name="videoTitle"
               type="text"
               placeholder="e.g. Full Match Highlights - Pitch 1"
               value={videoTitle}
@@ -1001,19 +1334,54 @@ export const GameDetailsPage = () => {
           </div>
 
           <div>
-            <label className="block text-slate-700 dark:text-slate-300 mb-1">Video MP4 / Embed Stream URL</label>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1">
+              Select Video File (.mp4, .webm, .mov, max 50 MB)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                ref={videoFileInputRef}
+                type="file"
+                accept=".mp4,.webm,.mov,.mkv,video/mp4,video/webm,video/quicktime"
+                onChange={handleVideoFileChange}
+                disabled={isSubmittingVideo}
+                className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sport-500/10 file:text-sport-600 dark:file:text-sport-400 hover:file:bg-sport-500/20 cursor-pointer"
+              />
+              {videoFile && (
+                <button
+                  type="button"
+                  onClick={() => { setVideoFile(null); if (videoFileInputRef.current) videoFileInputRef.current.value = ''; }}
+                  disabled={isSubmittingVideo}
+                  className="text-rose-500 hover:text-rose-600 text-xs font-bold whitespace-nowrap p-1 cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {videoFile && (
+              <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Selected: <strong className="text-slate-900 dark:text-white">{videoFile.name}</strong> ({formatFileSize(videoFile.size)})</span>
+                <span className="text-emerald-500 font-bold">✓ Ready</span>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1">Or Video MP4 / Embed Stream URL</label>
             <input
+              name="videoUrl"
               type="text"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold"
-              required
+              disabled={!!videoFile || isSubmittingVideo}
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold disabled:opacity-50"
+              required={!videoFile}
             />
           </div>
 
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1">Video Description / Highlights</label>
             <textarea
+              name="videoDesc"
               rows="2"
               placeholder="Key goals, saves, penalty shootout footage..."
               value={videoDesc}
@@ -1022,12 +1390,41 @@ export const GameDetailsPage = () => {
             />
           </div>
 
+          {isSubmittingVideo && uploadProgress > 0 && (
+            <div className="space-y-1 py-1">
+              <div className="flex justify-between text-[11px] font-bold text-slate-500">
+                <span>Uploading & Processing Video Footage...</span>
+                <span className="text-sport-500">{uploadProgress}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-sport-500 transition-all duration-200 rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setIsVideoModalOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (isSubmittingVideo) {
+                  toast('Upload in progress...', { icon: '⏳' });
+                  return;
+                }
+                setIsVideoModalOpen(false);
+                setVideoFile(null);
+                if (videoFileInputRef.current) videoFileInputRef.current.value = '';
+              }}
+              disabled={isSubmittingVideo}
+            >
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" icon={Film}>
-              Upload & Link Match Video
+            <Button type="submit" variant="primary" size="sm" icon={Film} isLoading={isSubmittingVideo} disabled={isSubmittingVideo}>
+              {isSubmittingVideo ? `Uploading (${uploadProgress}%)...` : 'Upload & Link Match Video'}
             </Button>
           </div>
         </form>
@@ -1046,6 +1443,7 @@ export const GameDetailsPage = () => {
               Game Name <span className="text-rose-500">*</span>
             </label>
             <input
+              name="editTitle"
               type="text"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
@@ -1061,6 +1459,7 @@ export const GameDetailsPage = () => {
                 Date <span className="text-rose-500">*</span>
               </label>
               <input
+                name="editDate"
                 type="date"
                 value={editDate}
                 onChange={(e) => setEditDate(e.target.value)}
@@ -1074,6 +1473,7 @@ export const GameDetailsPage = () => {
                 Start Time <span className="text-rose-500">*</span>
               </label>
               <input
+                name="editStartTime"
                 type="time"
                 value={editStartTime}
                 onChange={(e) => setEditStartTime(e.target.value)}
@@ -1087,6 +1487,7 @@ export const GameDetailsPage = () => {
                 End Time <span className="text-rose-500">*</span>
               </label>
               <input
+                name="editEndTime"
                 type="time"
                 value={editEndTime}
                 onChange={(e) => setEditEndTime(e.target.value)}
@@ -1103,6 +1504,7 @@ export const GameDetailsPage = () => {
                 Game Type / Format <span className="text-rose-500">*</span>
               </label>
               <select
+                name="editFormat"
                 value={editFormat}
                 onChange={(e) => {
                   setEditFormat(e.target.value);
@@ -1131,6 +1533,7 @@ export const GameDetailsPage = () => {
                 Skill Level
               </label>
               <select
+                name="editSkill"
                 value={editSkill}
                 onChange={(e) => setEditSkill(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
@@ -1150,6 +1553,7 @@ export const GameDetailsPage = () => {
                 Max Players <span className="text-rose-500">*</span>
               </label>
               <input
+                name="editMaxPlayers"
                 type="number"
                 min="1"
                 max="50"
@@ -1165,6 +1569,7 @@ export const GameDetailsPage = () => {
                 Entry Fee (₹)
               </label>
               <input
+                name="editEntryFee"
                 type="number"
                 min="0"
                 step="50"
@@ -1214,14 +1619,115 @@ export const GameDetailsPage = () => {
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition-all whitespace-nowrap cursor-pointer"
+              disabled={isSubmittingEdit}
+              className="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Changes
+              {isSubmittingEdit ? 'Saving Changes...' : 'Save Changes'}
             </button>
           </div>
         </form>
       </Modal>
 
+      {/* ═══ CANCEL MATCH CONFIRM MODAL ═══ */}
+    <Modal
+      isOpen={isCancelMatchModalOpen}
+      onClose={() => { if (!isActionLoading) setIsCancelMatchModalOpen(false); }}
+      title="🗑️ Cancel & Remove Match Session"
+      maxWidth="max-w-md"
+    >
+      <div className="space-y-4">
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 space-y-2">
+          <p className="text-sm font-bold">Are you sure you want to cancel and remove this match?</p>
+          <p className="text-xs font-semibold opacity-80">This action cannot be undone. All players will be removed from the roster and entry fees refunded.</p>
+        </div>
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+          <div className="flex justify-between">
+            <span className="text-slate-400">Match:</span>
+            <span className="text-slate-900 dark:text-white font-bold truncate max-w-[200px]">{game?.title}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Format:</span>
+            <span className="text-slate-700 dark:text-slate-300">{game?.format}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Players Registered:</span>
+            <span className="text-slate-700 dark:text-slate-300">{game?.confirmedPlayers?.length || 0} players</span>
+          </div>
+        </div>
+        <div className="flex gap-3 pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCancelMatchModalOpen(false)}
+            className="flex-1 border border-slate-200 dark:border-slate-700"
+          >
+            Keep Match
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            icon={Trash2}
+            isLoading={isActionLoading}
+            disabled={isActionLoading}
+            onClick={handleConfirmCancelMatch}
+            className="flex-1"
+          >
+            Yes, Cancel Match
+          </Button>
+        </div>
+      </div>
+    </Modal>
+
+    {/* ═══ LEAVE MATCH CONFIRM MODAL ═══ */}
+    <Modal
+      isOpen={isLeaveMatchModalOpen}
+      onClose={() => { if (!isLeaving) setIsLeaveMatchModalOpen(false); }}
+      title="⚠️ Leave Match & Refund"
+      maxWidth="max-w-md"
+    >
+      <div className="space-y-4">
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 space-y-2">
+          <p className="text-sm font-bold">Are you sure you want to leave this match?</p>
+          <p className="text-xs font-semibold opacity-80">Your roster spot will be freed for another player. Your entry fee will be refunded to your wallet.</p>
+        </div>
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+          <div className="flex justify-between">
+            <span className="text-slate-400">Match:</span>
+            <span className="text-slate-900 dark:text-white font-bold truncate max-w-[200px]">{game?.title}</span>
+          </div>
+          {game?.entryFee > 0 && (
+            <div className="flex justify-between">
+              <span className="text-slate-400">Refund Amount:</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹{game.entryFee} → Wallet</span>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsLeaveMatchModalOpen(false)}
+            className="flex-1 border border-slate-200 dark:border-slate-700"
+          >
+            Stay in Match
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            isLoading={isLeaving}
+            disabled={isLeaving}
+            onClick={handleLeaveMatch}
+            className="flex-1"
+          >
+            Yes, Leave Match
+          </Button>
+        </div>
+      </div>
+    </Modal>
     </div>
   );
 };

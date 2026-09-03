@@ -13,6 +13,8 @@ import { getTodayDate } from '../../utils/dateUtils';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
+import Modal from '../../components/common/Modal';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 export const ClubDashboardPage = () => {
@@ -21,6 +23,12 @@ export const ClubDashboardPage = () => {
   const { currentUser } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState('all');
+  const [togglingCourtId, setTogglingCourtId] = useState(null);
+  const [removingGameId, setRemovingGameId] = useState(null);
+  const [gameToRemove, setGameToRemove] = useState(null);
+
+  const isTogglingCourtRef = React.useRef(false);
+  const isRemovingGameRef = React.useRef(false);
 
   // Manager's primary club & courts
   const myClub = clubs.find(c => c.managerIds?.includes(currentUser?.id)) || clubs[0];
@@ -47,13 +55,57 @@ export const ClubDashboardPage = () => {
     { day: 'Sun', hours: 10.0, percent: 90, peak: '07:00 - 22:00' }
   ];
 
-  const handleToggleCourtStatus = (courtId, currentStatus) => {
-    const nextStatus = currentStatus === 'AVAILABLE' ? 'MAINTENANCE' : 'AVAILABLE';
-    if (updateCourtStatus) {
-      updateCourtStatus(courtId, nextStatus);
-      toast.success(`Court status updated to ${nextStatus}`);
-    } else {
-      toast.success(`Court status toggled to ${nextStatus}`);
+  const handleToggleCourtStatus = async (courtId, currentStatus) => {
+    if (togglingCourtId || isTogglingCourtRef.current) return;
+    if (!checkNetworkOnline()) return;
+
+    isTogglingCourtRef.current = true;
+    setTogglingCourtId(courtId);
+    try {
+      const nextStatus = currentStatus === 'AVAILABLE' ? 'MAINTENANCE' : 'AVAILABLE';
+      if (updateCourtStatus) {
+        updateCourtStatus(courtId, nextStatus);
+        toast.success(`Court status updated to ${nextStatus}`);
+      } else {
+        toast.success(`Court status toggled to ${nextStatus}`);
+      }
+    } catch (err) {
+      logActionError('handleToggleCourtStatus', err);
+      toast.error(getErrorMessage(err, 'updating court status'));
+    } finally {
+      setTogglingCourtId(null);
+      setTimeout(() => {
+        isTogglingCourtRef.current = false;
+      }, 400);
+    }
+  };
+
+  const handleRequestRemoveGame = (e, game) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (removingGameId || isRemovingGameRef.current) return;
+    setGameToRemove(game);
+  };
+
+  const handleConfirmRemoveGame = async () => {
+    if (!gameToRemove || removingGameId || isRemovingGameRef.current) return;
+    if (!checkNetworkOnline()) return;
+
+    const game = gameToRemove;
+    isRemovingGameRef.current = true;
+    setGameToRemove(null);
+    setRemovingGameId(game.id);
+    try {
+      removeGame(game.id, 'Cancelled by venue manager');
+      toast.success(`Game session "${game.title}" removed.`);
+    } catch (err) {
+      logActionError('handleConfirmRemoveGame', err);
+      toast.error(getErrorMessage(err, 'removing game session'));
+    } finally {
+      setRemovingGameId(null);
+      setTimeout(() => {
+        isRemovingGameRef.current = false;
+      }, 400);
     }
   };
 
@@ -309,17 +361,12 @@ export const ClubDashboardPage = () => {
                         </div>
 
                         <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (window.confirm(`Cancel and remove game session "${game.title}"?`)) {
-                              removeGame(game.id, 'Cancelled by venue manager');
-                            }
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                          disabled={removingGameId !== null}
+                          onClick={(e) => handleRequestRemoveGame(e, game)}
+                          className="p-1.5 rounded-lg hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer disabled:opacity-50"
                           title="Remove / Cancel Game Session"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {removingGameId === game.id ? <span className="animate-spin inline-block text-xs">⏳</span> : <Trash2 className="w-4 h-4" />}
                         </button>
                       </div>
 
@@ -408,12 +455,13 @@ export const ClubDashboardPage = () => {
                       <p className="text-[10px] text-slate-400 font-semibold">{crt.type} • {crt.surface}</p>
                     </div>
                     <button
+                      disabled={togglingCourtId === (crt.courtId || crt.id)}
                       onClick={() => handleToggleCourtStatus(crt.courtId || crt.id, crt.status)}
-                      className="cursor-pointer"
+                      className="cursor-pointer disabled:opacity-50"
                       title="Click to toggle status"
                     >
                       <Badge variant={crt.status === 'AVAILABLE' ? 'emerald' : 'danger'} size="sm">
-                        {crt.status === 'AVAILABLE' ? '🟢 Active' : '🔴 Maintenance'}
+                        {togglingCourtId === (crt.courtId || crt.id) ? '⏳ Updating...' : crt.status === 'AVAILABLE' ? '🟢 Active' : '🔴 Maintenance'}
                       </Badge>
                     </button>
                   </div>
@@ -467,6 +515,59 @@ export const ClubDashboardPage = () => {
 
       </div>
 
+      {/* ═══ REMOVE GAME CONFIRM MODAL ═══ */}
+      <Modal
+        isOpen={!!gameToRemove}
+        onClose={() => { if (!removingGameId) setGameToRemove(null); }}
+        title="🗑️ Cancel & Remove Game Session"
+        maxWidth="max-w-md"
+      >
+        {gameToRemove && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 space-y-2">
+              <p className="text-sm font-bold">Are you sure you want to cancel and remove this game session?</p>
+              <p className="text-xs font-semibold opacity-80">This action is irreversible. All registered players will be removed from the roster.</p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Session:</span>
+                <span className="text-slate-900 dark:text-white font-bold truncate max-w-[180px]">{gameToRemove.title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Date:</span>
+                <span className="text-slate-700 dark:text-slate-300">{gameToRemove.dateTime?.date} · {gameToRemove.dateTime?.startTime}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Players:</span>
+                <span className="text-slate-700 dark:text-slate-300">{gameToRemove.confirmedPlayers?.length || 0} registered</span>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setGameToRemove(null)}
+                className="flex-1 border border-slate-200 dark:border-slate-700"
+              >
+                Keep Session
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                icon={Trash2}
+                isLoading={!!removingGameId}
+                disabled={!!removingGameId}
+                onClick={handleConfirmRemoveGame}
+                className="flex-1"
+              >
+                Yes, Cancel & Remove
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

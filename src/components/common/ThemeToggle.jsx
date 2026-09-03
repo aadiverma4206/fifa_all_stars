@@ -4,6 +4,7 @@ import { useThemeStore } from '../../store/useThemeStore';
 
 export const ThemeToggle = ({ className = "" }) => {
   const { theme, toggleTheme, applyTheme, listenToSystemChanges } = useThemeStore();
+  const lastClickRef = React.useRef(0);
 
   useEffect(() => {
     applyTheme();
@@ -13,9 +14,16 @@ export const ThemeToggle = ({ className = "" }) => {
     };
   }, [applyTheme, listenToSystemChanges]);
 
+  const handleToggle = () => {
+    const now = Date.now();
+    if (now - lastClickRef.current < 250) return;
+    lastClickRef.current = now;
+    toggleTheme();
+  };
+
   return (
     <button
-      onClick={toggleTheme}
+      onClick={handleToggle}
       type="button"
       aria-label="Toggle theme mode"
       title={`Current Theme: ${theme.toUpperCase()} (Click to toggle Light / Dark / System)`}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Search, Shield, UserCheck, Lock, Unlock, Eye, HelpCircle, Plus, Building2, UserPlus, Phone, CreditCard, History } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDataStore } from '../../store/useDataStore';
@@ -7,7 +7,8 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
 import Modal from '../../components/common/Modal';
-import { validateName, validateEmail, validatePassword, validatePhone, validateNonEmpty } from '../../utils/validationUtils';
+import { validateName, validateEmail, validatePassword, validatePhone, validateNonEmpty, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 export const UserManagementPage = () => {
@@ -23,6 +24,15 @@ export const UserManagementPage = () => {
   const [roleConfirmTarget, setRoleConfirmTarget] = useState(null); // { user, newRole }
   const [blockConfirmTarget, setBlockConfirmTarget] = useState(null); // user
 
+  // Loading & Concurrency Locks
+  const [isChangingRole, setIsChangingRole] = useState(false);
+  const [isTogglingBlock, setIsTogglingBlock] = useState(false);
+  const [isCreatingManager, setIsCreatingManager] = useState(false);
+
+  const isChangingRoleRef = useRef(false);
+  const isTogglingBlockRef = useRef(false);
+  const isCreatingManagerRef = useRef(false);
+
   // Add Club Manager Modal State
   const [isAddManagerModalOpen, setIsAddManagerModalOpen] = useState(false);
   const [mgrName, setMgrName] = useState('');
@@ -30,7 +40,7 @@ export const UserManagementPage = () => {
   const [mgrPhone, setMgrPhone] = useState('');
   const [mgrPassword, setMgrPassword] = useState('Manager@123');
   const [mgrClubId, setMgrClubId] = useState(clubs[0]?.id || '');
-  const [mgrCity, setMgrCity] = useState('Raipur');
+  const [mgrCity, setMgrCity] = useState(clubs[0]?.city || 'Raipur');
 
   const filteredUsers = usersList.filter(u => {
     const searchLower = searchTerm.toLowerCase();
@@ -54,63 +64,102 @@ export const UserManagementPage = () => {
     setRoleConfirmTarget({ user, newRole });
   };
 
-  const handleConfirmRoleChange = () => {
-    if (!roleConfirmTarget) return;
+  const handleConfirmRoleChange = async () => {
+    if (!roleConfirmTarget || isChangingRole || isChangingRoleRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
     const { user, newRole } = roleConfirmTarget;
-    changeUserRole(user.id, newRole);
-    toast.success(`Role for ${user.name} changed to ${newRole}`);
-    setRoleConfirmTarget(null);
+
+    isChangingRoleRef.current = true;
+    setIsChangingRole(true);
+    try {
+      changeUserRole(user.id, newRole);
+      toast.success(`Updated ${user.name}'s role to ${newRole}`);
+      setRoleConfirmTarget(null);
+    } catch (err) {
+      logActionError('handleConfirmRoleChange', err);
+      toast.error(getErrorMessage(err, 'changing user role'));
+    } finally {
+      setIsChangingRole(false);
+      setTimeout(() => {
+        isChangingRoleRef.current = false;
+      }, 400);
+    }
   };
 
-  const handleConfirmBlockToggle = () => {
-    if (!blockConfirmTarget) return;
-    const isBlocking = blockConfirmTarget.status !== 'SUSPENDED';
-    toggleUserStatus(blockConfirmTarget.id);
-    toast.success(`User ${blockConfirmTarget.name} ${isBlocking ? 'BLOCKED & SUSPENDED' : 'UNBLOCKED'}`);
-    setBlockConfirmTarget(null);
+  const handleOpenBlockConfirm = (user) => {
+    setBlockConfirmTarget(user);
   };
 
-  const handleCreateManagerSubmit = (e) => {
+  const handleConfirmToggleBlock = async () => {
+    if (!blockConfirmTarget || isTogglingBlock || isTogglingBlockRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const user = blockConfirmTarget;
+
+    isTogglingBlockRef.current = true;
+    setIsTogglingBlock(true);
+    try {
+      toggleUserStatus(user.id);
+      toast.success(`${user.name} has been ${user.status === 'ACTIVE' ? 'blocked' : 'unblocked'}`);
+      setBlockConfirmTarget(null);
+    } catch (err) {
+      logActionError('handleConfirmToggleBlock', err);
+      toast.error(getErrorMessage(err, 'updating user account status'));
+    } finally {
+      setIsTogglingBlock(false);
+      setTimeout(() => {
+        isTogglingBlockRef.current = false;
+      }, 400);
+    }
+  };
+
+  const handleCreateManagerSubmit = async (e) => {
     e.preventDefault();
-    const nameCheck = validateName(mgrName, 'Manager Name');
-    if (!nameCheck.isValid) {
-      toast.error(nameCheck.message);
-      return;
-    }
+    if (isCreatingManager || isCreatingManagerRef.current) return;
 
-    const emailCheck = validateEmail(mgrEmail);
-    if (!emailCheck.isValid) {
-      toast.error(emailCheck.message);
-      return;
-    }
+    if (!checkNetworkOnline()) return;
 
-    const phoneCheck = validatePhone(mgrPhone);
-    if (!phoneCheck.isValid) {
-      toast.error(phoneCheck.message);
-      return;
-    }
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateName(mgrName, 'Manager Name'), field: 'mgrName' },
+      { check: () => validateEmail(mgrEmail), field: 'mgrEmail' },
+      { check: () => validatePhone(mgrPhone), field: 'mgrPhone' },
+      { check: () => validatePassword(mgrPassword, 6), field: 'mgrPassword' }
+    ]);
 
-    const passCheck = validatePassword(mgrPassword, 6);
-    if (!passCheck.isValid) {
-      toast.error(passCheck.message);
-      return;
-    }
+    if (!isValid) return;
 
-    const res = createClubManager({
-      name: mgrName.trim(),
-      email: mgrEmail.trim(),
-      phone: mgrPhone.trim(),
-      password: mgrPassword,
-      clubId: mgrClubId,
-      city: mgrCity
-    });
+    isCreatingManagerRef.current = true;
+    setIsCreatingManager(true);
+    try {
+      const res = createClubManager({
+        name: mgrName.trim(),
+        email: mgrEmail.trim(),
+        phone: mgrPhone.trim(),
+        password: mgrPassword,
+        clubId: mgrClubId,
+        city: mgrCity
+      });
 
-    if (res.success) {
-      setIsAddManagerModalOpen(false);
-      setMgrName('');
-      setMgrEmail('');
-      setMgrPhone('');
-      setMgrPassword('Manager@123');
+      if (res && res.success) {
+        setIsAddManagerModalOpen(false);
+        setMgrName('');
+        setMgrEmail('');
+        setMgrPhone('');
+        setMgrPassword('Manager@123');
+      } else if (res && !res.success) {
+        toast.error(res.error || 'Failed to create manager account.');
+      }
+    } catch (err) {
+      logActionError('handleCreateManagerSubmit', err);
+      toast.error(getErrorMessage(err, 'creating manager account'));
+    } finally {
+      setIsCreatingManager(false);
+      setTimeout(() => {
+        isCreatingManagerRef.current = false;
+      }, 400);
     }
   };
 
@@ -334,10 +383,17 @@ export const UserManagementPage = () => {
               </button>
               <button
                 type="button"
+                disabled={isChangingRole}
                 onClick={handleConfirmRoleChange}
-                className="flex-1 py-2.5 rounded-md bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-sm transition-all cursor-pointer"
+                className="flex-1 py-2.5 rounded-md bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                ✅ Confirm Role Change
+                {isChangingRole ? (
+                  <span className="inline-flex items-center justify-center gap-1.5">
+                    <span className="animate-spin text-xs">⏳</span> Updating Role...
+                  </span>
+                ) : (
+                  '✅ Confirm Role Change'
+                )}
               </button>
             </div>
           </div>
@@ -383,14 +439,23 @@ export const UserManagementPage = () => {
               </button>
               <button
                 type="button"
-                onClick={handleConfirmBlockToggle}
-                className={`flex-1 py-2.5 rounded-md text-white text-xs font-bold shadow-sm transition-all cursor-pointer ${
+                disabled={isTogglingBlock}
+                onClick={handleConfirmToggleBlock}
+                className={`flex-1 py-2.5 rounded-md text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                   blockConfirmTarget.status === 'SUSPENDED'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
                     : 'bg-rose-600 hover:bg-rose-700'
                 }`}
               >
-                {blockConfirmTarget.status === 'SUSPENDED' ? '🔓 Confirm Unblock' : '🚫 Confirm Block'}
+                {isTogglingBlock ? (
+                  <span className="inline-flex items-center justify-center gap-1.5">
+                    <span className="animate-spin text-xs">⏳</span> Processing...
+                  </span>
+                ) : blockConfirmTarget.status === 'SUSPENDED' ? (
+                  '🔓 Confirm Unblock'
+                ) : (
+                  '🚫 Confirm Block'
+                )}
               </button>
             </div>
           </div>
@@ -411,6 +476,7 @@ export const UserManagementPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
             <input
+              name="mgrName"
               type="text"
               placeholder="e.g. Rajesh Sharma"
               value={mgrName}
@@ -424,6 +490,7 @@ export const UserManagementPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Email Address *</label>
               <input
+                name="mgrEmail"
                 type="email"
                 placeholder="manager@fifaallstars.com"
                 value={mgrEmail}
@@ -435,6 +502,7 @@ export const UserManagementPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
               <input
+                name="mgrPhone"
                 type="tel"
                 placeholder="+91 98765 43210"
                 value={mgrPhone}
@@ -448,6 +516,7 @@ export const UserManagementPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Password *</label>
               <input
+                name="mgrPassword"
                 type="text"
                 value={mgrPassword}
                 onChange={(e) => setMgrPassword(e.target.value)}
@@ -458,6 +527,7 @@ export const UserManagementPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Assign to Club *</label>
               <select
+                name="mgrClubId"
                 value={mgrClubId}
                 onChange={(e) => setMgrClubId(e.target.value)}
                 className="w-full px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sport-500"
@@ -473,7 +543,14 @@ export const UserManagementPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddManagerModalOpen(false)} className="rounded-md font-semibold text-xs">
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="md" className="rounded-md font-bold text-xs uppercase">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              isLoading={isCreatingManager}
+              disabled={isCreatingManager}
+              className="rounded-md font-bold text-xs uppercase"
+            >
               Create & Assign Manager
             </Button>
           </div>

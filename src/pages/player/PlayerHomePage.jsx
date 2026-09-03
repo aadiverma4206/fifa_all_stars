@@ -78,13 +78,17 @@ export const PlayerHomePage = () => {
 
   const citiesList = ['Raipur', 'Bangalore', 'Mumbai', 'Delhi', 'Pune'];
 
+  const isSearchingRef = React.useRef(false);
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    if (isSearchingRef.current) return;
+    isSearchingRef.current = true;
     if (selectedCity || searchQuery) {
       navigate(`/games?city=${encodeURIComponent(selectedCity)}&query=${encodeURIComponent(searchQuery)}`);
     } else {
       navigate('/games');
     }
+    setTimeout(() => { isSearchingRef.current = false; }, 500);
   };
 
   return (
@@ -226,6 +230,7 @@ export const PlayerHomePage = () => {
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <select
+                    name="city"
                     value={selectedCity}
                     onChange={(e) => setSelectedCity(e.target.value)}
                     className="w-full px-3 py-2 rounded-md border border-slate-800 bg-slate-950 text-slate-100 font-medium text-xs focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -239,6 +244,7 @@ export const PlayerHomePage = () => {
 
                 <div className="relative flex-1">
                   <input
+                    name="search"
                     type="text"
                     placeholder="Search match or venue..."
                     value={searchQuery}

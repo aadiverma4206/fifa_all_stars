@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   RotateCcw, CheckCircle2, XCircle, DollarSign, Calendar, AlertTriangle, 
   Search, Filter, Clock, ArrowUpDown, ChevronRight, User, Building2, 
@@ -11,6 +11,8 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
 import Modal from '../../components/common/Modal';
+import { validatePositiveAmount, validateNonEmpty, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 export const RefundsPage = () => {
@@ -18,7 +20,7 @@ export const RefundsPage = () => {
   const { usersList } = useAuthStore();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'PENDING' | 'REFUNDED' | 'REFUND_REJECTED'
   const [tierFilter, setTierFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('NEWEST');
 
@@ -33,13 +35,18 @@ export const RefundsPage = () => {
 
   const [rejectReason, setRejectReason] = useState('Cancellation submitted within locked 2-hour window');
   const [customRejectReason, setCustomRejectReason] = useState('');
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+
+  const isApprovingRef = useRef(false);
+  const isRejectingRef = useRef(false);
 
   const refundRequests = useMemo(() => {
     return bookings.filter(b => 
-      b.status === 'REFUND_PENDING' || 
       b.status === 'CANCELLED' || 
       b.status === 'REFUNDED' || 
-      b.status === 'REFUND_REJECTED'
+      b.status === 'REFUND_REJECTED' ||
+      b.refundRequestedAt
     );
   }, [bookings]);
 
@@ -61,15 +68,17 @@ export const RefundsPage = () => {
   const filteredRequests = useMemo(() => {
     return refundRequests
       .filter(b => {
-        const matchesSearch = 
-          b.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.courtName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.clubName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.cancellationReason?.toLowerCase().includes(searchTerm.toLowerCase());
+        // Search Filter
+        if (searchTerm.trim()) {
+          const q = searchTerm.toLowerCase();
+          const matchId = b.id?.toLowerCase().includes(q);
+          const matchUser = b.userName?.toLowerCase().includes(q);
+          const matchClub = b.clubName?.toLowerCase().includes(q);
+          const matchCourt = b.courtName?.toLowerCase().includes(q);
+          if (!matchId && !matchUser && !matchClub && !matchCourt) return false;
+        }
 
-        if (!matchesSearch) return false;
-
+        // Status Filter
         if (statusFilter === 'PENDING') {
           if (b.status !== 'REFUND_PENDING' && b.status !== 'CANCELLED') return false;
         } else if (statusFilter === 'REFUNDED') {
@@ -118,30 +127,46 @@ export const RefundsPage = () => {
     }
   };
 
-  const handleConfirmApproval = (e) => {
+  const handleConfirmApproval = async (e) => {
     e.preventDefault();
-    if (!selectedBooking) return;
+    if (!selectedBooking || isApproving || isApprovingRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validatePositiveAmount(customAmount, 'Refund Amount', true), field: 'customAmount' }
+    ]);
+
+    if (!isValid) return;
 
     const amt = parseFloat(customAmount);
-    if (isNaN(amt) || amt < 0) {
-      toast.error('Please enter a valid refund amount');
-      return;
+
+    isApprovingRef.current = true;
+    setIsApproving(true);
+    try {
+      approveRefund(
+        selectedBooking.id,
+        usersList,
+        (updatedUsers) => {
+          const current = useAuthStore.getState().currentUser;
+          const updatedCurrent = current ? updatedUsers.find(u => u.id === current.id) || current : null;
+          useAuthStore.setState({ usersList: updatedUsers, currentUser: updatedCurrent });
+        },
+        amt,
+        selectedTier
+      );
+
+      setIsApproveModalOpen(false);
+      setSelectedBooking(null);
+    } catch (err) {
+      logActionError('handleConfirmApproval', err);
+      toast.error(getErrorMessage(err, 'approving refund'));
+    } finally {
+      setIsApproving(false);
+      setTimeout(() => {
+        isApprovingRef.current = false;
+      }, 400);
     }
-
-    approveRefund(
-      selectedBooking.id,
-      usersList,
-      (updatedUsers) => {
-        const current = useAuthStore.getState().currentUser;
-        const updatedCurrent = current ? updatedUsers.find(u => u.id === current.id) || current : null;
-        useAuthStore.setState({ usersList: updatedUsers, currentUser: updatedCurrent });
-      },
-      amt,
-      selectedTier
-    );
-
-    setIsApproveModalOpen(false);
-    setSelectedBooking(null);
   };
 
   const handleOpenReject = (booking) => {
@@ -151,14 +176,35 @@ export const RefundsPage = () => {
     setIsRejectModalOpen(true);
   };
 
-  const handleConfirmReject = (e) => {
+  const handleConfirmReject = async (e) => {
     e.preventDefault();
-    if (!selectedBooking) return;
+    if (!selectedBooking || isRejecting || isRejectingRef.current) return;
 
-    const finalReason = rejectReason === 'OTHER' ? customRejectReason : rejectReason;
-    rejectRefund(selectedBooking.id, finalReason || 'Cancellation request not eligible for refund under venue rules');
-    setIsRejectModalOpen(false);
-    setSelectedBooking(null);
+    if (!checkNetworkOnline()) return;
+
+    if (rejectReason === 'OTHER') {
+      const isValid = validateFormAndFocus(e, [
+        { check: () => validateNonEmpty(customRejectReason, 'Decline Reason'), field: 'customRejectReason' }
+      ]);
+      if (!isValid) return;
+    }
+
+    isRejectingRef.current = true;
+    setIsRejecting(true);
+    try {
+      const finalReason = rejectReason === 'OTHER' ? customRejectReason : rejectReason;
+      rejectRefund(selectedBooking.id, finalReason || 'Cancellation request not eligible for refund under venue rules');
+      setIsRejectModalOpen(false);
+      setSelectedBooking(null);
+    } catch (err) {
+      logActionError('handleConfirmReject', err);
+      toast.error(getErrorMessage(err, 'declining refund request'));
+    } finally {
+      setIsRejecting(false);
+      setTimeout(() => {
+        isRejectingRef.current = false;
+      }, 400);
+    }
   };
 
   const handleOpenDetails = (booking) => {
@@ -609,6 +655,7 @@ export const RefundsPage = () => {
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
                 <input
+                  name="customAmount"
                   type="number"
                   step="0.01"
                   min="0"
@@ -629,6 +676,7 @@ export const RefundsPage = () => {
                 Audit Transaction Memo (Optional)
               </label>
               <textarea
+                name="adminNote"
                 rows={2}
                 value={adminNote}
                 onChange={(e) => setAdminNote(e.target.value)}
@@ -641,7 +689,15 @@ export const RefundsPage = () => {
               <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsApproveModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" icon={CheckCircle2} rainbowBorder={false}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                icon={CheckCircle2}
+                rainbowBorder={false}
+                isLoading={isApproving}
+                disabled={isApproving}
+              >
                 Confirm & Issue ₹{parseFloat(customAmount || '0').toFixed(2)}
               </Button>
             </div>
@@ -668,6 +724,7 @@ export const RefundsPage = () => {
                 Select Policy Reason
               </label>
               <select
+                name="rejectReason"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 aria-label="Select Policy Reason"
@@ -687,6 +744,7 @@ export const RefundsPage = () => {
                   Specify Decline Reason
                 </label>
                 <textarea
+                  name="customRejectReason"
                   rows={2}
                   required
                   value={customRejectReason}
@@ -701,7 +759,15 @@ export const RefundsPage = () => {
               <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsRejectModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="danger" size="sm" icon={XCircle} rainbowBorder={false}>
+              <Button
+                type="submit"
+                variant="danger"
+                size="sm"
+                icon={XCircle}
+                rainbowBorder={false}
+                isLoading={isRejecting}
+                disabled={isRejecting}
+              >
                 Confirm Decline
               </Button>
             </div>

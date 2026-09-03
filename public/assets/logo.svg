@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <linearGradient id="shieldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#10B981"/>
+      <stop offset="50%" stopColor="#059669"/>
+      <stop offset="100%" stopColor="#047857"/>
+    </linearGradient>
+    <linearGradient id="goldStarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FEF08A"/>
+      <stop offset="50%" stopColor="#F59E0B"/>
+      <stop offset="100%" stopColor="#D97706"/>
+    </linearGradient>
+    <linearGradient id="stadiumDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#0F172A"/>
+      <stop offset="100%" stopColor="#020617"/>
+    </linearGradient>
+  </defs>
+  <polygon points="32,3 59,17 59,47 32,61 5,47 5,17" fill="url(#stadiumDark)" stroke="url(#shieldBorder)" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="32,8 54,20 54,44 32,56 10,44 10,20" fill="none" stroke="#10B981" stroke-width="1" stroke-dasharray="3 2" opacity="0.6"/>
+  <polygon points="32,18 44,27 40,41 24,41 20,27" fill="#10B981" opacity="0.35"/>
+  <line x1="32" y1="18" x2="32" y2="8" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+  <line x1="44" y1="27" x2="54" y2="22" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+  <line x1="40" y1="41" x2="47" y2="50" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="41" x2="17" y2="50" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+  <line x1="20" y1="27" x2="10" y2="22" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="32,16 36,25 46,26 39,33 41,43 32,38 23,43 25,33 18,26 28,25" fill="url(#goldStarGrad)" stroke="#FFFFFF" stroke-width="1" stroke-linejoin="round"/>
+</svg>

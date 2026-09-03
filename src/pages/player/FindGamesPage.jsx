@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Plus, MapPin, Calendar, Clock, Filter, Users, ShieldCheck, ArrowRight, RotateCcw, Lock, DollarSign, Check, Map, Eye, Shield, Trophy } from 'lucide-react';
 import { useDataStore, MATCH_FORMAT_SLOTS } from '../../store/useDataStore';
@@ -8,6 +8,8 @@ import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Avatar from '../../components/common/Avatar';
 import Modal from '../../components/common/Modal';
+import { validateTitle, validateDateNotPast, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 export const FindGamesPage = () => {
@@ -22,29 +24,28 @@ export const FindGamesPage = () => {
   const [selectedFormat, setSelectedFormat] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('list');
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
-  // Host Game Form States
+  // Host Form State
   const [title, setTitle] = useState('');
-  const [clubId, setClubId] = useState(clubs[0]?.id || '');
+  const [clubId, setClubId] = useState(clubs[0]?.id || 'clb_rp_01');
   const [courtId, setCourtId] = useState('');
-  const [format, setFormat] = useState('2v2');
-  const [maxPlayers, setMaxPlayers] = useState('4');
-  const [date, setDate] = useState(getTodayDate());
-  const [startTime, setStartTime] = useState('18:00');
-  const [endTime, setEndTime] = useState('19:00');
+  const [date, setDate] = useState(getTodayDate(1));
+  const [startTime, setStartTime] = useState('19:00');
+  const [endTime, setEndTime] = useState('20:30');
+  const [format, setFormat] = useState('5v5');
   const [skillLevel, setSkillLevel] = useState('Intermediate');
-  const [description, setDescription] = useState('');
+  const [maxPlayers, setMaxPlayers] = useState('10');
   const [entryFee, setEntryFee] = useState('0');
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [privacy, setPrivacy] = useState('PUBLIC');
+  const [description, setDescription] = useState('');
 
-  const handleOpenCreateGameModal = () => {
-    const targetDate = (activeDate && activeDate !== 'all') ? activeDate : getTodayDate();
-    setDate(targetDate);
-    setIsHostModalOpen(true);
-  };
+  const isPrivate = privacy === 'PRIVATE';
+  const setIsPrivate = (checked) => setPrivacy(checked ? 'PRIVATE' : 'PUBLIC');
+  const handleOpenCreateGameModal = () => setIsHostModalOpen(true);
 
-  // Dynamic Courts filtering based on selected Club
   const availableCourts = courts.filter(c => c.clubId === clubId);
 
   useEffect(() => {
@@ -96,83 +97,94 @@ export const FindGamesPage = () => {
     return matchesTab && matchesFormat && matchesType && matchesDate && matchesSearch;
   });
 
-  const handleHostGame = (e) => {
+  const isPublishingRef = useRef(false);
+
+  const handleHostGame = async (e) => {
     e.preventDefault();
+    if (isPublishing || isPublishingRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
     if (!currentUser) {
       toast.error('Please sign in to host a new game session.');
       navigate('/login');
       return;
     }
 
-    if (!title || !title.trim()) {
-      toast.error('Game Session Title is required.');
-      return;
-    }
-
-    const today = getTodayDate();
-    if (date < today) {
-      toast.error('Game date cannot be in the past! Please select today or a future date.');
-      return;
-    }
-
-    if (!startTime || !endTime) {
-      toast.error('Please specify both Start Time and End Time.');
-      return;
-    }
-
-    if (startTime >= endTime) {
-      toast.error('End Time must be after Start Time!');
-      return;
-    }
-
+    // Resolve club, court and derived values BEFORE validation so they are in scope
     const club = clubs.find(c => c.id === clubId) || clubs[0];
-    const court = courts.find(c => c.courtId === courtId || c.id === courtId) || availableCourts[0];
+    const court = courts.find(c => (c.courtId || c.id) === courtId);
+    const computedSlots = parseInt(maxPlayers, 10) || MATCH_FORMAT_SLOTS[format] || 10;
     const feeVal = parseFloat(entryFee) || 0;
-    if (feeVal < 0) {
-      toast.error('Entry fee cannot be negative.');
-      return;
-    }
-    const computedSlots = parseInt(maxPlayers, 10) || MATCH_FORMAT_SLOTS[format] || 4;
-
     const isPlayerHost = currentUser.role === 'PLAYER';
 
-    if (isPlayerHost && feeVal > 0) {
-      if ((currentUser.walletBalance || 0) < feeVal) {
-        toast.error(`Insufficient wallet balance! Hosting as a Player requires paying the entry fee (₹${feeVal}). Please top up in Profile.`);
-        return;
-      }
-      updateWallet(-feeVal, `Host Entry Fee: ${title || club.name}`);
+    // Guard: must have a valid club to create a game
+    if (!club) {
+      toast.error('No venue available. Please select a valid club.');
+      return;
     }
 
-    createGame({
-      title: title || `${club.name} ${format} Session`,
-      venueReference: {
-        clubId: club.id,
-        clubName: club.name,
-        courtId: court?.courtId || court?.id || 'crt_rp_101',
-        courtName: court?.name || 'Pitch Alpha',
-        city: club.city || 'Raipur'
-      },
-      format,
-      maxPlayers: computedSlots,
-      entryFee: feeVal,
-      skill: skillLevel,
-      privacy: isPrivate ? 'PRIVATE' : 'PUBLIC',
-      dateTime: {
-        date,
-        startTime,
-        endTime
-      },
-      description
-    }, currentUser);
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(title, 'Game Session Title'), field: 'title' },
+      { check: () => validateDateNotPast(date, 'Game Date'), field: 'date' },
+      { check: () => validateTimeRange(startTime, endTime), field: 'startTime' },
+      { check: () => validateIntegerRange(maxPlayers, 2, 50, 'Max Players'), field: 'maxPlayers' },
+      { check: () => validatePositiveAmount(entryFee, 'Entry Fee', true), field: 'entryFee' },
+      { check: () => {
+        if (isPlayerHost && feeVal > 0 && (currentUser.walletBalance || 0) < feeVal) {
+          return { isValid: false, message: `Insufficient wallet balance! Hosting as a Player requires paying the entry fee (₹${feeVal}). Please top up in Profile.` };
+        }
+        return { isValid: true };
+      }, field: 'entryFee' }
+    ]);
 
-    const roleNotice = isPlayerHost 
-      ? `Game published! You are 1/${computedSlots} confirmed player (₹${feeVal} fee paid).` 
-      : `Game published for ${club.name}! (0/${computedSlots} slots occupied).`;
+    if (!isValid) return;
 
-    toast.success(roleNotice);
-    setIsHostModalOpen(false);
-    setTitle('');
+    isPublishingRef.current = true;
+    setIsPublishing(true);
+    try {
+      if (isPlayerHost && feeVal > 0) {
+        updateWallet(-feeVal, `Host Entry Fee: ${title || club.name}`);
+      }
+
+      createGame({
+        title: title.trim() || `${club.name} ${format} Session`,
+        venueReference: {
+          clubId: club.id,
+          clubName: club.name,
+          courtId: court?.courtId || court?.id || 'crt_rp_101',
+          courtName: court?.name || 'Pitch Alpha',
+          city: club.city || 'Raipur'
+        },
+        format,
+        maxPlayers: computedSlots,
+        entryFee: feeVal,
+        skill: skillLevel,
+        privacy: isPrivate ? 'PRIVATE' : 'PUBLIC',
+        dateTime: {
+          date,
+          startTime,
+          endTime
+        },
+        description: description.trim()
+      }, currentUser);
+
+      const roleNotice = isPlayerHost
+        ? `Game published! You are 1/${computedSlots} confirmed player (₹${feeVal} fee paid).`
+        : `Game published for ${club.name}! (0/${computedSlots} slots occupied).`;
+
+      toast.success(roleNotice);
+      setIsHostModalOpen(false);
+      setTitle('');
+    } catch (err) {
+      logActionError('handleHostGame', err);
+      toast.error(getErrorMessage(err, 'publishing game session'));
+    } finally {
+      setIsPublishing(false);
+      setTimeout(() => {
+        isPublishingRef.current = false;
+      }, 400);
+    }
   };
 
   return (
@@ -476,6 +488,7 @@ export const FindGamesPage = () => {
               Game Name <span className="text-rose-500">*</span>
             </label>
             <input
+              name="title"
               type="text"
               placeholder="Evening Doubles Fun"
               value={title}
@@ -492,6 +505,7 @@ export const FindGamesPage = () => {
                 Club <span className="text-rose-500">*</span>
               </label>
               <select
+                name="clubId"
                 value={clubId}
                 onChange={(e) => setClubId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
@@ -508,6 +522,7 @@ export const FindGamesPage = () => {
                 Court <span className="text-rose-500">*</span>
               </label>
               <select
+                name="courtId"
                 value={courtId}
                 onChange={(e) => setCourtId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
@@ -533,6 +548,7 @@ export const FindGamesPage = () => {
                 Date <span className="text-rose-500">*</span>
               </label>
               <input
+                name="date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -546,6 +562,7 @@ export const FindGamesPage = () => {
                 Start Time <span className="text-rose-500">*</span>
               </label>
               <input
+                name="startTime"
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
@@ -559,6 +576,7 @@ export const FindGamesPage = () => {
                 End Time <span className="text-rose-500">*</span>
               </label>
               <input
+                name="endTime"
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
@@ -575,6 +593,7 @@ export const FindGamesPage = () => {
                 Game Type / Format <span className="text-rose-500">*</span>
               </label>
               <select
+                name="format"
                 value={format}
                 onChange={(e) => handleFormatChange(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
@@ -598,6 +617,7 @@ export const FindGamesPage = () => {
                 Skill Level
               </label>
               <select
+                name="skillLevel"
                 value={skillLevel}
                 onChange={(e) => setSkillLevel(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
@@ -617,6 +637,7 @@ export const FindGamesPage = () => {
                 Maximum Players <span className="text-rose-500">*</span>
               </label>
               <input
+                name="maxPlayers"
                 type="number"
                 min="1"
                 max="50"
@@ -632,6 +653,7 @@ export const FindGamesPage = () => {
                 Entry Fee (₹)
               </label>
               <input
+                name="entryFee"
                 type="number"
                 min="0"
                 step="50"
@@ -682,9 +704,10 @@ export const FindGamesPage = () => {
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition-all whitespace-nowrap cursor-pointer"
+              disabled={isPublishing}
+              className="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Publish Game
+              {isPublishing ? 'Publishing Game...' : 'Publish Game'}
             </button>
           </div>
 

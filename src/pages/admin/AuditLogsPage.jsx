@@ -22,6 +22,7 @@ export const AuditLogsPage = () => {
 
   const [selectedLog, setSelectedLog] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const adminNames = useMemo(() => {
     const list = Array.from(new Set(auditLogs.map(l => l.adminName).filter(Boolean)));
@@ -72,32 +73,41 @@ export const AuditLogsPage = () => {
       });
   }, [auditLogs, searchTerm, actionCategory, adminFilter, sortBy]);
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
+    if (isExporting) return;
+
     if (filteredLogs.length === 0) {
       toast.error('No log records available to export');
       return;
     }
 
-    const headers = ['ID', 'Timestamp', 'Admin Name', 'Action', 'Target Component', 'Details'];
-    const rows = filteredLogs.map(l => [
-      l.id,
-      l.timestamp,
-      `"${l.adminName || ''}"`,
-      `"${l.action || ''}"`,
-      `"${l.target || ''}"`,
-      `"${(l.details || '').replace(/"/g, '""')}"`
-    ]);
+    setIsExporting(true);
+    try {
+      const headers = ['ID', 'Timestamp', 'Admin Name', 'Action', 'Target Component', 'Details'];
+      const rows = filteredLogs.map(l => [
+        l.id,
+        l.timestamp,
+        `"${l.adminName || ''}"`,
+        `"${l.action || ''}"`,
+        `"${l.target || ''}"`,
+        `"${(l.details || '').replace(/"/g, '""')}"`
+      ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `fifa_all_stars_audit_logs_${new Date().toISOString().substring(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `fifa_all_stars_audit_logs_${new Date().toISOString().substring(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    toast.success('Audit log CSV exported successfully!');
+      toast.success('Audit log CSV exported successfully!');
+    } catch (err) {
+      toast.error('Failed to export CSV.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleOpenDetail = (log) => {
@@ -146,10 +156,12 @@ export const AuditLogsPage = () => {
             size="sm"
             icon={Download}
             rainbowBorder={false}
+            isLoading={isExporting}
+            disabled={isExporting || filteredLogs.length === 0}
             onClick={handleExportCSV}
             className="rounded-xl font-bold text-xs uppercase shadow-sm"
           >
-            Export Log CSV
+            {isExporting ? 'Exporting...' : 'Export Log CSV'}
           </Button>
         </div>
       </div>

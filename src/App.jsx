@@ -42,7 +42,9 @@ import DisputesPage from './pages/admin/DisputesPage';
 import AuditLogsPage from './pages/admin/AuditLogsPage';
 import SupportTicketsPage from './pages/admin/SupportTicketsPage';
 
+import ErrorBoundary from './components/common/ErrorBoundary';
 import ScrollToTop from './components/common/ScrollToTop';
+import { initActionGuardian } from './utils/actionGuardian';
 
 function App() {
   const { applyTheme, listenToSystemChanges } = useThemeStore();
@@ -50,14 +52,16 @@ function App() {
 
   useEffect(() => {
     applyTheme();
-    const cleanup = listenToSystemChanges();
+    const cleanupTheme = listenToSystemChanges();
+    const cleanupGuardian = initActionGuardian();
     return () => {
-      if (cleanup) cleanup();
+      if (cleanupTheme) cleanupTheme();
+      if (cleanupGuardian) cleanupGuardian();
     };
   }, [applyTheme, listenToSystemChanges]);
 
   return (
-    <>
+    <ErrorBoundary>
       <ScrollToTop />
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <Routes>
@@ -145,7 +149,7 @@ function App() {
         </Route>
 
       </Routes>
-    </>
+    </ErrorBoundary>
   );
 }
 

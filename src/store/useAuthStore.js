@@ -43,7 +43,7 @@ export const useAuthStore = create(
           phone: phone ? phone.trim() : '+91 90000 00000',
           password: password,
           role: 'PLAYER', // AUTOMATICALLY ASSIGNED PLAYER ROLE ONLY
-          profileImageUrl: profileImageUrl || '/src/assets/images/avatars/avatar-1.jpg',
+          profileImageUrl: profileImageUrl || '/assets/images/avatars/avatar-1.jpg',
           city: city || 'Raipur',
           playingHand: playingHand || 'Right / Midfielder',
           skillLevel: 'Intermediate',
@@ -116,7 +116,7 @@ export const useAuthStore = create(
           skillLevel: 'Advanced',
           eloRating: 1600,
           bio: bio || 'General Manager of assigned football venue.',
-          profileImageUrl: '/src/assets/images/avatars/avatar-3.jpg',
+          profileImageUrl: '/assets/images/avatars/avatar-3.jpg',
           badges: ['VerifiedPartner'],
           joinedDate: getTodayDate(0),
           walletBalance: 5000.00,
@@ -241,10 +241,15 @@ export const useAuthStore = create(
       updateWallet: (amount, description = 'Wallet Transaction') => {
         const user = get().currentUser;
         if (!user) return;
+        const numAmount = parseFloat(amount);
+        if (isNaN(numAmount) || !isFinite(numAmount)) {
+          console.error('Invalid wallet amount:', amount);
+          return;
+        }
         const newTx = {
-          id: `tx_${Date.now()}`,
-          type: amount >= 0 ? 'WALLET_TOPUP' : 'PAYMENT',
-          amount: Math.abs(amount),
+          id: `tx_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          type: numAmount >= 0 ? 'WALLET_TOPUP' : 'PAYMENT',
+          amount: Math.abs(numAmount),
           date: getTodayDate(0),
           status: 'SUCCESS',
           description
@@ -252,7 +257,7 @@ export const useAuthStore = create(
         const updatedHistory = [...(user.paymentHistory || []), newTx];
         const updated = {
           ...user,
-          walletBalance: (user.walletBalance || 0) + amount,
+          walletBalance: Math.max(0, Math.round(((user.walletBalance || 0) + numAmount) * 100) / 100),
           paymentHistory: updatedHistory
         };
         set({
@@ -269,10 +274,44 @@ export const useAuthStore = create(
           currentUser: updated,
           usersList: get().usersList.map(u => u.id === user.id ? updated : u)
         });
+      },
+
+      resetPasswordWithToken: (emailOrPhone, newPassword) => {
+        const query = (emailOrPhone || '').trim().toLowerCase();
+        const user = get().usersList.find(u => 
+          u.email.toLowerCase() === query || 
+          (u.phone && u.phone.replace(/[\s+-]/g, '') === query.replace(/[\s+-]/g, ''))
+        );
+        if (!user) {
+          return { success: false, error: 'No account registered with that email or phone number.' };
+        }
+        if (user.status === 'SUSPENDED') {
+          return { success: false, error: 'Account is suspended. Please contact support.' };
+        }
+        const updatedUser = { ...user, password: newPassword };
+        set({
+          usersList: get().usersList.map(u => u.id === user.id ? updatedUser : u),
+          currentUser: get().currentUser?.id === user.id ? updatedUser : get().currentUser
+        });
+        return { success: true, message: 'Password updated successfully.' };
       }
     }),
     {
-      name: 'fifa_all_stars_auth_storage'
+      name: 'fifa_all_stars_auth_storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          if (state.currentUser?.profileImageUrl?.includes('/src/assets/images/')) {
+            state.currentUser.profileImageUrl = state.currentUser.profileImageUrl.replace('/src/assets/images/', '/assets/images/');
+          }
+          if (Array.isArray(state.usersList)) {
+            state.usersList.forEach(u => {
+              if (u.profileImageUrl?.includes('/src/assets/images/')) {
+                u.profileImageUrl = u.profileImageUrl.replace('/src/assets/images/', '/assets/images/');
+              }
+            });
+          }
+        }
+      }
     }
   )
 );

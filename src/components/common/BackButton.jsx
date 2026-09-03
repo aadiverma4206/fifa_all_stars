@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { canNavigate } from '../../utils/navigationGuardian';
 
 /**
  * Smart BackButton component that safely handles browser history and fallback URLs.
@@ -11,6 +12,8 @@ export const BackButton = ({ to, fallback = '/player/home', label = 'Back', clas
 
   const handleBack = (e) => {
     e.preventDefault();
+    if (!canNavigate(to || 'BACK_NAVIGATION')) return;
+
     if (to) {
       navigate(to);
     } else if (window.history.state && window.history.state.idx > 0) {

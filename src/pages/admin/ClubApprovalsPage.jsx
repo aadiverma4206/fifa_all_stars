@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   Building2, CheckCircle2, XCircle, UserPlus, MapPin, Search, Filter, 
   Clock, Star, ShieldCheck, AlertCircle, Eye, Edit3, Plus, Trash2, 
@@ -13,6 +13,8 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
 import Modal from '../../components/common/Modal';
+import { validateTitle, validateNonEmpty, validatePositiveAmount, validateTimeRange, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 const AVAILABLE_AMENITIES = [
@@ -40,6 +42,7 @@ export const ClubApprovalsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, PENDING, ACTIVE, REJECTED, UNASSIGNED
   const [cityFilter, setCityFilter] = useState('ALL');
+  const [managerFilter, setManagerFilter] = useState('all'); // all, assigned, unassigned
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [sortBy, setSortBy] = useState('NEWEST'); // NEWEST, NAME, RATING, COURTS
 
@@ -51,6 +54,19 @@ export const ClubApprovalsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddClubModalOpen, setIsAddClubModalOpen] = useState(false);
   const [isAddCourtModalOpen, setIsAddCourtModalOpen] = useState(false);
+
+  // Loading & Concurrency Locks
+  const [isApprovingClub, setIsApprovingClub] = useState(false);
+  const [isRejectingClub, setIsRejectingClub] = useState(false);
+  const [isSavingClub, setIsSavingClub] = useState(false);
+  const [isCreatingClub, setIsCreatingClub] = useState(false);
+  const [isCreatingCourt, setIsCreatingCourt] = useState(false);
+
+  const isApprovingClubRef = useRef(false);
+  const isRejectingClubRef = useRef(false);
+  const isSavingClubRef = useRef(false);
+  const isCreatingClubRef = useRef(false);
+  const isCreatingCourtRef = useRef(false);
 
   // Form State for Approval
   const [selectedManagerId, setSelectedManagerId] = useState('');
@@ -68,7 +84,7 @@ export const ClubApprovalsPage = () => {
     openTime: '06:00',
     closeTime: '23:00',
     description: '',
-    clubImageUrl: '/src/assets/images/courts/court-1.jpg',
+    clubImageUrl: '/assets/images/courts/court-1.jpg',
     amenities: ['Floodlights', 'Washrooms', 'Parking', 'Changing Rooms'],
     managerId: '',
     status: 'ACTIVE'
@@ -84,7 +100,7 @@ export const ClubApprovalsPage = () => {
     weekendMultiplier: 1.75,
     peakWindow: '17:00-21:00',
     status: 'AVAILABLE',
-    image: '/src/assets/images/courts/court-1.jpg'
+    image: '/assets/images/courts/court-1.jpg'
   });
 
   // Manager accounts list
@@ -119,34 +135,34 @@ export const ClubApprovalsPage = () => {
           club.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (club.managerIds || []).some(mId => {
             const user = usersList.find(u => u.id === mId);
-            return user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+            return user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
           });
 
-        if (!matchesSearch) return false;
+        const matchesStatus = statusFilter === 'all' || 
+          (statusFilter === 'ACTIVE' && (club.status === 'ACTIVE' || !club.status)) ||
+          club.status === statusFilter;
 
-        // City Filter
-        if (cityFilter !== 'ALL' && club.city !== cityFilter) return false;
+        const matchesCity = cityFilter === 'all' || club.city?.toLowerCase() === cityFilter.toLowerCase();
+        
+        const hasManager = club.managerIds && club.managerIds.length > 0;
+        const matchesManager = managerFilter === 'all' || 
+          (managerFilter === 'assigned' && hasManager) || 
+          (managerFilter === 'unassigned' && !hasManager);
 
-        // Status Filter
-        if (statusFilter === 'PENDING') return club.status === 'PENDING';
-        if (statusFilter === 'ACTIVE') return club.status === 'ACTIVE' || !club.status;
-        if (statusFilter === 'SUSPENDED') return club.status === 'SUSPENDED' || club.status === 'REJECTED';
-        if (statusFilter === 'UNASSIGNED') return !club.managerIds || club.managerIds.length === 0;
-
-        return true;
+        return matchesSearch && matchesStatus && matchesCity && matchesManager;
       })
       .sort((a, b) => {
-        if (sortBy === 'NEWEST') return (b.id || '').localeCompare(a.id || '');
-        if (sortBy === 'NAME') return (a.name || '').localeCompare(b.name || '');
-        if (sortBy === 'RATING') return (b.rating || 0) - (a.rating || 0);
-        if (sortBy === 'COURTS') {
+        if (sortBy === 'name') return a.name.localeCompare(b.name);
+        if (sortBy === 'city') return (a.city || '').localeCompare(b.city || '');
+        if (sortBy === 'courts') {
           const courtsA = courts.filter(c => c.clubId === a.id).length;
           const courtsB = courts.filter(c => c.clubId === b.id).length;
           return courtsB - courtsA;
         }
-        return 0;
+        return (a.name || '').localeCompare(b.name || '');
       });
-  }, [clubs, courts, usersList, searchTerm, statusFilter, cityFilter, sortBy]);
+  }, [clubs, courts, usersList, searchTerm, statusFilter, cityFilter, managerFilter, sortBy]);
 
   // Handlers
   const handleOpenApproveModal = (club) => {
@@ -157,16 +173,30 @@ export const ClubApprovalsPage = () => {
     setIsApproveModalOpen(true);
   };
 
-  const handleConfirmApproval = (e) => {
+  const handleConfirmApproval = async (e) => {
     e.preventDefault();
-    if (!selectedClub) return;
+    if (!selectedClub || isApprovingClub || isApprovingClubRef.current) return;
 
-    approveClub(selectedClub.id, selectedManagerId);
-    if (approvalNotes.trim()) {
-      toast.success(`Verification notes logged for ${selectedClub.name}`);
+    if (!checkNetworkOnline()) return;
+
+    isApprovingClubRef.current = true;
+    setIsApprovingClub(true);
+    try {
+      approveClub(selectedClub.id, selectedManagerId);
+      if (approvalNotes.trim()) {
+        toast.success(`Verification notes logged for ${selectedClub.name}`);
+      }
+      setIsApproveModalOpen(false);
+      setSelectedClub(null);
+    } catch (err) {
+      logActionError('handleConfirmApproval', err);
+      toast.error(getErrorMessage(err, 'approving venue'));
+    } finally {
+      setIsApprovingClub(false);
+      setTimeout(() => {
+        isApprovingClubRef.current = false;
+      }, 400);
     }
-    setIsApproveModalOpen(false);
-    setSelectedClub(null);
   };
 
   const handleOpenRejectModal = (club) => {
@@ -176,14 +206,35 @@ export const ClubApprovalsPage = () => {
     setIsRejectModalOpen(true);
   };
 
-  const handleConfirmReject = (e) => {
+  const handleConfirmReject = async (e) => {
     e.preventDefault();
-    if (!selectedClub) return;
+    if (!selectedClub || isRejectingClub || isRejectingClubRef.current) return;
 
-    const finalReason = rejectReason === 'OTHER' ? customRejectReason : rejectReason;
-    rejectClub(selectedClub.id, finalReason || 'Application declined by administrator');
-    setIsRejectModalOpen(false);
-    setSelectedClub(null);
+    if (!checkNetworkOnline()) return;
+
+    if (rejectReason === 'OTHER') {
+      const isValid = validateFormAndFocus(e, [
+        { check: () => validateNonEmpty(customRejectReason, 'Rejection Reason'), field: 'customRejectReason' }
+      ]);
+      if (!isValid) return;
+    }
+
+    isRejectingClubRef.current = true;
+    setIsRejectingClub(true);
+    try {
+      const finalReason = rejectReason === 'OTHER' ? customRejectReason : rejectReason;
+      rejectClub(selectedClub.id, finalReason || 'Application declined by administrator');
+      setIsRejectModalOpen(false);
+      setSelectedClub(null);
+    } catch (err) {
+      logActionError('handleConfirmReject', err);
+      toast.error(getErrorMessage(err, 'declining venue registration'));
+    } finally {
+      setIsRejectingClub(false);
+      setTimeout(() => {
+        isRejectingClubRef.current = false;
+      }, 400);
+    }
   };
 
   const handleOpenDetails = (club) => {
@@ -200,7 +251,7 @@ export const ClubApprovalsPage = () => {
       openTime: club.operatingHours?.open || '06:00',
       closeTime: club.operatingHours?.close || '23:00',
       description: club.description || '',
-      clubImageUrl: club.clubImageUrl || '/src/assets/images/courts/court-1.jpg',
+      clubImageUrl: club.clubImageUrl || '/assets/images/courts/court-1.jpg',
       amenities: club.amenities || ['Floodlights', 'Washrooms', 'Parking'],
       managerId: club.managerIds?.[0] || '',
       status: club.status || 'ACTIVE'
@@ -208,32 +259,79 @@ export const ClubApprovalsPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEditClub = (e) => {
+  const handleSaveEditClub = async (e) => {
     e.preventDefault();
-    if (!selectedClub) return;
+    if (!selectedClub || isSavingClub || isSavingClubRef.current) return;
 
-    if (!clubFormData.name.trim()) {
-      toast.error('Venue name is required');
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(clubFormData.name, 'Venue Name'), field: 'name' },
+      { check: () => validateNonEmpty(clubFormData.address, 'Street Address'), field: 'address' },
+      { check: () => validateNonEmpty(clubFormData.city, 'City'), field: 'city' },
+      { check: () => validateTimeRange(clubFormData.openTime, clubFormData.closeTime), field: 'openTime' }
+    ]);
+
+    if (!isValid) return;
+
+    const trimmedName = clubFormData.name.trim();
+    const trimmedAddress = clubFormData.address.trim();
+    const trimmedCity = clubFormData.city.trim();
+    const trimmedDesc = clubFormData.description.trim();
+    const currentAmenities = (selectedClub.amenities || []).slice().sort();
+    const newAmenities = (clubFormData.amenities || []).slice().sort();
+    const amenitiesChanged = JSON.stringify(currentAmenities) !== JSON.stringify(newAmenities);
+    const currentMgr = selectedClub.managerIds?.[0] || '';
+
+    // Change Detection: prevent redundant updates if nothing changed
+    const hasChanges =
+      trimmedName !== (selectedClub.name || '').trim() ||
+      trimmedAddress !== (selectedClub.address || '').trim() ||
+      trimmedCity !== (selectedClub.city || '').trim() ||
+      clubFormData.openTime !== (selectedClub.operatingHours?.open || '') ||
+      clubFormData.closeTime !== (selectedClub.operatingHours?.close || '') ||
+      trimmedDesc !== (selectedClub.description || '').trim() ||
+      clubFormData.clubImageUrl !== (selectedClub.clubImageUrl || '') ||
+      clubFormData.managerId !== currentMgr ||
+      clubFormData.status !== (selectedClub.status || 'ACTIVE') ||
+      amenitiesChanged;
+
+    if (!hasChanges) {
+      toast('No changes detected for this venue.', { icon: 'ℹ️' });
+      setIsEditModalOpen(false);
+      setSelectedClub(null);
       return;
     }
 
-    updateClub(selectedClub.id, {
-      name: clubFormData.name.trim(),
-      address: clubFormData.address.trim(),
-      city: clubFormData.city.trim(),
-      operatingHours: {
-        open: clubFormData.openTime,
-        close: clubFormData.closeTime
-      },
-      description: clubFormData.description.trim(),
-      clubImageUrl: clubFormData.clubImageUrl,
-      amenities: clubFormData.amenities,
-      managerIds: clubFormData.managerId ? [clubFormData.managerId] : [],
-      status: clubFormData.status
-    });
+    isSavingClubRef.current = true;
+    setIsSavingClub(true);
+    try {
+      updateClub(selectedClub.id, {
+        name: trimmedName,
+        address: trimmedAddress,
+        city: trimmedCity,
+        operatingHours: {
+          open: clubFormData.openTime,
+          close: clubFormData.closeTime
+        },
+        description: trimmedDesc,
+        clubImageUrl: clubFormData.clubImageUrl,
+        amenities: clubFormData.amenities,
+        managerIds: clubFormData.managerId ? [clubFormData.managerId] : [],
+        status: clubFormData.status
+      });
 
-    setIsEditModalOpen(false);
-    setSelectedClub(null);
+      setIsEditModalOpen(false);
+      setSelectedClub(null);
+    } catch (err) {
+      logActionError('handleSaveEditClub', err);
+      toast.error(getErrorMessage(err, 'updating venue profile'));
+    } finally {
+      setIsSavingClub(false);
+      setTimeout(() => {
+        isSavingClubRef.current = false;
+      }, 400);
+    }
   };
 
   const handleOpenAddClub = () => {
@@ -244,7 +342,7 @@ export const ClubApprovalsPage = () => {
       openTime: '06:00',
       closeTime: '23:00',
       description: '',
-      clubImageUrl: '/src/assets/images/courts/court-1.jpg',
+      clubImageUrl: '/assets/images/courts/court-1.jpg',
       amenities: ['Floodlights', 'Washrooms', 'Parking', 'Changing Rooms'],
       managerId: managerUsers[0]?.id || '',
       status: 'ACTIVE'
@@ -252,46 +350,62 @@ export const ClubApprovalsPage = () => {
     setIsAddClubModalOpen(true);
   };
 
-  const handleCreateNewClub = (e) => {
+  const handleCreateNewClub = async (e) => {
     e.preventDefault();
-    if (!clubFormData.name.trim()) {
-      toast.error('Venue name is required');
-      return;
+    if (isCreatingClub || isCreatingClubRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(clubFormData.name, 'Venue Name'), field: 'name' },
+      { check: () => validateNonEmpty(clubFormData.address, 'Street Address'), field: 'address' },
+      { check: () => validateNonEmpty(clubFormData.city, 'City'), field: 'city' },
+      { check: () => validateTimeRange(clubFormData.openTime, clubFormData.closeTime), field: 'openTime' }
+    ]);
+
+    if (!isValid) return;
+
+    isCreatingClubRef.current = true;
+    setIsCreatingClub(true);
+    try {
+      const created = addClub({
+        name: clubFormData.name.trim(),
+        address: clubFormData.address.trim(),
+        city: clubFormData.city.trim(),
+        operatingHours: {
+          open: clubFormData.openTime,
+          close: clubFormData.closeTime
+        },
+        description: clubFormData.description.trim() || 'Official FIFA All Stars sports facility.',
+        clubImageUrl: clubFormData.clubImageUrl,
+        amenities: clubFormData.amenities,
+        managerIds: clubFormData.managerId ? [clubFormData.managerId] : [],
+        status: clubFormData.status
+      });
+
+      // Also auto-create a starter court for the new club
+      addCourt(created.id, {
+        name: `${created.name} Pitch 1 (5v5)`,
+        type: 'Outdoor',
+        surface: '3G Turf',
+        basePrice: 600,
+        peakMultiplier: 1.5,
+        weekendMultiplier: 1.75,
+        peakWindow: '17:00-21:00',
+        status: 'AVAILABLE',
+        image: created.clubImageUrl
+      });
+
+      setIsAddClubModalOpen(false);
+    } catch (err) {
+      logActionError('handleCreateNewClub', err);
+      toast.error(getErrorMessage(err, 'registering venue'));
+    } finally {
+      setIsCreatingClub(false);
+      setTimeout(() => {
+        isCreatingClubRef.current = false;
+      }, 400);
     }
-    if (!clubFormData.address.trim()) {
-      toast.error('Address is required');
-      return;
-    }
-
-    const created = addClub({
-      name: clubFormData.name.trim(),
-      address: clubFormData.address.trim(),
-      city: clubFormData.city.trim(),
-      operatingHours: {
-        open: clubFormData.openTime,
-        close: clubFormData.closeTime
-      },
-      description: clubFormData.description.trim() || 'Official FIFA All Stars sports facility.',
-      clubImageUrl: clubFormData.clubImageUrl,
-      amenities: clubFormData.amenities,
-      managerIds: clubFormData.managerId ? [clubFormData.managerId] : [],
-      status: clubFormData.status
-    });
-
-    // Also auto-create a starter court for the new club
-    addCourt(created.id, {
-      name: `${created.name} Pitch 1 (5v5)`,
-      type: 'Outdoor',
-      surface: '3G Turf',
-      basePrice: 600,
-      peakMultiplier: 1.5,
-      weekendMultiplier: 1.75,
-      peakWindow: '17:00-21:00',
-      status: 'AVAILABLE',
-      image: created.clubImageUrl
-    });
-
-    setIsAddClubModalOpen(false);
   };
 
   const handleOpenAddCourt = (club) => {
@@ -306,32 +420,49 @@ export const ClubApprovalsPage = () => {
       weekendMultiplier: 1.75,
       peakWindow: '17:00-21:00',
       status: 'AVAILABLE',
-      image: club.clubImageUrl || '/src/assets/images/courts/court-1.jpg'
+      image: club.clubImageUrl || '/assets/images/courts/court-1.jpg'
     });
     setIsAddCourtModalOpen(true);
   };
 
-  const handleCreateCourtSubmit = (e) => {
+  const handleCreateCourtSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedClub) return;
-    if (!courtFormData.name.trim()) {
-      toast.error('Court name is required');
-      return;
+    if (!selectedClub || isCreatingCourt || isCreatingCourtRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(courtFormData.name, 'Pitch Name'), field: 'courtName' },
+      { check: () => validatePositiveAmount(courtFormData.basePrice, 'Base Hourly Rate', false), field: 'basePrice' }
+    ]);
+
+    if (!isValid) return;
+
+    isCreatingCourtRef.current = true;
+    setIsCreatingCourt(true);
+    try {
+      addCourt(selectedClub.id, {
+        name: courtFormData.name.trim(),
+        type: courtFormData.type,
+        surface: courtFormData.surface,
+        basePrice: Number(courtFormData.basePrice) || 500,
+        peakMultiplier: Number(courtFormData.peakMultiplier) || 1.5,
+        weekendMultiplier: Number(courtFormData.weekendMultiplier) || 1.75,
+        peakWindow: courtFormData.peakWindow,
+        status: courtFormData.status,
+        image: courtFormData.image
+      });
+
+      setIsAddCourtModalOpen(false);
+    } catch (err) {
+      logActionError('handleCreateCourtSubmit', err);
+      toast.error(getErrorMessage(err, 'adding pitch'));
+    } finally {
+      setIsCreatingCourt(false);
+      setTimeout(() => {
+        isCreatingCourtRef.current = false;
+      }, 400);
     }
-
-    addCourt(selectedClub.id, {
-      name: courtFormData.name.trim(),
-      type: courtFormData.type,
-      surface: courtFormData.surface,
-      basePrice: Number(courtFormData.basePrice) || 500,
-      peakMultiplier: Number(courtFormData.peakMultiplier) || 1.5,
-      weekendMultiplier: Number(courtFormData.weekendMultiplier) || 1.75,
-      peakWindow: courtFormData.peakWindow,
-      status: courtFormData.status,
-      image: courtFormData.image
-    });
-
-    setIsAddCourtModalOpen(false);
   };
 
   const toggleAmenityInForm = (amenity) => {
@@ -641,9 +772,12 @@ export const ClubApprovalsPage = () => {
                 <div>
                   <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
                     <img 
-                      src={club.clubImageUrl || '/src/assets/images/courts/court-1.jpg'} 
+                      src={club.clubImageUrl || '/assets/images/courts/court-1.jpg'} 
                       alt={club.name}
-                      onError={(e) => { e.currentTarget.src = '/src/assets/images/courts/court-1.jpg'; }}
+                      onError={(e) => { 
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/assets/images/courts/court-1.jpg'; 
+                      }}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
@@ -897,9 +1031,12 @@ export const ClubApprovalsPage = () => {
                         <div className="flex items-center space-x-3.5">
                           <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-800 bg-slate-900">
                             <img 
-                              src={club.clubImageUrl || '/src/assets/images/courts/court-1.jpg'} 
+                              src={club.clubImageUrl || '/assets/images/courts/court-1.jpg'} 
                               alt={club.name} 
-                              onError={(e) => { e.currentTarget.src = '/src/assets/images/courts/court-1.jpg'; }}
+                              onError={(e) => { 
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/assets/images/courts/court-1.jpg'; 
+                              }}
                               className="w-full h-full object-cover" 
                             />
                           </div>
@@ -1053,9 +1190,12 @@ export const ClubApprovalsPage = () => {
             <div className="p-3.5 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center space-x-3.5">
               <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-300 dark:border-slate-700">
                 <img 
-                  src={selectedClub.clubImageUrl || '/src/assets/images/courts/court-1.jpg'} 
+                  src={selectedClub.clubImageUrl || '/assets/images/courts/court-1.jpg'} 
                   alt={selectedClub.name}
-                  onError={(e) => { e.currentTarget.src = '/src/assets/images/courts/court-1.jpg'; }}
+                  onError={(e) => { 
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/assets/images/courts/court-1.jpg'; 
+                  }}
                   className="w-full h-full object-cover" 
                 />
               </div>
@@ -1110,7 +1250,15 @@ export const ClubApprovalsPage = () => {
               <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsApproveModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" icon={CheckCircle2} rainbowBorder={false}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                icon={CheckCircle2}
+                rainbowBorder={false}
+                isLoading={isApprovingClub}
+                disabled={isApprovingClub}
+              >
                 Confirm & Activate Venue
               </Button>
             </div>
@@ -1157,6 +1305,7 @@ export const ClubApprovalsPage = () => {
                   Specify Rejection Reason
                 </label>
                 <textarea
+                  name="customRejectReason"
                   rows={2}
                   required
                   value={customRejectReason}
@@ -1171,7 +1320,15 @@ export const ClubApprovalsPage = () => {
               <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsRejectModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="danger" size="sm" icon={XCircle} rainbowBorder={false}>
+              <Button
+                type="submit"
+                variant="danger"
+                size="sm"
+                icon={XCircle}
+                rainbowBorder={false}
+                isLoading={isRejectingClub}
+                disabled={isRejectingClub}
+              >
                 Confirm Rejection
               </Button>
             </div>
@@ -1296,6 +1453,7 @@ export const ClubApprovalsPage = () => {
             <div className="sm:col-span-2">
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Venue Name *</label>
               <input
+                name="name"
                 type="text"
                 required
                 placeholder="E.g. Santiago Turf Arena"
@@ -1308,6 +1466,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">City *</label>
               <input
+                name="city"
                 type="text"
                 required
                 placeholder="E.g. Raipur, Bangalore, Pune, Mumbai"
@@ -1320,6 +1479,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Status</label>
               <select
+                name="status"
                 value={clubFormData.status}
                 onChange={(e) => setClubFormData(prev => ({ ...prev, status: e.target.value }))}
                 aria-label="Venue status"
@@ -1333,6 +1493,7 @@ export const ClubApprovalsPage = () => {
             <div className="sm:col-span-2">
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Full Address *</label>
               <input
+                name="address"
                 type="text"
                 required
                 placeholder="E.g. Plot 42, Telibandha VIP Road"
@@ -1345,6 +1506,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Opening Time</label>
               <input
+                name="openTime"
                 type="time"
                 value={clubFormData.openTime}
                 onChange={(e) => setClubFormData(prev => ({ ...prev, openTime: e.target.value }))}
@@ -1355,6 +1517,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Closing Time</label>
               <input
+                name="closeTime"
                 type="time"
                 value={clubFormData.closeTime}
                 onChange={(e) => setClubFormData(prev => ({ ...prev, closeTime: e.target.value }))}
@@ -1365,6 +1528,7 @@ export const ClubApprovalsPage = () => {
             <div className="sm:col-span-2">
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Assign Manager</label>
               <select
+                name="managerId"
                 value={clubFormData.managerId}
                 onChange={(e) => setClubFormData(prev => ({ ...prev, managerId: e.target.value }))}
                 aria-label="Assign Manager"
@@ -1387,11 +1551,11 @@ export const ClubApprovalsPage = () => {
                 aria-label="Cover Photo Asset"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-semibold"
               >
-                <option value="/src/assets/images/courts/court-1.jpg">Turf Ground Alpha (VIP 3G)</option>
-                <option value="/src/assets/images/courts/court-2.jpg">Floodlit Synthetic Arena</option>
-                <option value="/src/assets/images/courts/court-4.jpg">Indoor Acrylic Futsal Dome</option>
-                <option value="/src/assets/images/courts/court-5.jpg">Multi-Pitch Sports Complex</option>
-                <option value="/src/assets/images/courts/court-6.jpg">Championship Stadium Turf</option>
+                <option value="/assets/images/courts/court-1.jpg">Turf Ground Alpha (VIP 3G)</option>
+                <option value="/assets/images/courts/court-2.jpg">Floodlit Synthetic Arena</option>
+                <option value="/assets/images/courts/court-4.jpg">Indoor Acrylic Futsal Dome</option>
+                <option value="/assets/images/courts/court-5.jpg">Multi-Pitch Sports Complex</option>
+                <option value="/assets/images/courts/court-6.jpg">Championship Stadium Turf</option>
               </select>
             </div>
 
@@ -1437,7 +1601,15 @@ export const ClubApprovalsPage = () => {
             <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsAddClubModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" icon={Plus} rainbowBorder={false}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              rainbowBorder={false}
+              isLoading={isCreatingClub}
+              disabled={isCreatingClub}
+            >
               Save & Register Venue
             </Button>
           </div>
@@ -1453,6 +1625,7 @@ export const ClubApprovalsPage = () => {
             <div className="sm:col-span-2">
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Venue Name *</label>
               <input
+                name="name"
                 type="text"
                 required
                 value={clubFormData.name}
@@ -1464,6 +1637,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">City *</label>
               <input
+                name="city"
                 type="text"
                 required
                 value={clubFormData.city}
@@ -1475,6 +1649,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Status</label>
               <select
+                name="status"
                 value={clubFormData.status}
                 onChange={(e) => setClubFormData(prev => ({ ...prev, status: e.target.value }))}
                 aria-label="Venue status"
@@ -1489,6 +1664,7 @@ export const ClubApprovalsPage = () => {
             <div className="sm:col-span-2">
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Full Address *</label>
               <input
+                name="address"
                 type="text"
                 required
                 value={clubFormData.address}
@@ -1500,6 +1676,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Opening Time</label>
               <input
+                name="openTime"
                 type="time"
                 value={clubFormData.openTime}
                 onChange={(e) => setClubFormData(prev => ({ ...prev, openTime: e.target.value }))}
@@ -1510,6 +1687,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Closing Time</label>
               <input
+                name="closeTime"
                 type="time"
                 value={clubFormData.closeTime}
                 onChange={(e) => setClubFormData(prev => ({ ...prev, closeTime: e.target.value }))}
@@ -1520,6 +1698,7 @@ export const ClubApprovalsPage = () => {
             <div className="sm:col-span-2">
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Assigned Manager</label>
               <select
+                name="managerId"
                 value={clubFormData.managerId}
                 onChange={(e) => setClubFormData(prev => ({ ...prev, managerId: e.target.value }))}
                 aria-label="Assigned Manager"
@@ -1575,7 +1754,15 @@ export const ClubApprovalsPage = () => {
             <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" icon={Check} rainbowBorder={false}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              icon={Check}
+              rainbowBorder={false}
+              isLoading={isSavingClub}
+              disabled={isSavingClub}
+            >
               Save Changes
             </Button>
           </div>
@@ -1590,6 +1777,7 @@ export const ClubApprovalsPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Pitch Name *</label>
             <input
+              name="courtName"
               type="text"
               required
               placeholder="E.g. Pitch Alpha (5v5)"
@@ -1603,6 +1791,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Type</label>
               <select
+                name="type"
                 value={courtFormData.type}
                 onChange={(e) => setCourtFormData(prev => ({ ...prev, type: e.target.value }))}
                 aria-label="Pitch Type"
@@ -1617,6 +1806,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Surface Quality</label>
               <select
+                name="surface"
                 value={courtFormData.surface}
                 onChange={(e) => setCourtFormData(prev => ({ ...prev, surface: e.target.value }))}
                 aria-label="Pitch Surface Quality"
@@ -1634,6 +1824,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Base Hourly Rate (INR)</label>
               <input
+                name="basePrice"
                 type="number"
                 min="100"
                 step="50"
@@ -1646,6 +1837,7 @@ export const ClubApprovalsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Initial Status</label>
               <select
+                name="status"
                 value={courtFormData.status}
                 onChange={(e) => setCourtFormData(prev => ({ ...prev, status: e.target.value }))}
                 aria-label="Initial Pitch Status"
@@ -1662,7 +1854,15 @@ export const ClubApprovalsPage = () => {
             <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsAddCourtModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" icon={Plus} rainbowBorder={false}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              rainbowBorder={false}
+              isLoading={isCreatingCourt}
+              disabled={isCreatingCourt}
+            >
               Add Pitch to Venue
             </Button>
           </div>

@@ -7,15 +7,15 @@ export const dummyGames = [
     organizer: {
       id: "usr_player_demo",
       name: "Arjun Mehta",
-      avatar: "/src/assets/images/avatars/avatar-1.jpg"
+      avatar: "/assets/images/avatars/avatar-1.jpg"
     },
     format: "5v5",
     maxPlayers: 10,
     entryFee: 150, // ₹150 per player
     confirmedPlayers: [
-      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/src/assets/images/avatars/avatar-1.jpg", position: "ST" },
-      { id: "usr_p6", name: "Aarav Joshi", avatar: "/src/assets/images/avatars/avatar-8.jpg", position: "MID" },
-      { id: "usr_p10", name: "Ishan Verma", avatar: "/src/assets/images/avatars/avatar-8.jpg", position: "DEF" }
+      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/avatar-1.jpg", position: "ST" },
+      { id: "usr_p6", name: "Aarav Joshi", avatar: "/assets/images/avatars/avatar-8.jpg", position: "MID" },
+      { id: "usr_p10", name: "Ishan Verma", avatar: "/assets/images/avatars/avatar-8.jpg", position: "DEF" }
     ],
     waitlist: [],
     skill: "Intermediate",
@@ -43,29 +43,29 @@ export const dummyGames = [
     organizer: {
       id: "usr_player_demo",
       name: "Arjun Mehta",
-      avatar: "/src/assets/images/avatars/avatar-1.jpg"
+      avatar: "/assets/images/avatars/avatar-1.jpg"
     },
     format: "7v7",
     maxPlayers: 14,
     entryFee: 200, // ₹200 per player
     confirmedPlayers: [
-      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/src/assets/images/avatars/avatar-1.jpg", position: "ST" },
-      { id: "usr_p2", name: "Siddharth Rao", avatar: "/src/assets/images/avatars/avatar-6.jpg", position: "MID" },
-      { id: "usr_p3", name: "Ananya Iyer", avatar: "/src/assets/images/avatars/avatar-3.jpg", position: "GK" },
-      { id: "usr_p4", name: "Karan Patel", avatar: "/src/assets/images/avatars/avatar-4.jpg", position: "DEF" },
-      { id: "usr_p5", name: "Neha Gupta", avatar: "/src/assets/images/avatars/avatar-7.jpg", position: "WING" },
-      { id: "usr_p7", name: "Rohan Kapoor", avatar: "/src/assets/images/avatars/avatar-9.jpg", position: "ST" },
-      { id: "usr_p8", name: "Tanya Sharma", avatar: "/src/assets/images/avatars/avatar-10.jpg", position: "MID" },
-      { id: "usr_p9", name: "Devendra Singh", avatar: "/src/assets/images/avatars/avatar-2.jpg", position: "ST" },
-      { id: "usr_p6", name: "Aarav Joshi", avatar: "/src/assets/images/avatars/avatar-8.jpg", position: "MID" },
-      { id: "usr_p10", name: "Ishan Verma", avatar: "/src/assets/images/avatars/avatar-8.jpg", position: "DEF" },
-      { id: "usr_admin_demo", name: "Aaditya Verma", avatar: "/src/assets/images/avatars/avatar-1.jpg", position: "MID" },
-      { id: "usr_admin_2", name: "Rohan Deshmukh", avatar: "/src/assets/images/avatars/avatar-2.jpg", position: "DEF" },
-      { id: "usr_manager_demo", name: "Rajesh Sharma", avatar: "/src/assets/images/avatars/avatar-3.jpg", position: "MID" },
-      { id: "usr_manager_2", name: "Vikram Malhotra", avatar: "/src/assets/images/avatars/avatar-4.jpg", position: "WING" }
+      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/avatar-1.jpg", position: "ST" },
+      { id: "usr_p2", name: "Siddharth Rao", avatar: "/assets/images/avatars/avatar-6.jpg", position: "MID" },
+      { id: "usr_p3", name: "Ananya Iyer", avatar: "/assets/images/avatars/avatar-3.jpg", position: "GK" },
+      { id: "usr_p4", name: "Karan Patel", avatar: "/assets/images/avatars/avatar-4.jpg", position: "DEF" },
+      { id: "usr_p5", name: "Neha Gupta", avatar: "/assets/images/avatars/avatar-7.jpg", position: "WING" },
+      { id: "usr_p7", name: "Rohan Kapoor", avatar: "/assets/images/avatars/avatar-9.jpg", position: "ST" },
+      { id: "usr_p8", name: "Tanya Sharma", avatar: "/assets/images/avatars/avatar-10.jpg", position: "MID" },
+      { id: "usr_p9", name: "Devendra Singh", avatar: "/assets/images/avatars/avatar-2.jpg", position: "ST" },
+      { id: "usr_p6", name: "Aarav Joshi", avatar: "/assets/images/avatars/avatar-8.jpg", position: "MID" },
+      { id: "usr_p10", name: "Ishan Verma", avatar: "/assets/images/avatars/avatar-8.jpg", position: "DEF" },
+      { id: "usr_admin_demo", name: "Aaditya Verma", avatar: "/assets/images/avatars/avatar-1.jpg", position: "MID" },
+      { id: "usr_admin_2", name: "Rohan Deshmukh", avatar: "/assets/images/avatars/avatar-2.jpg", position: "DEF" },
+      { id: "usr_manager_demo", name: "Rajesh Sharma", avatar: "/assets/images/avatars/avatar-3.jpg", position: "MID" },
+      { id: "usr_manager_2", name: "Vikram Malhotra", avatar: "/assets/images/avatars/avatar-4.jpg", position: "WING" }
     ],
     waitlist: [
-      { id: "usr_manager_3", name: "Priya Nair", avatar: "/src/assets/images/avatars/avatar-5.jpg" }
+      { id: "usr_manager_3", name: "Priya Nair", avatar: "/assets/images/avatars/avatar-5.jpg" }
     ],
     skill: "Advanced",
     privacy: "PUBLIC",
@@ -92,14 +92,14 @@ export const dummyGames = [
     organizer: {
       id: "usr_p2",
       name: "Siddharth Rao",
-      avatar: "/src/assets/images/avatars/avatar-6.jpg"
+      avatar: "/assets/images/avatars/avatar-6.jpg"
     },
     format: "5v5",
     maxPlayers: 10,
     entryFee: 250,
     confirmedPlayers: [
-      { id: "usr_p2", name: "Siddharth Rao", avatar: "/src/assets/images/avatars/avatar-6.jpg", position: "MID" },
-      { id: "usr_p8", name: "Tanya Sharma", avatar: "/src/assets/images/avatars/avatar-10.jpg", position: "MID" }
+      { id: "usr_p2", name: "Siddharth Rao", avatar: "/assets/images/avatars/avatar-6.jpg", position: "MID" },
+      { id: "usr_p8", name: "Tanya Sharma", avatar: "/assets/images/avatars/avatar-10.jpg", position: "MID" }
     ],
     waitlist: [],
     skill: "All Levels",
@@ -127,14 +127,14 @@ export const dummyGames = [
     organizer: {
       id: "usr_p5",
       name: "Neha Gupta",
-      avatar: "/src/assets/images/avatars/avatar-7.jpg"
+      avatar: "/assets/images/avatars/avatar-7.jpg"
     },
     format: "5v5",
     maxPlayers: 10,
     entryFee: 180,
     confirmedPlayers: [
-      { id: "usr_p5", name: "Neha Gupta", avatar: "/src/assets/images/avatars/avatar-7.jpg", position: "WING" },
-      { id: "usr_manager_3", name: "Priya Nair", avatar: "/src/assets/images/avatars/avatar-5.jpg", position: "GK" }
+      { id: "usr_p5", name: "Neha Gupta", avatar: "/assets/images/avatars/avatar-7.jpg", position: "WING" },
+      { id: "usr_manager_3", name: "Priya Nair", avatar: "/assets/images/avatars/avatar-5.jpg", position: "GK" }
     ],
     waitlist: [],
     skill: "Intermediate",

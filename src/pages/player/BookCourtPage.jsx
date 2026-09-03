@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, Clock, MapPin, ShieldCheck, Zap, CheckCircle2, ArrowLeft, Lock, AlertTriangle } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
@@ -8,6 +8,8 @@ import Button from '../../components/common/Button';
 import BackButton from '../../components/common/BackButton';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { setCriticalOperation, clearCriticalOperation } from '../../utils/navigationGuardian';
 import toast from 'react-hot-toast';
 
 export const BookCourtPage = () => {
@@ -29,6 +31,7 @@ export const BookCourtPage = () => {
   const [duration, setDuration] = useState(1.5);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [isBooking, setIsBooking] = useState(false);
 
   const availableSlots = ['16:00', '17:30', '19:00', '20:30', '22:00'];
 
@@ -41,12 +44,22 @@ export const BookCourtPage = () => {
   const tax = Math.round(baseSubtotal * 0.05);
   const grandTotal = Math.round(baseSubtotal + serviceFee + tax);
 
-  const handleConfirmBooking = () => {
+  const isBookingRef = useRef(false);
+
+  const handleConfirmBooking = async () => {
+    if (isBooking || isBookingRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
     if (isUnavailable) {
       toast.error('This court is currently blocked or under maintenance by the venue manager.');
       return;
     }
-    if (!currentUser) return;
+    if (!currentUser) {
+      toast.error('Please sign in to book court slots.');
+      navigate('/login');
+      return;
+    }
     
     // Strict Date Validation: Past Date Guard
     const today = getTodayDate();
@@ -60,37 +73,70 @@ export const BookCourtPage = () => {
       return;
     }
 
-    if (currentUser.walletBalance < grandTotal) {
+    if ((currentUser.walletBalance || 0) < grandTotal) {
       toast.error(`Insufficient wallet balance! Booking total is ₹${grandTotal}, but your balance is ₹${currentUser.walletBalance?.toFixed(2)}. Please top up.`);
       return;
     }
 
-    updateWallet(-grandTotal);
+    isBookingRef.current = true;
+    setIsBooking(true);
+    setCriticalOperation('BOOKING_PAYMENT');
+    try {
+      const startH = parseInt(startTime.split(':')[0], 10);
+      const startM = parseInt(startTime.split(':')[1], 10);
+      const endH = startH + Math.floor(duration);
+      const endM = startM + (duration % 1 ? 30 : 0);
+      const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
-    const startH = parseInt(startTime.split(':')[0], 10);
-    const startM = parseInt(startTime.split(':')[1], 10);
-    const endH = startH + Math.floor(duration);
-    const endM = startM + (duration % 1 ? 30 : 0);
-    const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+      const newBooking = createBooking({
+        courtId: court.courtId || court.id,
+        courtName: court.name,
+        clubId: club.id,
+        clubName: club.name,
+        city: club.city,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        date,
+        startTime,
+        endTime: endTimeStr,
+        amountPaid: grandTotal
+      });
 
-    const newBooking = createBooking({
-      courtId: court.courtId || court.id,
-      courtName: court.name,
-      clubId: club.id,
-      clubName: club.name,
-      city: club.city,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      date,
-      startTime,
-      endTime: endTimeStr,
-      amountPaid: grandTotal
-    });
-
-    setConfirmedBooking(newBooking);
-    setIsSuccessModalOpen(true);
-    toast.success('Court booking confirmed!');
+      if (newBooking) {
+        updateWallet(-grandTotal, `Court Booking: ${court.name} (${date})`);
+        setConfirmedBooking(newBooking);
+        setIsSuccessModalOpen(true);
+        toast.success('Court booking confirmed!');
+      }
+    } catch (err) {
+      logActionError('handleConfirmBooking', err);
+      toast.error(getErrorMessage(err, 'confirming court booking'));
+    } finally {
+      clearCriticalOperation();
+      setIsBooking(false);
+      setTimeout(() => {
+        isBookingRef.current = false;
+      }, 400);
+    }
   };
+
+  if (!court || !club) {
+    return (
+      <div className="space-y-6 py-12 max-w-md mx-auto text-center">
+        <BackButton fallback="/player/courts" label="Back to Turf Directory" />
+        <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+          <div className="text-4xl">🏟️</div>
+          <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase">Pitch Unavailable</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            This pitch slot could not be located or may have been removed.
+          </p>
+          <Button variant="primary" size="md" onClick={() => navigate('/player/courts')} className="font-bold text-xs uppercase">
+            Browse All Courts
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 py-4 max-w-4xl mx-auto">
@@ -247,10 +293,11 @@ export const BookCourtPage = () => {
                 size="lg"
                 className="w-full"
                 icon={CheckCircle2}
-                disabled={isUnavailable}
+                isLoading={isBooking}
+                disabled={isUnavailable || isBooking}
                 onClick={handleConfirmBooking}
               >
-                {isUnavailable ? 'Court Unavailable' : `Pay & Reserve Pitch (₹${grandTotal})`}
+                {isUnavailable ? 'Court Unavailable' : isBooking ? 'Processing Reservation...' : `Pay & Reserve Pitch (₹${grandTotal})`}
               </Button>
             </div>
           </div>

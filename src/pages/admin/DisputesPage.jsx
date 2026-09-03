@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   AlertTriangle, CheckCircle2, Shield, Edit3, Search, Filter, 
   Clock, ArrowUpDown, ChevronRight, User, Building2, Layers, 
-  ShieldCheck, Eye, Trophy, Scale, XCircle, FileText, Check, Plus, AlertCircle
+  ShieldCheck, Eye, Trophy, Scale, XCircle, FileText, Check, Plus, AlertCircle,
+  Camera, Paperclip, X
 } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -11,6 +12,9 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
 import Modal from '../../components/common/Modal';
+import { validateTitle, validateNonEmpty, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { validateFile, readFileAsDataUrl, ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_EXTENSIONS, DEFAULT_MAX_IMAGE_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
 import toast from 'react-hot-toast';
 
 export const DisputesPage = () => {
@@ -27,6 +31,15 @@ export const DisputesPage = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isNewDisputeModalOpen, setIsNewDisputeModalOpen] = useState(false);
 
+  // Loading & Concurrency Locks
+  const [isResolving, setIsResolving] = useState(false);
+  const [isDismissing, setIsDismissing] = useState(false);
+  const [isCreatingDispute, setIsCreatingDispute] = useState(false);
+
+  const isResolvingRef = useRef(false);
+  const isDismissingRef = useRef(false);
+  const isCreatingDisputeRef = useRef(false);
+
   const [winnerTeam, setWinnerTeam] = useState('Team A');
   const [scoreStr, setScoreStr] = useState('Team A 4 - 3 Team B');
   const [adjudicatorNotes, setAdjudicatorNotes] = useState('After reviewing pitch surveillance footage and referee logs, Team A 4th goal is confirmed valid within stoppage time.');
@@ -35,11 +48,47 @@ export const DisputesPage = () => {
   const [customDismissReason, setCustomDismissReason] = useState('');
 
   const [newDisputeForm, setNewDisputeForm] = useState({
-    gameId: games[0]?.id || 'gam_101',
-    reportedBy: usersList[0]?.name || 'Arjun Mehta',
+    gameId: games[0]?.id || 'game_1',
+    reportedBy: '',
     disputedScore: 'Team A 3 - 3 Team B',
-    reason: 'Unregistered substitute player fielded in 2nd half without manager clearance'
+    reason: ''
   });
+
+  // Dispute Evidence Attachment State
+  const [disputeEvidenceFile, setDisputeEvidenceFile] = useState(null);
+  const [disputeEvidencePreview, setDisputeEvidencePreview] = useState('');
+  const disputeFileInputRef = useRef(null);
+
+  const handleDisputeFileChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setDisputeEvidenceFile(null);
+      setDisputeEvidencePreview('');
+      return;
+    }
+    const file = files[0];
+    const validation = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      allowedExtensions: ALLOWED_IMAGE_EXTENSIONS,
+      maxSizeBytes: DEFAULT_MAX_IMAGE_SIZE,
+      fileCategoryName: 'evidence file'
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      if (disputeFileInputRef.current) disputeFileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setDisputeEvidenceFile(file);
+      setDisputeEvidencePreview(dataUrl);
+      toast.success(`Attached evidence "${file.name}" (${formatFileSize(file.size)})`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to process evidence file.');
+    }
+  };
 
   const stats = useMemo(() => {
     const total = disputes.length;
@@ -86,13 +135,34 @@ export const DisputesPage = () => {
     setIsResolveModalOpen(true);
   };
 
-  const handleConfirmResolve = (e) => {
+  const handleConfirmResolve = async (e) => {
     e.preventDefault();
-    if (!selectedDispute) return;
+    if (!selectedDispute || isResolving || isResolvingRef.current) return;
 
-    resolveDispute(selectedDispute.id, winnerTeam, scoreStr, adjudicatorNotes);
-    setIsResolveModalOpen(false);
-    setSelectedDispute(null);
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateNonEmpty(scoreStr, 'Official Final Score'), field: 'scoreStr' },
+      { check: () => validateNonEmpty(adjudicatorNotes, 'Adjudication Verdict'), field: 'adjudicatorNotes' }
+    ]);
+
+    if (!isValid) return;
+
+    isResolvingRef.current = true;
+    setIsResolving(true);
+    try {
+      resolveDispute(selectedDispute.id, winnerTeam, scoreStr.trim(), adjudicatorNotes.trim());
+      setIsResolveModalOpen(false);
+      setSelectedDispute(null);
+    } catch (err) {
+      logActionError('handleConfirmResolve', err);
+      toast.error(getErrorMessage(err, 'resolving dispute'));
+    } finally {
+      setIsResolving(false);
+      setTimeout(() => {
+        isResolvingRef.current = false;
+      }, 400);
+    }
   };
 
   const handleOpenDismiss = (dispute) => {
@@ -102,14 +172,35 @@ export const DisputesPage = () => {
     setIsDismissModalOpen(true);
   };
 
-  const handleConfirmDismiss = (e) => {
+  const handleConfirmDismiss = async (e) => {
     e.preventDefault();
-    if (!selectedDispute) return;
+    if (!selectedDispute || isDismissing || isDismissingRef.current) return;
 
-    const finalReason = dismissReason === 'OTHER' ? customDismissReason : dismissReason;
-    dismissDispute(selectedDispute.id, finalReason || 'Dispute dismissed by match commissioner');
-    setIsDismissModalOpen(false);
-    setSelectedDispute(null);
+    if (!checkNetworkOnline()) return;
+
+    if (dismissReason === 'OTHER') {
+      const isValid = validateFormAndFocus(e, [
+        { check: () => validateNonEmpty(customDismissReason, 'Dismissal Reason'), field: 'customDismissReason' }
+      ]);
+      if (!isValid) return;
+    }
+
+    isDismissingRef.current = true;
+    setIsDismissing(true);
+    try {
+      const finalReason = dismissReason === 'OTHER' ? customDismissReason.trim() : dismissReason;
+      dismissDispute(selectedDispute.id, finalReason || 'Dispute dismissed by match commissioner');
+      setIsDismissModalOpen(false);
+      setSelectedDispute(null);
+    } catch (err) {
+      logActionError('handleConfirmDismiss', err);
+      toast.error(getErrorMessage(err, 'dismissing dispute'));
+    } finally {
+      setIsDismissing(false);
+      setTimeout(() => {
+        isDismissingRef.current = false;
+      }, 400);
+    }
   };
 
   const handleOpenDetails = (dispute) => {
@@ -117,26 +208,54 @@ export const DisputesPage = () => {
     setIsDetailModalOpen(true);
   };
 
-  const handleCreateNewDispute = (e) => {
+  const handleCreateNewDispute = async (e) => {
     e.preventDefault();
-    const game = games.find(g => g.id === newDisputeForm.gameId) || games[0];
-    const newEntry = {
-      id: `dsp_${Date.now()}`,
-      gameId: newDisputeForm.gameId,
-      gameTitle: game ? game.title : 'Pickup Super Match',
-      reportedBy: newDisputeForm.reportedBy,
-      disputedScore: newDisputeForm.disputedScore,
-      reason: newDisputeForm.reason,
-      status: 'OPEN',
-      createdAt: new Date().toISOString().substring(0, 10)
-    };
+    if (isCreatingDispute || isCreatingDisputeRef.current) return;
 
-    useDataStore.setState(state => ({
-      disputes: [newEntry, ...state.disputes]
-    }));
+    if (!checkNetworkOnline()) return;
 
-    toast.success('New match dispute logged for adjudication!');
-    setIsNewDisputeModalOpen(false);
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(newDisputeForm.reportedBy, 'Reporter Name'), field: 'reportedBy' },
+      { check: () => validateNonEmpty(newDisputeForm.disputedScore, 'Claimed Scoreline'), field: 'disputedScore' },
+      { check: () => validateNonEmpty(newDisputeForm.reason, 'Dispute Grievance Reason'), field: 'reason' }
+    ]);
+
+    if (!isValid) return;
+
+    isCreatingDisputeRef.current = true;
+    setIsCreatingDispute(true);
+    try {
+      const game = games.find(g => g.id === newDisputeForm.gameId) || games[0];
+      const newEntry = {
+        id: `dsp_${Date.now()}`,
+        gameId: newDisputeForm.gameId,
+        gameTitle: game ? game.title : 'Pickup Super Match',
+        reportedBy: newDisputeForm.reportedBy.trim(),
+        disputedScore: newDisputeForm.disputedScore.trim(),
+        reason: newDisputeForm.reason.trim(),
+        status: 'OPEN',
+        createdAt: new Date().toISOString().substring(0, 10),
+        ...(disputeEvidencePreview ? { evidenceUrl: disputeEvidencePreview, evidenceFileName: disputeEvidenceFile?.name } : {})
+      };
+
+      useDataStore.setState(state => ({
+        disputes: [newEntry, ...state.disputes]
+      }));
+
+      toast.success('New match dispute logged for adjudication!');
+      setIsNewDisputeModalOpen(false);
+      setDisputeEvidenceFile(null);
+      setDisputeEvidencePreview('');
+      if (disputeFileInputRef.current) disputeFileInputRef.current.value = '';
+    } catch (err) {
+      logActionError('handleCreateNewDispute', err);
+      toast.error(getErrorMessage(err, 'creating dispute'));
+    } finally {
+      setIsCreatingDispute(false);
+      setTimeout(() => {
+        isCreatingDisputeRef.current = false;
+      }, 400);
+    }
   };
 
   const getReporterUser = (name) => {
@@ -531,6 +650,7 @@ export const DisputesPage = () => {
                 Official Final Scoreline
               </label>
               <input
+                name="scoreStr"
                 type="text"
                 required
                 value={scoreStr}
@@ -545,6 +665,7 @@ export const DisputesPage = () => {
                 Commissioner Verdict & Evidence Notes
               </label>
               <textarea
+                name="adjudicatorNotes"
                 rows={3}
                 required
                 value={adjudicatorNotes}
@@ -558,7 +679,15 @@ export const DisputesPage = () => {
               <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsResolveModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" icon={CheckCircle2} rainbowBorder={false}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                icon={CheckCircle2}
+                rainbowBorder={false}
+                isLoading={isResolving}
+                disabled={isResolving}
+              >
                 Confirm Ruling & Recalculate Elo
               </Button>
             </div>
@@ -585,6 +714,7 @@ export const DisputesPage = () => {
                 Select Dismissal Reason
               </label>
               <select
+                name="dismissReason"
                 value={dismissReason}
                 onChange={(e) => setDismissReason(e.target.value)}
                 aria-label="Select Dismissal Reason"
@@ -604,6 +734,7 @@ export const DisputesPage = () => {
                   Specify Dismissal Reason
                 </label>
                 <textarea
+                  name="customDismissReason"
                   rows={2}
                   required
                   value={customDismissReason}
@@ -618,7 +749,15 @@ export const DisputesPage = () => {
               <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsDismissModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="danger" size="sm" icon={XCircle} rainbowBorder={false}>
+              <Button
+                type="submit"
+                variant="danger"
+                size="sm"
+                icon={XCircle}
+                rainbowBorder={false}
+                isLoading={isDismissing}
+                disabled={isDismissing}
+              >
                 Confirm Dismissal
               </Button>
             </div>
@@ -686,6 +825,7 @@ export const DisputesPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Select Match Session</label>
             <select
+              name="gameId"
               value={newDisputeForm.gameId}
               onChange={(e) => setNewDisputeForm(prev => ({ ...prev, gameId: e.target.value }))}
               aria-label="Select Match Session"
@@ -702,6 +842,7 @@ export const DisputesPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Reported By (Player / Captain)</label>
             <input
+              name="reportedBy"
               type="text"
               required
               value={newDisputeForm.reportedBy}
@@ -714,6 +855,7 @@ export const DisputesPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Contested / Claimed Scoreline</label>
             <input
+              name="disputedScore"
               type="text"
               required
               value={newDisputeForm.disputedScore}
@@ -726,6 +868,7 @@ export const DisputesPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Dispute Grievance Reason</label>
             <textarea
+              name="reason"
               rows={2}
               required
               value={newDisputeForm.reason}
@@ -735,11 +878,53 @@ export const DisputesPage = () => {
             />
           </div>
 
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">
+              Attach Evidence Photo / Screenshot (Optional, .jpg, .png, .webp · Max 10 MB)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                ref={disputeFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleDisputeFileChange}
+                className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sport-500/10 file:text-sport-600 dark:file:text-sport-400 hover:file:bg-sport-500/20 cursor-pointer"
+              />
+              {disputeEvidenceFile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDisputeEvidenceFile(null);
+                    setDisputeEvidencePreview('');
+                    if (disputeFileInputRef.current) disputeFileInputRef.current.value = '';
+                  }}
+                  className="text-rose-500 hover:text-rose-600 text-xs font-bold whitespace-nowrap p-1 cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {disputeEvidenceFile && (
+              <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Selected: <strong className="text-slate-900 dark:text-white">{disputeEvidenceFile.name}</strong> ({formatFileSize(disputeEvidenceFile.size)})</span>
+                <span className="text-emerald-500 font-bold">✓ Evidence Attached</span>
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
             <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsNewDisputeModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" icon={Plus} rainbowBorder={false}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              rainbowBorder={false}
+              isLoading={isCreatingDispute}
+              disabled={isCreatingDispute}
+            >
               Submit Incident Log
             </Button>
           </div>

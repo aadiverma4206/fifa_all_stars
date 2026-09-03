@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -13,6 +13,8 @@ import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
+import { validateTitle, validateDateNotPast, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 const FORMATS = ['5v5', '7v7', '3v3', '2v2', '1v1', '6v6', '11v11'];
@@ -77,6 +79,22 @@ export const ManagerGamesPage = () => {
   const [isLiveScoreModalOpen, setIsLiveScoreModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
+
+  // Loading & Concurrency Locks
+  const [isCreatingGame, setIsCreatingGame] = useState(false);
+  const [isEditingGame, setIsEditingGame] = useState(false);
+  const [isSubmittingScore, setIsSubmittingScore] = useState(false);
+  const [isSubmittingLiveScore, setIsSubmittingLiveScore] = useState(false);
+  const [startingGameId, setStartingGameId] = useState(null);
+  const [removingGameId, setRemovingGameId] = useState(null);
+  const [gameToRemove, setGameToRemove] = useState(null);
+
+  const isCreatingGameRef = useRef(false);
+  const isEditingGameRef = useRef(false);
+  const isSubmittingScoreRef = useRef(false);
+  const isSubmittingLiveScoreRef = useRef(false);
+  const startingGameRef = useRef(false);
+  const removingGameRef = useRef(false);
 
   // Create Game Form State
   const [title, setTitle] = useState('');
@@ -146,58 +164,59 @@ export const ManagerGamesPage = () => {
   });
 
   // Handle Create Game
-  const handleCreateGame = (e) => {
+  const handleCreateGame = async (e) => {
     e.preventDefault();
-    if (!title || !title.trim()) { 
-      toast.error('Please enter a valid game title!'); 
-      return; 
-    }
+    if (isCreatingGame || isCreatingGameRef.current) return;
 
-    if (date < todayStr) {
-      toast.error('Game date cannot be in the past! Please select today or a future date.');
-      return;
-    }
+    if (!checkNetworkOnline()) return;
 
-    if (!startTime || !endTime) {
-      toast.error('Please specify both Start Time and End Time.');
-      return;
-    }
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(title, 'Game Title'), field: 'title' },
+      { check: () => validateDateNotPast(date, 'Game Date'), field: 'date' },
+      { check: () => validateTimeRange(startTime, endTime), field: 'startTime' },
+      { check: () => validatePositiveAmount(entryFee, 'Entry Fee', true), field: 'entryFee' }
+    ]);
 
-    if (startTime >= endTime) {
-      toast.error('End Time must be after Start Time!');
-      return;
-    }
+    if (!isValid) return;
 
     const feeVal = parseFloat(entryFee) || 0;
-    if (feeVal < 0) {
-      toast.error('Entry fee cannot be negative.');
-      return;
-    }
-
     const selectedCourt = myCourts.find(c => c.courtId === selectedCourtId || c.id === selectedCourtId) || myCourts[0];
 
-    createGame({
-      title: title.trim(),
-      format,
-      date,
-      dateTime: { date, startTime, endTime },
-      entryFee: feeVal,
-      skill,
-      privacy,
-      description: description.trim(),
-      venueReference: {
-        clubId: myClub?.id,
-        clubName: myClub?.name,
-        courtId: selectedCourt?.courtId || selectedCourt?.id || '',
-        courtName: selectedCourt?.name || 'Main Pitch',
-        city: myClub?.city
-      }
-    }, currentUser);
+    isCreatingGameRef.current = true;
+    setIsCreatingGame(true);
+    try {
+      createGame({
+        title: title.trim(),
+        format,
+        date,
+        dateTime: { date, startTime, endTime },
+        entryFee: feeVal,
+        skill,
+        privacy,
+        description: description.trim(),
+        venueReference: {
+          clubId: myClub?.id,
+          clubName: myClub?.name,
+          courtId: selectedCourt?.courtId || selectedCourt?.id || '',
+          courtName: selectedCourt?.name || 'Main Pitch',
+          city: myClub?.city
+        }
+      }, currentUser);
 
-    setTitle(''); setFormat('5v5'); setDate(getTodayDate(1));
-    setStartTime('19:00'); setEndTime('20:30'); setEntryFee('0');
-    setSkill('All Levels'); setPrivacy('PUBLIC'); setDescription('');
-    setIsCreateModalOpen(false);
+      setTitle(''); setFormat('5v5'); setDate(getTodayDate(1));
+      setStartTime('19:00'); setEndTime('20:30'); setEntryFee('0');
+      setSkill('All Levels'); setPrivacy('PUBLIC'); setDescription('');
+      setIsCreateModalOpen(false);
+      toast.success('Game session published successfully!');
+    } catch (err) {
+      logActionError('handleCreateGame', err);
+      toast.error(getErrorMessage(err, 'creating game session'));
+    } finally {
+      setIsCreatingGame(false);
+      setTimeout(() => {
+        isCreatingGameRef.current = false;
+      }, 400);
+    }
   };
 
   // Handle Edit Game
@@ -216,51 +235,83 @@ export const ManagerGamesPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEditGame = (e) => {
+  const handleSaveEditGame = async (e) => {
     e.preventDefault();
-    if (!selectedGame) return;
+    if (!selectedGame || isEditingGame || isEditingGameRef.current) return;
 
-    if (!editTitle || !editTitle.trim()) {
-      toast.error('Game title cannot be empty.');
-      return;
-    }
+    if (!checkNetworkOnline()) return;
 
-    if (editStartTime && editEndTime && editStartTime >= editEndTime) {
-      toast.error('End Time must be after Start Time!');
-      return;
-    }
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(editTitle, 'Game Title'), field: 'editTitle' },
+      { check: () => validateDateNotPast(editDate, 'Game Date'), field: 'editDate' },
+      { check: () => validateTimeRange(editStartTime, editEndTime), field: 'editStartTime' },
+      { check: () => validatePositiveAmount(editEntryFee, 'Entry Fee', true), field: 'editEntryFee' }
+    ]);
+
+    if (!isValid) return;
 
     const feeVal = parseFloat(editEntryFee) || 0;
-    if (feeVal < 0) {
-      toast.error('Entry fee cannot be negative.');
+    const selectedCourt = myCourts.find(c => c.courtId === editCourtId || c.id === editCourtId) || myCourts[0];
+    const computedSlots = MATCH_FORMAT_SLOTS[editFormat] || selectedGame.maxPlayers || 10;
+    const trimmedTitle = editTitle.trim();
+    const trimmedDesc = editDescription.trim();
+
+    // Detect whether anything actually changed
+    const hasChanges =
+      trimmedTitle !== (selectedGame.title || '').trim() ||
+      editFormat !== selectedGame.format ||
+      computedSlots !== selectedGame.maxPlayers ||
+      feeVal !== (selectedGame.entryFee || 0) ||
+      editSkill !== selectedGame.skill ||
+      editPrivacy !== selectedGame.privacy ||
+      editDate !== (selectedGame.dateTime?.date || selectedGame.date) ||
+      editStartTime !== selectedGame.dateTime?.startTime ||
+      editEndTime !== selectedGame.dateTime?.endTime ||
+      editCourtId !== selectedGame.venueReference?.courtId ||
+      trimmedDesc !== (selectedGame.description || '').trim();
+
+    if (!hasChanges) {
+      toast('No changes detected for this game session.', { icon: 'ℹ️' });
+      setIsEditModalOpen(false);
+      setSelectedGame(null);
       return;
     }
 
-    const selectedCourt = myCourts.find(c => c.courtId === editCourtId || c.id === editCourtId) || myCourts[0];
-    const computedSlots = MATCH_FORMAT_SLOTS[editFormat] || selectedGame.maxPlayers || 10;
+    isEditingGameRef.current = true;
+    setIsEditingGame(true);
+    try {
+      updateGameDetails(selectedGame.id, {
+        title: trimmedTitle,
+        format: editFormat,
+        maxPlayers: computedSlots,
+        entryFee: feeVal,
+        skill: editSkill,
+        privacy: editPrivacy,
+        dateTime: {
+          date: editDate,
+          startTime: editStartTime,
+          endTime: editEndTime
+        },
+        venueReference: {
+          ...selectedGame.venueReference,
+          courtId: selectedCourt?.courtId || selectedCourt?.id || selectedGame.venueReference?.courtId,
+          courtName: selectedCourt?.name || selectedGame.venueReference?.courtName
+        },
+        description: trimmedDesc
+      });
 
-    updateGameDetails(selectedGame.id, {
-      title: editTitle.trim(),
-      format: editFormat,
-      maxPlayers: computedSlots,
-      entryFee: feeVal,
-      skill: editSkill,
-      privacy: editPrivacy,
-      dateTime: {
-        date: editDate,
-        startTime: editStartTime,
-        endTime: editEndTime
-      },
-      venueReference: {
-        ...selectedGame.venueReference,
-        courtId: selectedCourt?.courtId || selectedCourt?.id || selectedGame.venueReference?.courtId,
-        courtName: selectedCourt?.name || selectedGame.venueReference?.courtName
-      },
-      description: editDescription.trim()
-    });
-
-    setIsEditModalOpen(false);
-    setSelectedGame(null);
+      setIsEditModalOpen(false);
+      setSelectedGame(null);
+      toast.success('Game session details updated.');
+    } catch (err) {
+      logActionError('handleSaveEditGame', err);
+      toast.error(getErrorMessage(err, 'updating game session'));
+    } finally {
+      setIsEditingGame(false);
+      setTimeout(() => {
+        isEditingGameRef.current = false;
+      }, 400);
+    }
   };
 
   // Handle Score Entry Modal (Finishing Match)
@@ -271,32 +322,51 @@ export const ManagerGamesPage = () => {
     setIsScoreModalOpen(true);
   };
 
-  const handleSubmitScore = (e) => {
+  const handleSubmitScore = async (e) => {
     e.preventDefault();
-    if (!selectedGame) return;
+    if (!selectedGame || isSubmittingScore || isSubmittingScoreRef.current) return;
 
-    if (scoreA === '' || scoreA === null || scoreB === '' || scoreB === null) {
-      toast.error('Please enter scores for both Team A and Team B.');
-      return;
-    }
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateIntegerRange(scoreA, 0, 99, 'Team A Final Goals'), field: 'scoreA' },
+      { check: () => validateIntegerRange(scoreB, 0, 99, 'Team B Final Goals'), field: 'scoreB' }
+    ]);
+
+    if (!isValid) return;
 
     const parsedA = parseInt(scoreA, 10);
     const parsedB = parseInt(scoreB, 10);
 
-    if (isNaN(parsedA) || parsedA < 0 || isNaN(parsedB) || parsedB < 0) {
-      toast.error('Goals must be valid integers between 0 and 99.');
+    // Change detection: if already recorded identical score
+    if (selectedGame.score && selectedGame.score.teamA === parsedA && selectedGame.score.teamB === parsedB && selectedGame.status === 'COMPLETED') {
+      toast('Final match score is already recorded.', { icon: 'ℹ️' });
+      setIsScoreModalOpen(false);
+      setSelectedGame(null);
       return;
     }
 
-    submitGameScore(selectedGame.id, { teamAScore: parsedA, teamBScore: parsedB }, usersList, (updatedUsers) => {
-      if (currentUser?.id) {
-        const myUpdated = updatedUsers?.find(u => u.id === currentUser.id);
-        if (myUpdated) setCurrentUser(myUpdated);
-      }
-    }, `${currentUser?.name || 'Venue Manager'} (Club Manager)`);
+    isSubmittingScoreRef.current = true;
+    setIsSubmittingScore(true);
+    try {
+      submitGameScore(selectedGame.id, { teamAScore: parsedA, teamBScore: parsedB }, usersList, (updatedUsers) => {
+        if (currentUser?.id) {
+          const myUpdated = updatedUsers?.find(u => u.id === currentUser.id);
+          if (myUpdated) setCurrentUser(myUpdated);
+        }
+      }, `${currentUser?.name || 'Venue Manager'} (Club Manager)`);
 
-    setIsScoreModalOpen(false);
-    setSelectedGame(null);
+      setIsScoreModalOpen(false);
+      setSelectedGame(null);
+    } catch (err) {
+      logActionError('handleSubmitScore', err);
+      toast.error(getErrorMessage(err, 'submitting final match score'));
+    } finally {
+      setIsSubmittingScore(false);
+      setTimeout(() => {
+        isSubmittingScoreRef.current = false;
+      }, 400);
+    }
   };
 
   // Handle Live Score Modal
@@ -307,21 +377,94 @@ export const ManagerGamesPage = () => {
     setIsLiveScoreModalOpen(true);
   };
 
-  const handleSubmitLiveScore = (e) => {
+  const handleSubmitLiveScore = async (e) => {
     e.preventDefault();
-    if (!selectedGame) return;
+    if (!selectedGame || isSubmittingLiveScore || isSubmittingLiveScoreRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateIntegerRange(liveScoreA, 0, 99, 'Team A Live Goals'), field: 'liveScoreA' },
+      { check: () => validateIntegerRange(liveScoreB, 0, 99, 'Team B Live Goals'), field: 'liveScoreB' }
+    ]);
+
+    if (!isValid) return;
 
     const parsedA = parseInt(liveScoreA, 10);
     const parsedB = parseInt(liveScoreB, 10);
 
-    if (isNaN(parsedA) || parsedA < 0 || isNaN(parsedB) || parsedB < 0) {
-      toast.error('Please enter valid goal numbers between 0 and 99.');
+    // Change detection: if live score is already identical
+    if (selectedGame.liveScore && selectedGame.liveScore.teamA === parsedA && selectedGame.liveScore.teamB === parsedB) {
+      toast('Live score is already up to date.', { icon: 'ℹ️' });
+      setIsLiveScoreModalOpen(false);
+      setSelectedGame(null);
       return;
     }
 
-    updateLiveScore(selectedGame.id, { teamAScore: parsedA, teamBScore: parsedB }, currentUser?.name || 'Venue Manager');
-    setIsLiveScoreModalOpen(false);
-    setSelectedGame(null);
+    isSubmittingLiveScoreRef.current = true;
+    setIsSubmittingLiveScore(true);
+    try {
+      updateLiveScore(selectedGame.id, { teamAScore: parsedA, teamBScore: parsedB }, currentUser?.name || 'Venue Manager');
+      setIsLiveScoreModalOpen(false);
+      setSelectedGame(null);
+    } catch (err) {
+      logActionError('handleSubmitLiveScore', err);
+      toast.error(getErrorMessage(err, 'updating live score'));
+    } finally {
+      setIsSubmittingLiveScore(false);
+      setTimeout(() => {
+        isSubmittingLiveScoreRef.current = false;
+      }, 400);
+    }
+  };
+
+  const handleStartMatch = async (game) => {
+    if (startingGameId || startingGameRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    startingGameRef.current = true;
+    setStartingGameId(game.id);
+    try {
+      updateGameLifecycle(game.id, 'ONGOING');
+      toast.success(`Match "${game.title}" is now LIVE!`);
+    } catch (err) {
+      logActionError('handleStartMatch', err);
+      toast.error(getErrorMessage(err, 'starting match'));
+    } finally {
+      setStartingGameId(null);
+      setTimeout(() => {
+        startingGameRef.current = false;
+      }, 400);
+    }
+  };
+
+  const handleRequestRemoveGame = (game) => {
+    if (removingGameId || removingGameRef.current) return;
+    setGameToRemove(game);
+  };
+
+  const handleConfirmRemoveGame = async () => {
+    if (!gameToRemove || removingGameId || removingGameRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const game = gameToRemove;
+    removingGameRef.current = true;
+    setGameToRemove(null);
+    setRemovingGameId(game.id);
+    try {
+      removeGame(game.id, 'Cancelled by venue manager');
+      toast.success(`Game session "${game.title}" removed.`);
+    } catch (err) {
+      logActionError('handleConfirmRemoveGame', err);
+      toast.error(getErrorMessage(err, 'removing game session'));
+    } finally {
+      setRemovingGameId(null);
+      setTimeout(() => {
+        removingGameRef.current = false;
+      }, 400);
+    }
   };
 
   const resetAllFilters = () => {
@@ -727,10 +870,9 @@ export const ManagerGamesPage = () => {
                           variant="primary"
                           size="sm"
                           icon={Play}
-                          onClick={() => {
-                            updateGameLifecycle(game.id, 'ONGOING');
-                            toast.success(`Match "${game.title}" is now LIVE!`);
-                          }}
+                          isLoading={startingGameId === game.id}
+                          disabled={startingGameId !== null}
+                          onClick={() => handleStartMatch(game)}
                           className="text-xs font-black shadow-xs"
                         >
                           Start Match
@@ -778,11 +920,9 @@ export const ManagerGamesPage = () => {
                       variant="danger"
                       size="sm"
                       icon={Trash2}
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to cancel and remove game session "${game.title}"?`)) {
-                          removeGame(game.id, 'Cancelled by venue manager');
-                        }
-                      }}
+                      isLoading={removingGameId === game.id}
+                      disabled={removingGameId !== null}
+                      onClick={() => handleRequestRemoveGame(game)}
                       className="text-xs font-semibold"
                       title="Cancel and remove session"
                     >
@@ -809,6 +949,7 @@ export const ManagerGamesPage = () => {
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Game Title *</label>
             <input
+              name="title"
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -822,6 +963,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Match Format</label>
               <select
+                name="format"
                 value={format}
                 onChange={e => setFormat(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -832,6 +974,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Skill Level</label>
               <select
+                name="skill"
                 value={skill}
                 onChange={e => setSkill(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -844,6 +987,7 @@ export const ManagerGamesPage = () => {
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Select Pitch / Court</label>
             <select
+              name="selectedCourtId"
               value={selectedCourtId}
               onChange={e => setSelectedCourtId(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -858,6 +1002,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Date</label>
               <input
+                name="date"
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
@@ -867,6 +1012,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Start Time</label>
               <input
+                name="startTime"
                 type="time"
                 value={startTime}
                 onChange={e => setStartTime(e.target.value)}
@@ -876,6 +1022,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">End Time</label>
               <input
+                name="endTime"
                 type="time"
                 value={endTime}
                 onChange={e => setEndTime(e.target.value)}
@@ -888,6 +1035,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Entry Fee (₹ per player)</label>
               <input
+                name="entryFee"
                 type="number"
                 min="0"
                 value={entryFee}
@@ -898,6 +1046,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Privacy</label>
               <select
+                name="privacy"
                 value={privacy}
                 onChange={e => setPrivacy(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -910,6 +1059,7 @@ export const ManagerGamesPage = () => {
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Description (optional)</label>
             <textarea
+              name="description"
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={2}
@@ -922,7 +1072,14 @@ export const ManagerGamesPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsCreateModalOpen(false)} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" className="flex-1">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isCreatingGame}
+              disabled={isCreatingGame}
+              className="flex-1"
+            >
               ✅ Publish Game Session
             </Button>
           </div>
@@ -935,6 +1092,7 @@ export const ManagerGamesPage = () => {
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Game Title *</label>
             <input
+              name="editTitle"
               type="text"
               value={editTitle}
               onChange={e => setEditTitle(e.target.value)}
@@ -947,6 +1105,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Match Format</label>
               <select
+                name="editFormat"
                 value={editFormat}
                 onChange={e => setEditFormat(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -957,6 +1116,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Skill Level</label>
               <select
+                name="editSkill"
                 value={editSkill}
                 onChange={e => setEditSkill(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -969,6 +1129,7 @@ export const ManagerGamesPage = () => {
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Select Court / Pitch</label>
             <select
+              name="editCourtId"
               value={editCourtId}
               onChange={e => setEditCourtId(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -983,6 +1144,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Date</label>
               <input
+                name="editDate"
                 type="date"
                 value={editDate}
                 onChange={e => setEditDate(e.target.value)}
@@ -992,6 +1154,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Start Time</label>
               <input
+                name="editStartTime"
                 type="time"
                 value={editStartTime}
                 onChange={e => setEditStartTime(e.target.value)}
@@ -1001,6 +1164,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">End Time</label>
               <input
+                name="editEndTime"
                 type="time"
                 value={editEndTime}
                 onChange={e => setEditEndTime(e.target.value)}
@@ -1013,6 +1177,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Entry Fee (₹)</label>
               <input
+                name="editEntryFee"
                 type="number"
                 min="0"
                 value={editEntryFee}
@@ -1023,6 +1188,7 @@ export const ManagerGamesPage = () => {
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Privacy</label>
               <select
+                name="editPrivacy"
                 value={editPrivacy}
                 onChange={e => setEditPrivacy(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -1036,7 +1202,14 @@ export const ManagerGamesPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditModalOpen(false)} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" variant="emerald" size="sm" className="flex-1">
+            <Button
+              type="submit"
+              variant="emerald"
+              size="sm"
+              isLoading={isEditingGame}
+              disabled={isEditingGame}
+              className="flex-1"
+            >
               Save Changes
             </Button>
           </div>
@@ -1059,6 +1232,7 @@ export const ManagerGamesPage = () => {
               <div className="text-center flex-1">
                 <label className="block text-xs font-black text-slate-500 uppercase mb-1">Team A Score</label>
                 <input
+                  name="scoreA"
                   type="number" min="0" max="99"
                   placeholder="0"
                   value={scoreA}
@@ -1070,6 +1244,7 @@ export const ManagerGamesPage = () => {
               <div className="text-center flex-1">
                 <label className="block text-xs font-black text-slate-500 uppercase mb-1">Team B Score</label>
                 <input
+                  name="scoreB"
                   type="number" min="0" max="99"
                   placeholder="0"
                   value={scoreB}
@@ -1083,7 +1258,14 @@ export const ManagerGamesPage = () => {
               <Button type="button" variant="ghost" size="sm" onClick={() => setIsScoreModalOpen(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button type="submit" variant="emerald" size="sm" className="flex-1">
+              <Button
+                type="submit"
+                variant="emerald"
+                size="sm"
+                isLoading={isSubmittingScore}
+                disabled={isSubmittingScore}
+                className="flex-1"
+              >
                 🏁 Save & Publish Final Score
               </Button>
             </div>
@@ -1107,6 +1289,7 @@ export const ManagerGamesPage = () => {
               <div className="text-center flex-1">
                 <label className="block text-xs font-black text-slate-500 uppercase mb-1">Team A Live</label>
                 <input
+                  name="liveScoreA"
                   type="number" min="0" max="99"
                   placeholder="0"
                   value={liveScoreA}
@@ -1118,6 +1301,7 @@ export const ManagerGamesPage = () => {
               <div className="text-center flex-1">
                 <label className="block text-xs font-black text-slate-500 uppercase mb-1">Team B Live</label>
                 <input
+                  name="liveScoreB"
                   type="number" min="0" max="99"
                   placeholder="0"
                   value={liveScoreB}
@@ -1131,7 +1315,14 @@ export const ManagerGamesPage = () => {
               <Button type="button" variant="ghost" size="sm" onClick={() => setIsLiveScoreModalOpen(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" className="flex-1">
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                isLoading={isSubmittingLiveScore}
+                disabled={isSubmittingLiveScore}
+                className="flex-1"
+              >
                 🔴 Update Live Score
               </Button>
             </div>
@@ -1139,6 +1330,59 @@ export const ManagerGamesPage = () => {
         )}
       </Modal>
 
+      {/* ═══ REMOVE GAME CONFIRM MODAL ═══ */}
+    <Modal
+      isOpen={!!gameToRemove}
+      onClose={() => { if (!removingGameId) setGameToRemove(null); }}
+      title="🗑️ Cancel & Remove Game Session"
+      maxWidth="max-w-md"
+    >
+      {gameToRemove && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 space-y-2">
+            <p className="text-sm font-bold">Are you sure you want to cancel and remove this game session?</p>
+            <p className="text-xs font-semibold opacity-80">This action is irreversible. All registered players will be removed from the roster.</p>
+          </div>
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Session:</span>
+              <span className="text-slate-900 dark:text-white font-bold truncate max-w-[200px]">{gameToRemove.title}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Date &amp; Time:</span>
+              <span className="text-slate-700 dark:text-slate-300">{gameToRemove.dateTime?.date} · {gameToRemove.dateTime?.startTime}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Registered Players:</span>
+              <span className="text-slate-700 dark:text-slate-300">{gameToRemove.confirmedPlayers?.length || 0} / {gameToRemove.maxPlayers}</span>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setGameToRemove(null)}
+              className="flex-1 border border-slate-200 dark:border-slate-700"
+            >
+              Keep Session
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              icon={Trash2}
+              isLoading={!!removingGameId}
+              disabled={!!removingGameId}
+              onClick={handleConfirmRemoveGame}
+              className="flex-1"
+            >
+              Yes, Cancel &amp; Remove
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
     </div>
   );
 };

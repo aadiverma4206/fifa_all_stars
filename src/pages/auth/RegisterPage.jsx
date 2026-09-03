@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import communityPlayersImg from '../../assets/images/hero/community-players.jpg';
-import { validateName, validateEmail, validatePassword, validatePhone, validateNonEmpty } from '../../utils/validationUtils';
+import { validateName, validateEmail, validatePassword, validatePhone, validateConfirmPassword, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 
@@ -26,51 +27,53 @@ export const RegisterPage = () => {
   const [bio, setBio] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const handleRegister = (e) => {
     e.preventDefault();
+    if (isLoading || isSubmittingRef.current) return;
 
-    const nameCheck = validateName(name, 'Full Name');
-    if (!nameCheck.isValid) { toast.error(nameCheck.message); return; }
+    if (!checkNetworkOnline()) return;
 
-    const emailCheck = validateEmail(email);
-    if (!emailCheck.isValid) { toast.error(emailCheck.message); return; }
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateName(name, 'Full Name'), field: 'name' },
+      { check: () => validateEmail(email), field: 'email' },
+      { check: () => validatePhone(phone), field: 'phone' },
+      { check: () => validatePassword(password, 6), field: 'password' },
+      { check: () => validateConfirmPassword(password, confirmPassword), field: 'confirmPassword' },
+      { check: () => agreeTerms ? { isValid: true } : { isValid: false, message: 'Please accept the Terms of Service to continue.' }, field: 'agreeTerms' }
+    ]);
 
-    const phoneCheck = validatePhone(phone);
-    if (!phoneCheck.isValid) { toast.error(phoneCheck.message); return; }
+    if (!isValid) return;
 
-    const passCheck = validatePassword(password, 6);
-    if (!passCheck.isValid) { toast.error(passCheck.message); return; }
-
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match. Please re-enter.');
-      return;
-    }
-
-    if (!agreeTerms) {
-      toast.error('Please accept the Terms of Service to continue.');
-      return;
-    }
-
+    isSubmittingRef.current = true;
     setIsLoading(true);
 
     setTimeout(() => {
-      const res = registerPlayer({
-        name,
-        email,
-        phone,
-        password,
-        city,
-        playingHand: `Right / ${position}`,
-        bio: bio || `Casual ${position} player looking for pickup matches in ${city}.`
-      });
+      try {
+        const res = registerPlayer({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          password,
+          city,
+          playingHand: `Right / ${position}`,
+          bio: bio.trim() || `Casual ${position} player looking for pickup matches in ${city}.`
+        });
 
-      setIsLoading(false);
-
-      if (res.success) {
-        navigate('/player/home', { replace: true });
-      } else {
-        toast.error(res.error || 'Registration failed.');
+        if (res.success) {
+          navigate('/player/home', { replace: true });
+        } else {
+          toast.error(res.error || 'Registration failed. Please check your details.');
+        }
+      } catch (err) {
+        logActionError('handleRegister', err);
+        toast.error(getErrorMessage(err, 'registering player account'));
+      } finally {
+        setIsLoading(false);
+        setTimeout(() => {
+          isSubmittingRef.current = false;
+        }, 400);
       }
     }, 400);
   };
@@ -147,6 +150,7 @@ export const RegisterPage = () => {
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
+                    name="name"
                     type="text"
                     placeholder="e.g. Rahul Sharma"
                     value={name}
@@ -166,6 +170,7 @@ export const RegisterPage = () => {
                   <div className="relative">
                     <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
+                      name="email"
                       type="email"
                       placeholder="name@example.com"
                       value={email}
@@ -181,6 +186,7 @@ export const RegisterPage = () => {
                   <div className="relative">
                     <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
+                      name="phone"
                       type="tel"
                       placeholder="+91 98765 43210"
                       value={phone}
@@ -200,6 +206,7 @@ export const RegisterPage = () => {
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
@@ -224,6 +231,7 @@ export const RegisterPage = () => {
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
+                      name="confirmPassword"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={confirmPassword}
@@ -282,6 +290,7 @@ export const RegisterPage = () => {
                 type="submit"
                 variant="primary"
                 isLoading={isLoading}
+                disabled={isLoading}
                 icon={ArrowRight}
                 className="w-full py-3.5 text-xs font-black uppercase tracking-wide"
               >

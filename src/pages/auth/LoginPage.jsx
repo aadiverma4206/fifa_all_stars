@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -11,12 +11,13 @@ import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import communityPlayersImg from '../../assets/images/hero/community-players.jpg';
-import { validateEmail, validatePassword, validatePhone, validateNonEmpty } from '../../utils/validationUtils';
+import { validateName, validateEmail, validatePassword, validatePhone, validateNonEmpty, validateEmailOrPhone, validateConfirmPassword, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { loginWithCredentials, registerPlayer } = useAuthStore();
+  const { loginWithCredentials, registerPlayer, resetPasswordWithToken } = useAuthStore();
 
   const [selectedRole, setSelectedRole] = useState('PLAYER');
   const [email, setEmail] = useState('player@fifaallstars.com');
@@ -24,8 +25,24 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const [isRegLoading, setIsRegLoading] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+
+  // Concurrency & Multiple Submission Prevention Locks
+  const isLoggingInRef = useRef(false);
+  const isDemoLoadingRef = useRef(false);
+
+  // Forgot Password / Reset Password States
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotInput, setForgotInput] = useState('');
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
+  const [resetStep, setResetStep] = useState('request'); // 'request' | 'reset'
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isResetLoading, setIsResetLoading] = useState(false);
 
   // Public Player Registration Form States
   const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
@@ -72,31 +89,50 @@ export const LoginPage = () => {
   const currentPersona = rolePersonas[selectedRole];
 
   const handleRoleSelect = (roleKey) => {
+    if (isLoading || isDemoLoading) return;
     setSelectedRole(roleKey);
     setEmail(rolePersonas[roleKey].email);
     setPassword(rolePersonas[roleKey].pass);
   };
 
   const handleLoginSubmit = (e) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please enter both email and password.');
+    if (e && e.preventDefault) e.preventDefault();
+    if (isLoading || isDemoLoading || isLoggingInRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateEmail(email), field: 'email' },
+      { check: () => validatePassword(password, 1), field: 'password' }
+    ]);
+
+    if (!isValid) {
       triggerShake();
       return;
     }
 
+    isLoggingInRef.current = true;
     setIsLoading(true);
     setTimeout(() => {
-      const res = loginWithCredentials(email, password);
-      setIsLoading(false);
-
-      if (res.success) {
-        toast.success(`Authenticated as ${res.user.name} (${res.user.role})`);
-        const targetRoute = getDefaultRoleRoute(res.user.role);
-        navigate(targetRoute, { replace: true });
-      } else {
-        toast.error(res.error || 'Invalid credentials');
+      try {
+        const res = loginWithCredentials(email, password);
+        if (res.success) {
+          toast.success(`Authenticated as ${res.user.name} (${res.user.role})`);
+          const targetRoute = getDefaultRoleRoute(res.user.role);
+          navigate(targetRoute, { replace: true });
+        } else {
+          toast.error(res.error || 'Invalid email or password. Please verify and try again.');
+          triggerShake();
+        }
+      } catch (err) {
+        logActionError('handleLoginSubmit', err);
+        toast.error(getErrorMessage(err, 'authenticating'));
         triggerShake();
+      } finally {
+        setIsLoading(false);
+        setTimeout(() => {
+          isLoggingInRef.current = false;
+        }, 400);
       }
     }, 400);
   };
@@ -107,19 +143,35 @@ export const LoginPage = () => {
   };
 
   const handleQuickDemo = (roleKey) => {
+    if (isLoading || isDemoLoading || isDemoLoadingRef.current) return;
+    if (!checkNetworkOnline()) return;
+
+    isDemoLoadingRef.current = true;
+    setIsDemoLoading(true);
     handleRoleSelect(roleKey);
     const persona = rolePersonas[roleKey];
     toast.loading(`Authenticating as ${persona.user}...`, { id: 'demo-login' });
 
     setTimeout(() => {
-      const res = loginWithCredentials(persona.email, persona.pass);
-      if (res.success) {
-        toast.success(`Welcome, ${res.user.name}!`, { id: 'demo-login' });
-        const targetRoute = getDefaultRoleRoute(res.user.role);
-        navigate(targetRoute, { replace: true });
-      } else {
-        toast.error(res.error || 'Demo authentication failed', { id: 'demo-login' });
+      try {
+        const res = loginWithCredentials(persona.email, persona.pass);
+        if (res.success) {
+          toast.success(`Welcome, ${res.user.name}!`, { id: 'demo-login' });
+          const targetRoute = getDefaultRoleRoute(res.user.role);
+          navigate(targetRoute, { replace: true });
+        } else {
+          toast.error(res.error || 'Demo authentication failed. Please try again.', { id: 'demo-login' });
+          triggerShake();
+        }
+      } catch (err) {
+        logActionError('handleQuickDemo', err);
+        toast.error(getErrorMessage(err, 'authenticating demo session'), { id: 'demo-login' });
         triggerShake();
+      } finally {
+        setIsDemoLoading(false);
+        setTimeout(() => {
+          isDemoLoadingRef.current = false;
+        }, 400);
       }
     }, 400);
   };
@@ -137,27 +189,130 @@ export const LoginPage = () => {
 
   const handleRegisterSubmit = (e) => {
     e.preventDefault();
-    if (!regName || !regEmail || !regPassword) {
-      toast.error('Please enter Full Name, Email, and Password.');
-      return;
-    }
+    if (isRegLoading) return;
 
-    const res = registerPlayer({
-      name: regName,
-      email: regEmail,
-      phone: regPhone,
-      password: regPassword,
-      city: regCity,
-      playingHand: `Right / ${regPosition}`,
-      bio: regBio
-    });
+    if (!checkNetworkOnline()) return;
 
-    if (res.success) {
-      setIsSignUpModalOpen(false);
-      navigate('/player/home', { replace: true });
-    } else {
-      toast.error(res.error || 'Registration failed');
-    }
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateName(regName, 'Full Name'), field: 'regName' },
+      { check: () => validateEmail(regEmail), field: 'regEmail' },
+      { check: () => validatePhone(regPhone), field: 'regPhone' },
+      { check: () => validatePassword(regPassword, 6), field: 'regPassword' }
+    ]);
+
+    if (!isValid) return;
+
+    setIsRegLoading(true);
+    setTimeout(() => {
+      try {
+        const res = registerPlayer({
+          name: regName.trim(),
+          email: regEmail.trim(),
+          phone: regPhone.trim(),
+          password: regPassword,
+          city: regCity,
+          playingHand: `Right / ${regPosition}`,
+          bio: regBio.trim()
+        });
+
+        if (res.success) {
+          setIsSignUpModalOpen(false);
+          navigate('/player/home', { replace: true });
+        } else {
+          toast.error(res.error || 'Registration failed. Please check your details.');
+        }
+      } catch (err) {
+        logActionError('handleRegisterSubmit', err);
+        toast.error(getErrorMessage(err, 'registering player account'));
+      } finally {
+        setIsRegLoading(false);
+      }
+    }, 400);
+  };
+
+  const handleForgotPasswordClick = () => {
+    setForgotInput(email || '');
+    setResetStep('request');
+    setResetCode('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setIsForgotModalOpen(true);
+  };
+
+  const handleForgotPasswordRequest = (e) => {
+    e.preventDefault();
+    if (isForgotLoading) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateEmailOrPhone(forgotInput), field: 'forgotInput' }
+    ]);
+
+    if (!isValid) return;
+
+    setIsForgotLoading(true);
+    setTimeout(() => {
+      try {
+        const cleanInput = forgotInput.trim().toLowerCase();
+        const usersList = useAuthStore.getState().usersList || [];
+        const found = usersList.find(u => 
+          u.email?.toLowerCase() === cleanInput || 
+          (u.phone && u.phone.replace(/[\s+-]/g, '') === cleanInput.replace(/[\s+-]/g, ''))
+        );
+
+        if (!found) {
+          toast.error('No account registered with that email or mobile number.');
+          return;
+        }
+
+        toast.success(`Verification code sent to ${forgotInput}. (Demo verification code is 123456)`);
+        setResetStep('reset');
+      } catch (err) {
+        logActionError('handleForgotPasswordRequest', err);
+        toast.error(getErrorMessage(err, 'requesting password reset'));
+      } finally {
+        setIsForgotLoading(false);
+      }
+    }, 400);
+  };
+
+  const handleResetPasswordSubmit = (e) => {
+    e.preventDefault();
+    if (isResetLoading) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateNonEmpty(resetCode, 'Verification code'), field: 'resetCode' },
+      { check: () => resetCode.trim() === '123456' ? { isValid: true } : { isValid: false, message: 'Invalid verification code. Please enter 123456.' }, field: 'resetCode' },
+      { check: () => validatePassword(newPassword, 6), field: 'newPassword' },
+      { check: () => validateConfirmPassword(newPassword, confirmNewPassword), field: 'confirmNewPassword' }
+    ]);
+
+    if (!isValid) return;
+
+    setIsResetLoading(true);
+    setTimeout(() => {
+      try {
+        const res = resetPasswordWithToken(forgotInput, newPassword);
+        if (res && res.success) {
+          toast.success('Password updated successfully! You can now log in with your new credentials.');
+          setPassword(newPassword);
+          if (validateEmail(forgotInput).isValid) {
+            setEmail(forgotInput);
+          }
+          setIsForgotModalOpen(false);
+        } else {
+          toast.error(res?.error || 'Unable to reset password. Please try again.');
+        }
+      } catch (err) {
+        logActionError('handleResetPasswordSubmit', err);
+        toast.error(getErrorMessage(err, 'resetting password'));
+      } finally {
+        setIsResetLoading(false);
+      }
+    }, 400);
   };
 
 
@@ -310,10 +465,17 @@ export const LoginPage = () => {
               </div>
               <button
                 type="button"
+                disabled={isLoading || isDemoLoading}
                 onClick={() => handleQuickDemo(selectedRole)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 font-extrabold text-[11px] transition-all shadow-sm whitespace-nowrap"
+                className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 font-extrabold text-[11px] transition-all shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                1-Click Demo Log In
+                {isDemoLoading ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="animate-spin text-xs">⏳</span> Authenticating...
+                  </span>
+                ) : (
+                  '1-Click Demo Log In'
+                )}
               </button>
             </div>
 
@@ -326,6 +488,7 @@ export const LoginPage = () => {
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
+                    name="email"
                     type="email"
                     placeholder="name@example.com"
                     value={email}
@@ -342,6 +505,7 @@ export const LoginPage = () => {
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
@@ -372,8 +536,9 @@ export const LoginPage = () => {
                 </label>
                 <button 
                   type="button"
-                  onClick={() => toast.success('Demo password pre-filled. Click Log In.')} 
-                  className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold"
+                  onClick={handleForgotPasswordClick} 
+                  disabled={isLoading || isDemoLoading}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer disabled:opacity-50"
                 >
                   Forgot password?
                 </button>
@@ -383,7 +548,9 @@ export const LoginPage = () => {
               <Button
                 type="submit"
                 variant="primary"
+                onClick={handleLoginSubmit}
                 isLoading={isLoading}
+                disabled={isLoading || isDemoLoading}
                 className="w-full py-3.5 text-xs font-black uppercase tracking-wide"
               >
                 Log in & Launch Workspace
@@ -601,6 +768,7 @@ export const LoginPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
             <input
+              name="regName"
               type="text"
               placeholder="e.g. Rahul Sharma"
               value={regName}
@@ -614,6 +782,7 @@ export const LoginPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Email Address *</label>
               <input
+                name="regEmail"
                 type="email"
                 placeholder="name@example.com"
                 value={regEmail}
@@ -625,6 +794,7 @@ export const LoginPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
               <input
+                name="regPhone"
                 type="tel"
                 placeholder="+91 98765 43210"
                 value={regPhone}
@@ -637,6 +807,7 @@ export const LoginPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1">Password *</label>
             <input
+              name="regPassword"
               type="password"
               placeholder="••••••••"
               value={regPassword}
@@ -676,11 +847,135 @@ export const LoginPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsSignUpModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="md">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              isLoading={isRegLoading}
+              disabled={isRegLoading}
+            >
               Create Account & Enter Workspace
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* 8. FORGOT / RESET PASSWORD MODAL */}
+      <Modal 
+        isOpen={isForgotModalOpen} 
+        onClose={() => { if (!isForgotLoading && !isResetLoading) setIsForgotModalOpen(false); }} 
+        title={resetStep === 'request' ? "Forgot Password" : "Reset Password"}
+        maxWidth="max-w-md"
+      >
+        {resetStep === 'request' ? (
+          <form onSubmit={handleForgotPasswordRequest} className="space-y-4 text-xs font-bold">
+            <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 space-y-1">
+              <p className="text-[11px] font-semibold">
+                Enter your registered email address or mobile number. We will send a secure verification code to reset your password.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">Email or Mobile Number *</label>
+              <input
+                name="forgotInput"
+                type="text"
+                placeholder="name@example.com or +91 9876543210"
+                value={forgotInput}
+                onChange={(e) => setForgotInput(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setIsForgotModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                isLoading={isForgotLoading}
+                disabled={isForgotLoading}
+              >
+                Send Reset Code
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleResetPasswordSubmit} className="space-y-4 text-xs font-bold">
+            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 space-y-1">
+              <p className="text-[11px] font-semibold">
+                Verification code sent to <strong>{forgotInput}</strong>. Enter the code and your new password. (Demo verification code: <strong>123456</strong>)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">6-Digit Verification Code *</label>
+              <input
+                name="resetCode"
+                type="text"
+                maxLength={6}
+                placeholder="123456"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-mono tracking-widest text-center text-base focus:ring-2 focus:ring-emerald-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">New Password *</label>
+              <input
+                name="newPassword"
+                type="password"
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 mb-1">Confirm New Password *</label>
+              <input
+                name="confirmNewPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                required
+              />
+            </div>
+
+            <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setResetStep('request')}
+                className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline cursor-pointer"
+              >
+                Back to email entry
+              </button>
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setIsForgotModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  isLoading={isResetLoading}
+                  disabled={isResetLoading}
+                >
+                  Confirm & Reset Password
+                </Button>
+              </div>
+            </div>
+          </form>
+        )}
       </Modal>
 
     </div>

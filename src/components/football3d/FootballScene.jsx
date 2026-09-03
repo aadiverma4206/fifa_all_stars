@@ -7,6 +7,7 @@ import FootballLighting from './FootballLighting';
 import FootballParticles from './FootballParticles';
 import FootballEnvironment from './FootballEnvironment';
 import FootballFallback from './FootballFallback';
+import ErrorBoundary from '../common/ErrorBoundary';
 
 export function FootballScene() {
   const { theme } = useThemeStore();
@@ -32,25 +33,27 @@ export function FootballScene() {
       {/* Soft Ambient Background Glow */}
       <div className="absolute inset-0 bg-radial from-sport-500/15 via-transparent to-transparent blur-3xl pointer-events-none" />
 
-      <Suspense fallback={<FootballFallback theme={theme} />}>
-        <Canvas
-          camera={{ position: [0, 0, 6.0], fov: 42 }}
-          dpr={[1, 2]}
-          shadows
-          gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-          className="w-full h-full"
-        >
-          <FootballLighting theme={theme} />
-          <FootballModel
-            mouseRef={mouseRef}
-            scrollRef={scrollRef}
-            theme={theme}
-            reducedMotion={reducedMotion}
-          />
-          <FootballParticles theme={theme} reducedMotion={reducedMotion} />
-          <FootballEnvironment theme={theme} />
-        </Canvas>
-      </Suspense>
+      <ErrorBoundary fallback={<FootballFallback theme={theme} />}>
+        <Suspense fallback={<FootballFallback theme={theme} />}>
+          <Canvas
+            camera={{ position: [0, 0, 6.0], fov: 42 }}
+            dpr={[1, 2]}
+            shadows
+            gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+            className="w-full h-full"
+          >
+            <FootballLighting theme={theme} />
+            <FootballModel
+              mouseRef={mouseRef}
+              scrollRef={scrollRef}
+              theme={theme}
+              reducedMotion={reducedMotion}
+            />
+            <FootballParticles theme={theme} reducedMotion={reducedMotion} />
+            <FootballEnvironment theme={theme} />
+          </Canvas>
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }

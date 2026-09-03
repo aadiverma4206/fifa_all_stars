@@ -11,7 +11,7 @@ export const dummyCourts = [
     weekendMultiplier: 1.75,
     peakWindow: "17:00-21:00",
     status: "AVAILABLE",
-    image: "/src/assets/images/courts/court-1.jpg"
+    image: "/assets/images/courts/court-1.jpg"
   },
   {
     courtId: "crt_rp_102",
@@ -24,7 +24,7 @@ export const dummyCourts = [
     weekendMultiplier: 1.75,
     peakWindow: "17:00-21:00",
     status: "AVAILABLE",
-    image: "/src/assets/images/courts/court-2.jpg"
+    image: "/assets/images/courts/court-2.jpg"
   },
   {
     courtId: "crt_rp_103",
@@ -37,7 +37,7 @@ export const dummyCourts = [
     weekendMultiplier: 1.75,
     peakWindow: "17:00-21:00",
     status: "AVAILABLE",
-    image: "/src/assets/images/courts/court-3.jpg"
+    image: "/assets/images/courts/court-3.jpg"
   },
 
   // --- Bangalore Courts (clb_blr_1) ---
@@ -52,7 +52,7 @@ export const dummyCourts = [
     weekendMultiplier: 1.75,
     peakWindow: "18:00-22:00",
     status: "AVAILABLE",
-    image: "/src/assets/images/courts/court-4.jpg"
+    image: "/assets/images/courts/court-4.jpg"
   },
   {
     courtId: "crt_blr_202",
@@ -65,7 +65,7 @@ export const dummyCourts = [
     weekendMultiplier: 1.75,
     peakWindow: "18:00-22:00",
     status: "AVAILABLE",
-    image: "/src/assets/images/courts/court-5.jpg"
+    image: "/assets/images/courts/court-5.jpg"
   },
 
   // --- Pune Courts (clb_pune_1) ---
@@ -80,7 +80,7 @@ export const dummyCourts = [
     weekendMultiplier: 1.75,
     peakWindow: "17:00-21:00",
     status: "AVAILABLE",
-    image: "/src/assets/images/courts/court-6.jpg"
+    image: "/assets/images/courts/court-6.jpg"
   },
   {
     courtId: "crt_pune_302",
@@ -93,7 +93,7 @@ export const dummyCourts = [
     weekendMultiplier: 1.75,
     peakWindow: "17:00-21:00",
     status: "MAINTENANCE",
-    image: "/src/assets/images/courts/court-1.jpg"
+    image: "/assets/images/courts/court-1.jpg"
   },
 
   // --- Mumbai Courts (clb_mumbai_1) ---
@@ -108,6 +108,6 @@ export const dummyCourts = [
     weekendMultiplier: 1.75,
     peakWindow: "18:00-22:00",
     status: "BLOCKED",
-    image: "/src/assets/images/courts/court-2.jpg"
+    image: "/assets/images/courts/court-2.jpg"
   }
 ];
