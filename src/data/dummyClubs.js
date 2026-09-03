@@ -9,7 +9,7 @@ export const dummyClubs = [
     amenities: ["Floodlights", "Pro Shop", "Washrooms", "Parking", "Cafeteria", "Changing Rooms"],
     status: "ACTIVE",
     managerIds: ["usr_manager_demo"],
-    clubImageUrl: "/src/assets/images/courts/court-1.jpg",
+    clubImageUrl: "/assets/images/courts/court-1.jpg",
     rating: 4.9,
     reviewsCount: 142,
     description: "Raipur's premier FIFA grade 3G artificial grass turf featuring high intensity HD floodlighting & automated score displays."
@@ -24,7 +24,7 @@ export const dummyClubs = [
     amenities: ["Floodlights", "Pro Shop", "Washrooms", "Parking", "Free WiFi", "Live Video Recording"],
     status: "ACTIVE",
     managerIds: ["usr_manager_2"],
-    clubImageUrl: "/src/assets/images/courts/court-2.jpg",
+    clubImageUrl: "/assets/images/courts/court-2.jpg",
     rating: 4.8,
     reviewsCount: 215,
     description: "State-of-the-art multi-pitch sports arena located in the heart of Indiranagar."
@@ -39,7 +39,7 @@ export const dummyClubs = [
     amenities: ["Floodlights", "Washrooms", "Parking", "Juice Bar", "First Aid Kit"],
     status: "ACTIVE",
     managerIds: ["usr_manager_3"],
-    clubImageUrl: "/src/assets/images/courts/court-3.jpg",
+    clubImageUrl: "/assets/images/courts/court-3.jpg",
     rating: 4.7,
     reviewsCount: 98,
     description: "All-weather covered turf dome with shock-pad underlayment for maximum safety."
@@ -54,7 +54,7 @@ export const dummyClubs = [
     amenities: ["Floodlights", "Pro Shop", "Washrooms", "Parking", "Locker Rooms"],
     status: "PENDING",
     managerIds: ["usr_admin_demo"],
-    clubImageUrl: "/src/assets/images/courts/court-4.jpg",
+    clubImageUrl: "/assets/images/courts/court-4.jpg",
     rating: 4.6,
     reviewsCount: 45,
     description: "Iconic oceanfront turf facility awaiting official FIFA All Stars verification."

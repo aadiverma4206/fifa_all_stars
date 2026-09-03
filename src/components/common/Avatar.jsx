@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import clsx from 'clsx';
 
 export const Avatar = ({ src, alt = 'Avatar', name = '', size = 'md', status, className = '' }) => {
   const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [src]);
 
   const getInitials = (str) => {
     if (!str && !alt) return 'FA';

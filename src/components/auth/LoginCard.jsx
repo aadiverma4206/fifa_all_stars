@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Building2, ShieldCheck, ArrowRight, Key, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import RoleSelectButton from './RoleSelectButton';
 import Button from '../common/Button';
+import { validateEmail, validatePassword, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 export const LoginCard = () => {
@@ -20,10 +22,13 @@ export const LoginCard = () => {
   const [email, setEmail] = useState(demoAccounts.PLAYER.email);
   const [password, setPassword] = useState(demoAccounts.PLAYER.pass);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const navigate = useNavigate();
 
   const handleSelectRole = (roleKey) => {
+    if (isSubmitting || isSubmittingRef.current) return;
     setSelectedRole(roleKey);
     const demo = demoAccounts[roleKey];
     if (demo) {
@@ -32,21 +37,44 @@ export const LoginCard = () => {
     }
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const result = loginWithCredentials(email, password);
-    if (result.success) {
-      toast.success(`Logged in as ${result.user.name}`);
-      const userRole = result.user.role.toUpperCase();
-      if (userRole === 'CLUB_MANAGER') {
-        navigate('/manager/dashboard');
-      } else if (userRole === 'SUPER_ADMIN') {
-        navigate('/admin/dashboard');
+    if (isSubmitting || isSubmittingRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateEmail(email), field: 'email' },
+      { check: () => validatePassword(password, 1), field: 'password' }
+    ]);
+
+    if (!isValid) return;
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      const result = loginWithCredentials(email, password);
+      if (result.success) {
+        toast.success(`Logged in as ${result.user.name}`);
+        const userRole = result.user.role.toUpperCase();
+        if (userRole === 'CLUB_MANAGER') {
+          navigate('/manager/dashboard');
+        } else if (userRole === 'SUPER_ADMIN') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/player/home');
+        }
       } else {
-        navigate('/player/home');
+        toast.error(result.error || 'Invalid email or password. Please try again.');
       }
-    } else {
-      toast.error(result.error || 'Invalid credentials');
+    } catch (err) {
+      logActionError('handleLogin', err);
+      toast.error(getErrorMessage(err, 'logging in'));
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 400);
     }
   };
 
@@ -95,6 +123,7 @@ export const LoginCard = () => {
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -109,6 +138,7 @@ export const LoginCard = () => {
             <div className="relative">
               <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
+                name="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -132,6 +162,8 @@ export const LoginCard = () => {
           size="lg"
           className="w-full mt-4"
           icon={ArrowRight}
+          isLoading={isSubmitting}
+          disabled={isSubmitting}
         >
           Authenticate & Enter Workspace
         </Button>

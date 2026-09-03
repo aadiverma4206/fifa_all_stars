@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   Ticket, UserPlus, CheckCircle2, AlertCircle, Search, Filter, 
   Clock, ArrowUpDown, ChevronRight, User, Building2, Layers, 
-  ShieldCheck, Eye, Plus, MessageSquare, AlertTriangle, Check, RefreshCw, Send
+  ShieldCheck, Eye, Plus, MessageSquare, AlertTriangle, Check, RefreshCw, Send,
+  Camera, Paperclip, X
 } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -11,6 +12,9 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
 import Modal from '../../components/common/Modal';
+import { validateTitle, validateNonEmpty, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { validateFile, readFileAsDataUrl, ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_EXTENSIONS, DEFAULT_MAX_IMAGE_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
 import toast from 'react-hot-toast';
 
 export const SupportTicketsPage = () => {
@@ -28,6 +32,13 @@ export const SupportTicketsPage = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
 
+  // Loading & Concurrency Locks
+  const [isResolving, setIsResolving] = useState(false);
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false);
+
+  const isResolvingRef = useRef(false);
+  const isCreatingTicketRef = useRef(false);
+
   const [resolutionText, setResolutionText] = useState('Issue has been investigated and resolved with the venue management.');
   const [newTicketData, setNewTicketData] = useState({
     subject: '',
@@ -37,6 +48,42 @@ export const SupportTicketsPage = () => {
     assignedStaff: 'Unassigned',
     description: ''
   });
+
+  // Ticket Attachment State
+  const [ticketAttachmentFile, setTicketAttachmentFile] = useState(null);
+  const [ticketAttachmentPreview, setTicketAttachmentPreview] = useState('');
+  const ticketFileInputRef = useRef(null);
+
+  const handleTicketFileChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setTicketAttachmentFile(null);
+      setTicketAttachmentPreview('');
+      return;
+    }
+    const file = files[0];
+    const validation = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      allowedExtensions: ALLOWED_IMAGE_EXTENSIONS,
+      maxSizeBytes: DEFAULT_MAX_IMAGE_SIZE,
+      fileCategoryName: 'ticket screenshot / attachment'
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      if (ticketFileInputRef.current) ticketFileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setTicketAttachmentFile(file);
+      setTicketAttachmentPreview(dataUrl);
+      toast.success(`Attached screenshot "${file.name}" (${formatFileSize(file.size)})`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to process attachment file.');
+    }
+  };
 
   const staffUsers = useMemo(() => {
     return usersList.filter(u => 
@@ -91,13 +138,33 @@ export const SupportTicketsPage = () => {
     setIsResolveModalOpen(true);
   };
 
-  const handleConfirmResolve = (e) => {
+  const handleConfirmResolve = async (e) => {
     e.preventDefault();
-    if (!selectedTicket) return;
+    if (!selectedTicket || isResolving || isResolvingRef.current) return;
 
-    resolveTicket(selectedTicket.id, resolutionText);
-    setIsResolveModalOpen(false);
-    setSelectedTicket(null);
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateNonEmpty(resolutionText, 'Resolution Memo'), field: 'resolutionText' }
+    ]);
+
+    if (!isValid) return;
+
+    isResolvingRef.current = true;
+    setIsResolving(true);
+    try {
+      resolveTicket(selectedTicket.id, resolutionText.trim());
+      setIsResolveModalOpen(false);
+      setSelectedTicket(null);
+    } catch (err) {
+      logActionError('handleConfirmResolve', err);
+      toast.error(getErrorMessage(err, 'resolving ticket'));
+    } finally {
+      setIsResolving(false);
+      setTimeout(() => {
+        isResolvingRef.current = false;
+      }, 400);
+    }
   };
 
   const handleOpenDetails = (ticket) => {
@@ -105,31 +172,53 @@ export const SupportTicketsPage = () => {
     setIsDetailModalOpen(true);
   };
 
-  const handleCreateTicketSubmit = (e) => {
+  const handleCreateTicketSubmit = async (e) => {
     e.preventDefault();
-    if (!newTicketData.subject.trim()) {
-      toast.error('Subject is required');
-      return;
+    if (isCreatingTicket || isCreatingTicketRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(newTicketData.subject, 'Subject'), field: 'subject' },
+      { check: () => validateNonEmpty(newTicketData.user, 'Player / User'), field: 'user' }
+    ]);
+
+    if (!isValid) return;
+
+    isCreatingTicketRef.current = true;
+    setIsCreatingTicket(true);
+    try {
+      createTicket({
+        subject: newTicketData.subject.trim(),
+        user: newTicketData.user.trim(),
+        priority: newTicketData.priority,
+        category: newTicketData.category,
+        assignedStaff: newTicketData.assignedStaff,
+        description: newTicketData.description.trim(),
+        ...(ticketAttachmentPreview ? { attachmentUrl: ticketAttachmentPreview, attachmentName: ticketAttachmentFile?.name } : {})
+      });
+
+      setIsNewTicketModalOpen(false);
+      setNewTicketData({
+        subject: '',
+        user: usersList[0]?.name || 'Arjun Mehta',
+        priority: 'HIGH',
+        category: 'VENUE_FACILITY',
+        assignedStaff: 'Unassigned',
+        description: ''
+      });
+      setTicketAttachmentFile(null);
+      setTicketAttachmentPreview('');
+      if (ticketFileInputRef.current) ticketFileInputRef.current.value = '';
+    } catch (err) {
+      logActionError('handleCreateTicketSubmit', err);
+      toast.error(getErrorMessage(err, 'creating support ticket'));
+    } finally {
+      setIsCreatingTicket(false);
+      setTimeout(() => {
+        isCreatingTicketRef.current = false;
+      }, 400);
     }
-
-    createTicket({
-      subject: newTicketData.subject.trim(),
-      user: newTicketData.user.trim(),
-      priority: newTicketData.priority,
-      category: newTicketData.category,
-      assignedStaff: newTicketData.assignedStaff,
-      description: newTicketData.description.trim()
-    });
-
-    setIsNewTicketModalOpen(false);
-    setNewTicketData({
-      subject: '',
-      user: usersList[0]?.name || 'Arjun Mehta',
-      priority: 'HIGH',
-      category: 'VENUE_FACILITY',
-      assignedStaff: 'Unassigned',
-      description: ''
-    });
   };
 
   const getPriorityBadge = (priority) => {
@@ -506,6 +595,7 @@ export const SupportTicketsPage = () => {
                 Resolution Response & Action Memo
               </label>
               <textarea
+                name="resolutionText"
                 rows={3}
                 required
                 value={resolutionText}
@@ -519,7 +609,15 @@ export const SupportTicketsPage = () => {
               <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsResolveModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" icon={CheckCircle2} rainbowBorder={false}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                icon={CheckCircle2}
+                rainbowBorder={false}
+                isLoading={isResolving}
+                disabled={isResolving}
+              >
                 Confirm & Mark Resolved
               </Button>
             </div>
@@ -582,6 +680,7 @@ export const SupportTicketsPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Subject *</label>
             <input
+              name="subject"
               type="text"
               required
               placeholder="E.g. Refund query or Floodlight issue"
@@ -595,6 +694,7 @@ export const SupportTicketsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Player / User</label>
               <input
+                name="user"
                 type="text"
                 required
                 value={newTicketData.user}
@@ -606,6 +706,7 @@ export const SupportTicketsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Priority</label>
               <select
+                name="priority"
                 value={newTicketData.priority}
                 onChange={(e) => setNewTicketData(prev => ({ ...prev, priority: e.target.value }))}
                 aria-label="Ticket Priority Level"
@@ -621,6 +722,7 @@ export const SupportTicketsPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">Assign Staff Operator</label>
             <select
+              name="assignedStaff"
               value={newTicketData.assignedStaff}
               onChange={(e) => setNewTicketData(prev => ({ ...prev, assignedStaff: e.target.value }))}
               aria-label="Assign Staff Operator"
@@ -635,11 +737,53 @@ export const SupportTicketsPage = () => {
             </select>
           </div>
 
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1 font-bold">
+              Attach Screenshot / Incident Image (Optional, .jpg, .png, .webp · Max 10 MB)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                ref={ticketFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleTicketFileChange}
+                className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sport-500/10 file:text-sport-600 dark:file:text-sport-400 hover:file:bg-sport-500/20 cursor-pointer"
+              />
+              {ticketAttachmentFile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTicketAttachmentFile(null);
+                    setTicketAttachmentPreview('');
+                    if (ticketFileInputRef.current) ticketFileInputRef.current.value = '';
+                  }}
+                  className="text-rose-500 hover:text-rose-600 text-xs font-bold whitespace-nowrap p-1 cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {ticketAttachmentFile && (
+              <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Selected: <strong className="text-slate-900 dark:text-white">{ticketAttachmentFile.name}</strong> ({formatFileSize(ticketAttachmentFile.size)})</span>
+                <span className="text-emerald-500 font-bold">✓ Image Attached</span>
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
             <Button type="button" variant="ghost" size="sm" rainbowBorder={false} onClick={() => setIsNewTicketModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" icon={Plus} rainbowBorder={false}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              rainbowBorder={false}
+              isLoading={isCreatingTicket}
+              disabled={isCreatingTicket}
+            >
               Create Ticket
             </Button>
           </div>

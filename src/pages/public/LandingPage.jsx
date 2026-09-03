@@ -10,14 +10,18 @@ export const LandingPage = () => {
   const navigate = useNavigate();
   const [selectedArea, setSelectedArea] = useState('');
   const [openFaq, setOpenFaq] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
+    if (isSearching) return;
+    setIsSearching(true);
     if (selectedArea) {
       navigate(`/games?city=${encodeURIComponent(selectedArea)}`);
     } else {
       navigate('/games');
     }
+    setTimeout(() => setIsSearching(false), 500);
   };
 
   const reviews = [
@@ -95,6 +99,7 @@ export const LandingPage = () => {
 
               <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <select
+                  name="selectedArea"
                   value={selectedArea}
                   onChange={(e) => setSelectedArea(e.target.value)}
                   className="flex-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-slate-100 font-bold text-xs focus:ring-2 focus:ring-sport-500"
@@ -109,9 +114,10 @@ export const LandingPage = () => {
 
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black text-xs tracking-wide transition-all shadow-lg shadow-rose-500/30 whitespace-nowrap"
+                  disabled={isSearching}
+                  className="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black text-xs tracking-wide transition-all shadow-lg shadow-rose-500/30 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  Search
+                  {isSearching ? 'Searching...' : 'Search'}
                 </button>
               </form>
             </div>
@@ -123,9 +129,9 @@ export const LandingPage = () => {
                 </Button>
               </Link>
               
-              {/* Football Kick Loading Animation (Without Background) */}
+              {/* Football Kick Juggling Animation */}
               <div className="flex items-center justify-center p-1 bg-transparent select-none">
-                <FootballKickLoader size="lg" inline={true} />
+                <FootballKickLoader size="lg" />
               </div>
             </div>
           </div>

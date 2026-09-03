@@ -1,6 +1,9 @@
 import React, { useRef, useState } from 'react';
 import clsx from 'clsx';
 import FootballKickLoader from './FootballKickLoader';
+import toast from 'react-hot-toast';
+import { executeSafeActionPipeline, isActionRunning, runActionValidation } from '../../utils/actionSafetySystem';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 
 export const Button = ({
   children,
@@ -14,6 +17,13 @@ export const Button = ({
   effect,
   onClick,
   loadingText,
+  fullScreenLoader = false,
+  validate,
+  actionKey,
+  successMessage,
+  errorMessage,
+  onSuccess,
+  onError,
   ...props
 }) => {
   const buttonRef = useRef(null);
@@ -40,22 +50,47 @@ export const Button = ({
   const showLoading = isLoading || internalLoading;
   const hasRainbowBorder = rainbowBorder && !disabled && !showLoading;
 
-  const handleClick = (e) => {
-    // STRICT ANTI-DOUBLE-CLICK / SINGLE CLICK AT A TIME LOCK
+  const handleClick = async (e) => {
+    // 1. STRICT ANTI-DOUBLE-CLICK / SINGLE CLICK AT A TIME LOCK
     if (disabled || showLoading || isClickLocked.current) {
-      e.preventDefault();
-      e.stopPropagation();
+      if (e && e.preventDefault) e.preventDefault();
+      if (e && e.stopPropagation) e.stopPropagation();
       return;
     }
 
-    // Lock clicks for 750ms to prevent rapid double triggers
-    isClickLocked.current = true;
-    setTimeout(() => {
-      isClickLocked.current = false;
-    }, 750);
+    // 2. CHECK IF GLOBAL ACTION IS CURRENTLY RUNNING
+    if (actionKey && isActionRunning(actionKey)) {
+      if (e && e.preventDefault) e.preventDefault();
+      return;
+    }
 
+    // 3. PRE-FLIGHT VALIDATION CHECK (IF SUPPLIED)
+    if (validate) {
+      const valResult = runActionValidation(validate, e);
+      if (!valResult.isValid) {
+        if (e && e.preventDefault) e.preventDefault();
+        return;
+      }
+    }
+
+    // 4. FORM SUBMIT VALIDATION CHECK
+    if (props.type === 'submit' && buttonRef.current?.form) {
+      const form = buttonRef.current.form;
+      if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+    }
+
+    // 5. LOCK CLICKS IMMEDIATELY TO PREVENT RAPID CONCURRENT TRIGGERS
+    isClickLocked.current = true;
+    if (buttonRef.current) {
+      buttonRef.current.dataset.actionLocked = 'true';
+    }
+
+    // Existing subtle ripple wave effect
     const btn = buttonRef.current;
-    if (btn) {
+    if (btn && e && typeof e.clientX === 'number') {
       const rect = btn.getBoundingClientRect();
       const diameter = Math.max(rect.width, rect.height) * 2;
       const x = e.clientX - rect.left - diameter / 2;
@@ -77,12 +112,54 @@ export const Button = ({
     }
 
     if (onClick) {
-      const result = onClick(e);
-      // If onClick returns a Promise, trigger internal loading until resolved
-      if (result && typeof result.then === 'function') {
-        setInternalLoading(true);
-        result.finally(() => setInternalLoading(false));
+      if (!checkNetworkOnline()) return;
+
+      // Safety timeout: guarantees no button ever remains permanently stuck in loading state
+      const safetyTimeout = setTimeout(() => {
+        setInternalLoading(false);
+        isClickLocked.current = false;
+        if (buttonRef.current) {
+          delete buttonRef.current.dataset.actionLocked;
+        }
+      }, 8000);
+
+      try {
+        const result = onClick(e);
+        // If onClick returns a Promise, trigger internal loading until resolved
+        if (result && typeof result.then === 'function') {
+          setInternalLoading(true);
+          const data = await result;
+          if (successMessage) {
+            toast.success(successMessage);
+          }
+          if (typeof onSuccess === 'function') {
+            onSuccess(data);
+          }
+        }
+      } catch (err) {
+        logActionError('Button.onClick', err);
+        const safeMsg = errorMessage || getErrorMessage(err, 'processing action');
+        toast.error(safeMsg);
+        if (typeof onError === 'function') {
+          onError(err, safeMsg);
+        }
+      } finally {
+        clearTimeout(safetyTimeout);
+        setInternalLoading(false);
+        setTimeout(() => {
+          isClickLocked.current = false;
+          if (buttonRef.current) {
+            delete buttonRef.current.dataset.actionLocked;
+          }
+        }, 400);
       }
+    } else {
+      setTimeout(() => {
+        isClickLocked.current = false;
+        if (buttonRef.current) {
+          delete buttonRef.current.dataset.actionLocked;
+        }
+      }, 400);
     }
   };
 
@@ -91,6 +168,8 @@ export const Button = ({
       <button
         ref={buttonRef}
         disabled={disabled || showLoading}
+        data-action-locked={showLoading || isClickLocked.current ? 'true' : undefined}
+        aria-busy={showLoading ? 'true' : undefined}
         className={clsx(baseStyles, variants[variant], sizes[size], className)}
         onClick={handleClick}
         {...props}
@@ -112,8 +191,8 @@ export const Button = ({
         <span className="relative z-10 pointer-events-none">{children}</span>
       </button>
 
-      {/* Screen-centered Football Kick animation with 3% (3px) backdrop blur */}
-      {showLoading && (
+      {/* Screen-centered Football Kick animation when explicitly requested with fullScreenLoader or loadingText */}
+      {showLoading && (fullScreenLoader || loadingText) && (
         <FootballKickLoader fullScreen={true} size="lg" text={loadingText || "Processing Football Action..."} />
       )}
     </>

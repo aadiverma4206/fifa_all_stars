@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -11,6 +11,10 @@ import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
+import { validateTitle, validateNonEmpty, validatePhone, validateEmail, validateCoordinates, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { validateFile, readFileAsDataUrl, ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_EXTENSIONS, DEFAULT_MAX_IMAGE_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import toast from 'react-hot-toast';
 
 const CITY_COORDINATES = {
@@ -24,27 +28,29 @@ const CITY_COORDINATES = {
 
 const DEFAULT_AMENITIES = [
   'Floodlights',
-  'Pro Shop',
-  'Washrooms',
-  'Parking',
-  'Cafeteria',
   'Changing Rooms',
-  'Free WiFi',
-  'Live Video Recording',
-  'Locker Rooms',
-  'First Aid Kit',
+  'Showers',
   'Drinking Water',
-  'Spectator Seating'
+  'Free Parking',
+  'Equipment Rental',
+  'Spectator Stand',
+  'Cafeteria & Snacks',
+  'First Aid Station',
+  'Locker Facility',
+  'Free High-Speed Wi-Fi',
+  'VAR / Video Recording'
 ];
 
-const LOCAL_COURT_IMAGES = [
-  '/src/assets/images/courts/court-1.jpg',
-  '/src/assets/images/courts/court-2.jpg',
-  '/src/assets/images/courts/court-3.jpg',
-  '/src/assets/images/courts/court-4.jpg',
-  '/src/assets/images/courts/court-5.jpg',
-  '/src/assets/images/courts/court-6.jpg'
+const PRESET_VENUE_IMAGES = [
+  '/assets/images/courts/court-1.jpg',
+  '/assets/images/courts/court-2.jpg',
+  '/assets/images/courts/court-3.jpg',
+  '/assets/images/courts/court-4.jpg',
+  '/assets/images/courts/court-5.jpg',
+  '/assets/images/courts/court-6.jpg'
 ];
+
+const LOCAL_COURT_IMAGES = PRESET_VENUE_IMAGES;
 
 export const ManageClubPage = () => {
   const { clubs, courts, games, updateClub } = useDataStore();
@@ -67,10 +73,50 @@ export const ManageClubPage = () => {
   const [daysOpen, setDaysOpen] = useState(myClub?.daysOpen || 'Monday – Sunday (All Days)');
   const [phone, setPhone] = useState(myClub?.contactPhone || '+91 98765 43210');
   const [email, setEmail] = useState(myClub?.contactEmail || 'contact@bernabeuarena.com');
-  const [clubImageUrl, setClubImageUrl] = useState(myClub?.clubImageUrl || '/src/assets/images/courts/court-1.jpg');
+  const [clubImageUrl, setClubImageUrl] = useState(myClub?.clubImageUrl || '/assets/images/courts/court-1.jpg');
   const [description, setDescription] = useState(myClub?.description || '');
   const [selectedAmenities, setSelectedAmenities] = useState(myClub?.amenities || DEFAULT_AMENITIES.slice(0, 6));
   const [newAmenity, setNewAmenity] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Cover Image File Upload States
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverUploadProgress, setCoverUploadProgress] = useState(0);
+  const coverFileInputRef = useRef(null);
+
+  const handleCoverFileChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setCoverFile(null);
+      return;
+    }
+    const file = files[0];
+    const validation = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      allowedExtensions: ALLOWED_IMAGE_EXTENSIONS,
+      maxSizeBytes: DEFAULT_MAX_IMAGE_SIZE,
+      fileCategoryName: 'venue photo'
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      if (coverFileInputRef.current) coverFileInputRef.current.value = '';
+      setCoverFile(null);
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file, (percent) => {
+        setCoverUploadProgress(percent);
+      });
+      setCoverFile(file);
+      setClubImageUrl(dataUrl);
+      toast.success(`Photo "${file.name}" loaded (${formatFileSize(file.size)})`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to read image file.');
+      setCoverFile(null);
+    }
+  };
 
   // Sync state if club changes
   useEffect(() => {
@@ -85,7 +131,7 @@ export const ManageClubPage = () => {
       setDaysOpen(myClub.daysOpen || 'Monday – Sunday (All Days)');
       setPhone(myClub.contactPhone || '+91 98765 43210');
       setEmail(myClub.contactEmail || 'contact@bernabeuarena.com');
-      setClubImageUrl(myClub.clubImageUrl || '/src/assets/images/courts/court-1.jpg');
+      setClubImageUrl(myClub.clubImageUrl || '/assets/images/courts/court-1.jpg');
       setDescription(myClub.description || '');
       setSelectedAmenities(myClub.amenities || DEFAULT_AMENITIES.slice(0, 6));
     }
@@ -121,66 +167,129 @@ export const ManageClubPage = () => {
     }
   };
 
-  // Reset Form
-  const handleReset = () => {
-    if (myClub) {
-      setName(myClub.name || '');
-      setAddress(myClub.address || '');
-      setCity(myClub.city || 'Raipur');
-      setLat(myClub.geoCoordinates?.lat || 21.2497);
-      setLng(myClub.geoCoordinates?.lng || 81.6584);
-      setOpenTime(myClub.operatingHours?.open || '06:00');
-      setCloseTime(myClub.operatingHours?.close || '23:00');
-      setDaysOpen(myClub.daysOpen || 'Monday – Sunday (All Days)');
-      setPhone(myClub.contactPhone || '+91 98765 43210');
-      setEmail(myClub.contactEmail || 'contact@bernabeuarena.com');
-      setClubImageUrl(myClub.clubImageUrl || '/src/assets/images/courts/court-1.jpg');
-      setDescription(myClub.description || '');
-      setSelectedAmenities(myClub.amenities || DEFAULT_AMENITIES.slice(0, 6));
-      toast.success('Form reset to saved venue profile.');
-    }
+  const hasUnsavedClubEdits = Boolean(
+    myClub && (
+      name !== (myClub.name || '') ||
+      address !== (myClub.address || '') ||
+      city !== (myClub.city || 'Raipur') ||
+      phone !== (myClub.contactPhone || '') ||
+      email !== (myClub.contactEmail || '') ||
+      description !== (myClub.description || '') ||
+      coverFile !== null
+    )
+  );
+
+  const { confirmDiscard } = useUnsavedChanges(hasUnsavedClubEdits);
+
+  // Discard Changes
+  const handleDiscard = () => {
+    confirmDiscard(() => {
+      if (myClub) {
+        setName(myClub.name || '');
+        setAddress(myClub.address || '');
+        setCity(myClub.city || 'Raipur');
+        setLat(myClub.geoCoordinates?.lat || 21.2497);
+        setLng(myClub.geoCoordinates?.lng || 81.6584);
+        setOpenTime(myClub.operatingHours?.open || '06:00');
+        setCloseTime(myClub.operatingHours?.close || '23:00');
+        setDaysOpen(myClub.daysOpen || 'Monday – Sunday (All Days)');
+        setPhone(myClub.contactPhone || '+91 98765 43210');
+        setEmail(myClub.contactEmail || 'contact@bernabeuarena.com');
+        setClubImageUrl(myClub.clubImageUrl || '/assets/images/courts/court-1.jpg');
+        setDescription(myClub.description || '');
+        setSelectedAmenities(myClub.amenities || DEFAULT_AMENITIES.slice(0, 6));
+        setCoverFile(null);
+        if (coverFileInputRef.current) coverFileInputRef.current.value = '';
+        toast.success('Form reset to saved venue profile.');
+      }
+    });
   };
+  const handleReset = handleDiscard;
 
   // Save Club Profile
-  const handleSaveClub = (e) => {
-    e.preventDefault();
+  const isSavingRef = useRef(false);
 
-    if (!name || !name.trim()) {
-      toast.error('Venue / Club Name is required.');
-      return;
-    }
+  const handleSaveClub = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (isSaving || isSavingRef.current) return;
 
-    if (!address || !address.trim()) {
-      toast.error('Full Street Address is required.');
-      return;
-    }
+    if (!checkNetworkOnline()) return;
 
-    if (openTime && closeTime && openTime >= closeTime && closeTime !== '00:00') {
-      toast.error('Closing Time must be after Opening Time (or set 00:00 for midnight).');
-      return;
-    }
+    const isValid = validateFormAndFocus(e || document, [
+      { check: () => validateTitle(name, 'Venue / Club Name'), field: 'name' },
+      { check: () => validateNonEmpty(address, 'Street Address'), field: 'address' },
+      { check: () => validatePhone(phone), field: 'phone' },
+      { check: () => validateEmail(email), field: 'email' },
+      { check: () => validateCoordinates(lat, lng), field: 'lat' },
+      { check: () => {
+        if (openTime && closeTime && openTime >= closeTime && closeTime !== '00:00') {
+          return { isValid: false, message: 'Closing Time must be after Opening Time (or set 00:00 for midnight).' };
+        }
+        return { isValid: true };
+      }, field: 'closeTime' }
+    ]);
+
+    if (!isValid) return;
 
     const parsedLat = parseFloat(lat);
     const parsedLng = parseFloat(lng);
+    const trimmedName = name.trim();
+    const trimmedAddress = address.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedEmail = email.trim();
+    const trimmedDesc = description.trim();
 
-    if (isNaN(parsedLat) || isNaN(parsedLng)) {
-      toast.error('Please enter valid numerical latitude and longitude coordinates.');
+    // Change Detection: prevent redundant updates if nothing changed
+    const currentAmenities = (myClub?.amenities || []).slice().sort();
+    const newAmenities = selectedAmenities.slice().sort();
+    const amenitiesChanged = JSON.stringify(currentAmenities) !== JSON.stringify(newAmenities);
+
+    const hasChanges =
+      trimmedName !== (myClub?.name || '').trim() ||
+      trimmedAddress !== (myClub?.address || '').trim() ||
+      city !== (myClub?.city || '') ||
+      trimmedPhone !== (myClub?.contactPhone || '').trim() ||
+      trimmedEmail !== (myClub?.contactEmail || '').trim() ||
+      parsedLat !== myClub?.geoCoordinates?.lat ||
+      parsedLng !== myClub?.geoCoordinates?.lng ||
+      openTime !== (myClub?.operatingHours?.open || '') ||
+      closeTime !== (myClub?.operatingHours?.close || '') ||
+      daysOpen !== (myClub?.daysOpen || '') ||
+      clubImageUrl !== (myClub?.clubImageUrl || '') ||
+      trimmedDesc !== (myClub?.description || '').trim() ||
+      amenitiesChanged;
+
+    if (!hasChanges) {
+      toast('No changes detected for this venue profile.', { icon: 'ℹ️' });
       return;
     }
 
-    updateClub(myClub.id, {
-      name: name.trim(),
-      address: address.trim(),
-      city,
-      contactPhone: phone.trim(),
-      contactEmail: email.trim(),
-      geoCoordinates: { lat: parsedLat, lng: parsedLng },
-      operatingHours: { open: openTime, close: closeTime },
-      daysOpen,
-      amenities: selectedAmenities,
-      clubImageUrl,
-      description: description.trim()
-    });
+    isSavingRef.current = true;
+    setIsSaving(true);
+    try {
+      updateClub(myClub.id, {
+        name: trimmedName,
+        address: trimmedAddress,
+        city,
+        contactPhone: trimmedPhone,
+        contactEmail: trimmedEmail,
+        geoCoordinates: { lat: parsedLat, lng: parsedLng },
+        operatingHours: { open: openTime, close: closeTime },
+        daysOpen,
+        amenities: selectedAmenities,
+        clubImageUrl,
+        description: trimmedDesc
+      });
+      toast.success('Venue profile saved successfully!');
+    } catch (err) {
+      logActionError('handleSaveClub', err);
+      toast.error(getErrorMessage(err, 'updating venue profile'));
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => {
+        isSavingRef.current = false;
+      }, 400);
+    }
   };
 
   return (
@@ -219,10 +328,12 @@ export const ManageClubPage = () => {
             variant="primary"
             size="md"
             icon={Save}
+            isLoading={isSaving}
+            disabled={isSaving}
             onClick={handleSaveClub}
             className="shadow-lg shadow-sport-500/20 text-xs font-black"
           >
-            Save Venue Profile
+            {isSaving ? 'Saving Profile...' : 'Save Venue Profile'}
           </Button>
         </div>
       </div>
@@ -254,6 +365,7 @@ export const ManageClubPage = () => {
                     Venue / Club Name *
                   </label>
                   <input
+                    name="name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -268,6 +380,7 @@ export const ManageClubPage = () => {
                     City Location *
                   </label>
                   <select
+                    name="city"
                     value={city}
                     onChange={(e) => handleCityChange(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -287,6 +400,7 @@ export const ManageClubPage = () => {
                   Full Street Address & Landmark *
                 </label>
                 <input
+                  name="address"
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -308,6 +422,7 @@ export const ManageClubPage = () => {
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">LAT:</span>
                     <input
+                      name="lat"
                       type="number"
                       step="0.0001"
                       value={lat}
@@ -318,6 +433,7 @@ export const ManageClubPage = () => {
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">LNG:</span>
                     <input
+                      name="lng"
                       type="number"
                       step="0.0001"
                       value={lng}
@@ -336,6 +452,7 @@ export const ManageClubPage = () => {
                     <span>Contact Phone</span>
                   </label>
                   <input
+                    name="phone"
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -350,6 +467,7 @@ export const ManageClubPage = () => {
                     <span>Contact Email</span>
                   </label>
                   <input
+                    name="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -365,6 +483,7 @@ export const ManageClubPage = () => {
                   Venue Overview & Description
                 </label>
                 <textarea
+                  name="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
@@ -392,6 +511,7 @@ export const ManageClubPage = () => {
                     Opening Time
                   </label>
                   <input
+                    name="openTime"
                     type="time"
                     value={openTime}
                     onChange={(e) => setOpenTime(e.target.value)}
@@ -404,6 +524,7 @@ export const ManageClubPage = () => {
                     Closing Time
                   </label>
                   <input
+                    name="closeTime"
                     type="time"
                     value={closeTime}
                     onChange={(e) => setCloseTime(e.target.value)}
@@ -416,6 +537,7 @@ export const ManageClubPage = () => {
                     Days Active
                   </label>
                   <select
+                    name="daysOpen"
                     value={daysOpen}
                     onChange={(e) => setDaysOpen(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -538,6 +660,41 @@ export const ManageClubPage = () => {
                 </div>
               </div>
 
+              {/* Upload Local Image File */}
+              <div className="pt-2">
+                <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">
+                  Or Upload Venue Photo (.jpg, .png, .webp · Max 10 MB)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={coverFileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleCoverFileChange}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sport-500/10 file:text-sport-600 dark:file:text-sport-400 hover:file:bg-sport-500/20 cursor-pointer"
+                  />
+                  {coverFile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoverFile(null);
+                        setClubImageUrl(myClub?.clubImageUrl || '/assets/images/courts/court-1.jpg');
+                        if (coverFileInputRef.current) coverFileInputRef.current.value = '';
+                      }}
+                      className="text-rose-500 hover:text-rose-600 text-xs font-bold whitespace-nowrap p-1 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {coverFile && (
+                  <div className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <span>Selected: <strong className="text-slate-900 dark:text-white">{coverFile.name}</strong> ({formatFileSize(coverFile.size)})</span>
+                    <span className="text-emerald-500 font-bold">✓ Loaded as Cover</span>
+                  </div>
+                )}
+              </div>
+
               {/* Custom Image URL */}
               <div className="pt-2">
                 <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">
@@ -558,8 +715,16 @@ export const ManageClubPage = () => {
               <Button type="button" variant="outline" size="md" onClick={handleReset}>
                 Reset Changes
               </Button>
-              <Button type="submit" variant="primary" size="md" icon={Save} className="shadow-lg shadow-sport-500/25">
-                Save Venue Profile
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                icon={Save}
+                isLoading={isSaving}
+                disabled={isSaving}
+                className="shadow-lg shadow-sport-500/25"
+              >
+                {isSaving ? 'Saving Profile...' : 'Save Venue Profile'}
               </Button>
             </div>
 
@@ -584,10 +749,13 @@ export const ManageClubPage = () => {
               <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 shadow-xs">
                 <div className="relative h-44 w-full overflow-hidden bg-slate-800">
                   <img
-                    src={clubImageUrl || '/src/assets/images/courts/court-1.jpg'}
+                    src={clubImageUrl || '/assets/images/courts/court-1.jpg'}
                     alt={name || 'Venue Preview'}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = '/src/assets/images/courts/court-1.jpg'; }}
+                    onError={(e) => { 
+                      e.target.onerror = null;
+                      e.target.src = '/assets/images/courts/court-1.jpg'; 
+                    }}
                   />
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                     <Badge variant="emerald" size="sm" className="shadow-md">Active Venue</Badge>

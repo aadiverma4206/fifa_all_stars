@@ -5,14 +5,14 @@ export const dummyCommunityPosts = [
     city: "Raipur",
     authorId: "usr_player_demo",
     authorName: "Arjun Mehta",
-    authorAvatar: "/src/assets/images/avatars/avatar-1.jpg",
+    authorAvatar: "/assets/images/avatars/avatar-1.jpg",
     authorElo: 1840,
     timestamp: "2 hours ago",
     content: "What a crazy 5v5 match tonight at Bernabeu Arena Raipur! Thanks to Ananya for saving 3 penalties in a row. MVP performance! 🧤🔥",
     image: "",
     likes: 24,
     comments: [
-      { id: "c_1", author: "Ananya Iyer", avatar: "/src/assets/images/avatars/avatar-3.jpg", text: "Appreciate it Arjun! That volley goal from outside the box was top class! 🚀", timestamp: "1 hour ago" }
+      { id: "c_1", author: "Ananya Iyer", avatar: "/assets/images/avatars/avatar-3.jpg", text: "Appreciate it Arjun! That volley goal from outside the box was top class! 🚀", timestamp: "1 hour ago" }
     ],
     tags: ["RaipurMatch", "BernabeuTurf", "MVP"]
   },
@@ -21,14 +21,14 @@ export const dummyCommunityPosts = [
     city: "Bangalore",
     authorId: "usr_p2",
     authorName: "Siddharth Rao",
-    authorAvatar: "/src/assets/images/avatars/avatar-6.jpg",
+    authorAvatar: "/assets/images/avatars/avatar-6.jpg",
     authorElo: 1960,
     timestamp: "4 hours ago",
     content: "🚨 NEED 2 DEFENDERS: Tonight 8 PM at Silicon Turf Hub Indiranagar. Split fee ₹250. Hit join on Find Games page!",
     image: "",
     likes: 12,
     comments: [
-      { id: "c_2", author: "Tanya Sharma", avatar: "/src/assets/images/avatars/avatar-10.jpg", text: "I can join for midfield/defence! Just confirmed.", timestamp: "3 hours ago" }
+      { id: "c_2", author: "Tanya Sharma", avatar: "/assets/images/avatars/avatar-10.jpg", text: "I can join for midfield/defence! Just confirmed.", timestamp: "3 hours ago" }
     ],
     tags: ["BangaloreFutsal", "NeedPlayers"]
   }

@@ -1,79 +1,177 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Heart, MessageSquare, Send, Award, CheckCircle2, Vote } from 'lucide-react';
+import { Users, Heart, MessageSquare, Send, Award, CheckCircle2, Vote, Camera, Image as ImageIcon, X } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import Avatar from '../../components/common/Avatar';
-import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
+import Badge from '../../components/common/Badge';
+import Avatar from '../../components/common/Avatar';
+import { validateLength, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { validateFile, readFileAsDataUrl, ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_EXTENSIONS, DEFAULT_MAX_AVATAR_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
 import toast from 'react-hot-toast';
 
 export const CommunityPage = () => {
   const navigate = useNavigate();
-  const { communityPosts, polls, challenges, addCommunityPost, likePost, addComment, votePoll } = useDataStore();
   const { currentUser } = useAuthStore();
+  const { communityPosts, challenges, polls, addCommunityPost, addComment, votePoll, likePost } = useDataStore();
 
   const [selectedCity, setSelectedCity] = useState('all');
   const [postText, setPostText] = useState('');
   const [commentInputs, setCommentInputs] = useState({});
+  const [isPosting, setIsPosting] = useState(false);
+  const [submittingCommentPostId, setSubmittingCommentPostId] = useState(null);
+  const [votingPollId, setVotingPollId] = useState(null);
 
-  const filteredPosts = communityPosts.filter(p => 
-    selectedCity === 'all' || p.city?.toLowerCase() === selectedCity.toLowerCase()
-  );
+  // Post Media Attachment State
+  const [postImageFile, setPostImageFile] = useState(null);
+  const [postImagePreview, setPostImagePreview] = useState('');
+  const postImageInputRef = useRef(null);
 
-  const handleCreatePost = (e) => {
-    e.preventDefault();
-    if (!currentUser) {
-      toast.error('Please sign in to publish community posts.');
-      navigate('/login');
+  const handlePostImageChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setPostImageFile(null);
+      setPostImagePreview('');
       return;
     }
-    if (!postText.trim()) return;
-
-    addCommunityPost({
-      city: currentUser?.city || 'Raipur',
-      authorId: currentUser?.id || 'usr_player_demo',
-      authorName: currentUser?.name || 'Arjun Mehta',
-      authorAvatar: currentUser?.profileImageUrl || currentUser?.avatar,
-      authorElo: currentUser?.eloRating || currentUser?.elo || 1840,
-      content: postText,
-      tags: ['FIFAAllStars', currentUser?.city || 'Raipur']
+    const file = files[0];
+    const validation = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      allowedExtensions: ALLOWED_IMAGE_EXTENSIONS,
+      maxSizeBytes: DEFAULT_MAX_AVATAR_SIZE,
+      fileCategoryName: 'post image'
     });
 
-    toast.success('Post published to community feed!');
-    setPostText('');
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      if (postImageInputRef.current) postImageInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setPostImageFile(file);
+      setPostImagePreview(dataUrl);
+      toast.success(`Attached "${file.name}" (${formatFileSize(file.size)})`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to process selected image.');
+    }
   };
 
-  const handleVote = (pollId, optionId) => {
+  const isPostingRef = useRef(false);
+  const submittingCommentRef = useRef(false);
+  const votingPollRef = useRef(false);
+
+  const filteredPosts = selectedCity === 'all'
+    ? communityPosts
+    : communityPosts.filter(p => p.city?.toLowerCase() === selectedCity.toLowerCase());
+
+  const handleCreatePost = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (isPosting || isPostingRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e || document, [
+      { check: () => !currentUser ? { isValid: false, message: 'Please sign in to publish community posts.' } : { isValid: true }, field: 'postText' },
+      { check: () => validateLength(postText, 3, 500, 'Community post'), field: 'postText' }
+    ]);
+
+    if (!isValid) return;
+
+    isPostingRef.current = true;
+    setIsPosting(true);
+    try {
+      addCommunityPost({
+        city: currentUser?.city || 'Raipur',
+        authorId: currentUser?.id || 'usr_player_demo',
+        authorName: currentUser?.name || 'Arjun Mehta',
+        authorAvatar: currentUser?.profileImageUrl || currentUser?.avatar,
+        authorElo: currentUser?.eloRating || currentUser?.elo || 1840,
+        content: postText.trim(),
+        tags: ['FIFAAllStars', currentUser?.city || 'Raipur'],
+        ...(postImagePreview ? { image: postImagePreview } : {})
+      });
+
+      toast.success('Post published to community feed!');
+      setPostText('');
+      setPostImageFile(null);
+      setPostImagePreview('');
+      if (postImageInputRef.current) postImageInputRef.current.value = '';
+    } catch (err) {
+      logActionError('handleCreatePost', err);
+      toast.error(getErrorMessage(err, 'publishing community post'));
+    } finally {
+      setIsPosting(false);
+      setTimeout(() => {
+        isPostingRef.current = false;
+      }, 400);
+    }
+  };
+
+  const handleVote = async (pollId, optionId) => {
+    if (votingPollId || votingPollRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
     if (!currentUser) {
       toast.error('Please sign in to vote on polls.');
       navigate('/login');
       return;
     }
-    votePoll(pollId, optionId, currentUser?.id);
-    toast.success('Vote recorded!');
+
+    votingPollRef.current = true;
+    setVotingPollId(pollId);
+    try {
+      votePoll(pollId, optionId, currentUser?.id);
+      toast.success('Vote recorded!');
+    } catch (err) {
+      logActionError('handleVote', err);
+      toast.error(getErrorMessage(err, 'recording vote'));
+    } finally {
+      setVotingPollId(null);
+      setTimeout(() => {
+        votingPollRef.current = false;
+      }, 400);
+    }
   };
 
-  const handleAddComment = (postId, e) => {
+  const handleAddComment = async (postId, e) => {
     e.preventDefault();
-    if (!currentUser) {
-      toast.error('Please sign in to add comments.');
-      navigate('/login');
-      return;
-    }
+    if (submittingCommentPostId || submittingCommentRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
     const text = commentInputs[postId];
-    if (!text || !text.trim()) return;
+    const isValid = validateFormAndFocus(e, [
+      { check: () => !currentUser ? { isValid: false, message: 'Please sign in to add comments.' } : { isValid: true }, field: 'commentText' },
+      { check: () => validateLength(text, 1, 300, 'Comment'), field: 'commentText' }
+    ]);
 
-    addComment(postId, {
-      id: `c_${Date.now()}`,
-      author: currentUser?.name || 'Player',
-      avatar: currentUser?.profileImageUrl || currentUser?.avatar,
-      text: text,
-      timestamp: 'Just now'
-    });
+    if (!isValid) return;
 
-    setCommentInputs({ ...commentInputs, [postId]: '' });
-    toast.success('Comment added!');
+    submittingCommentRef.current = true;
+    setSubmittingCommentPostId(postId);
+    try {
+      addComment(postId, {
+        id: `c_${Date.now()}`,
+        author: currentUser?.name || 'Player',
+        avatar: currentUser?.profileImageUrl || currentUser?.avatar,
+        content: text.trim(),
+        createdAt: 'Just now'
+      });
+      setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+      toast.success('Comment added!');
+    } catch (err) {
+      logActionError('handleAddComment', err);
+      toast.error(getErrorMessage(err, 'adding comment'));
+    } finally {
+      setSubmittingCommentPostId(null);
+      setTimeout(() => {
+        submittingCommentRef.current = false;
+      }, 400);
+    }
   };
 
   return (
@@ -160,13 +258,15 @@ export const CommunityPage = () => {
                 <button
                   key={opt.id}
                   onClick={() => handleVote(polls[0].id, opt.id)}
-                  disabled={hasVoted}
-                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-xs font-bold transition-all ${
+                  disabled={hasVoted || votingPollId === polls[0].id}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-xs font-bold transition-all disabled:opacity-60 ${
                     hasVoted ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border-slate-200 dark:border-slate-800 hover:border-sport-500'
                   }`}
                 >
                   <span>{opt.text}</span>
-                  <span className="text-sport-500 font-extrabold">{opt.votes} Votes</span>
+                  <span className="text-sport-500 font-extrabold">
+                    {votingPollId === polls[0].id ? '⏳ Recording...' : `${opt.votes} Votes`}
+                  </span>
                 </button>
               );
             })}
@@ -179,6 +279,7 @@ export const CommunityPage = () => {
         <div className="flex items-start space-x-3">
           <Avatar src={currentUser?.profileImageUrl || currentUser?.avatar} name={currentUser?.name} size="md" />
           <textarea
+            name="postText"
             rows="3"
             placeholder={`Share match updates or looking-for-players notice in ${currentUser?.city || 'Raipur'}...`}
             value={postText}
@@ -187,8 +288,41 @@ export const CommunityPage = () => {
           />
         </div>
 
-        <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
-          <Button variant="primary" size="sm" icon={Send} onClick={handleCreatePost}>
+        {postImagePreview && (
+          <div className="relative inline-block ml-11">
+            <img src={postImagePreview} alt="Attached preview" className="max-h-36 rounded-xl border border-slate-200 dark:border-slate-700 object-cover shadow-xs" />
+            <button
+              type="button"
+              onClick={() => { setPostImageFile(null); setPostImagePreview(''); if (postImageInputRef.current) postImageInputRef.current.value = ''; }}
+              className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-0.5 shadow-md hover:bg-rose-600 transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div>
+            <input
+              ref={postImageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handlePostImageChange}
+              className="hidden"
+              id="community-post-photo"
+            />
+            <label
+              htmlFor="community-post-photo"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <Camera className="w-4 h-4 text-sport-500" />
+              <span>{postImageFile ? 'Change Photo' : 'Attach Photo'}</span>
+            </label>
+            {postImageFile && (
+              <span className="ml-2 text-[10px] text-slate-400 font-bold">({formatFileSize(postImageFile.size)})</span>
+            )}
+          </div>
+          <Button variant="primary" size="sm" icon={Send} isLoading={isPosting} disabled={isPosting} onClick={handleCreatePost}>
             Post to {currentUser?.city || 'Raipur'} Feed
           </Button>
         </div>
@@ -214,6 +348,12 @@ export const CommunityPage = () => {
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-relaxed font-sans">
               {post.content}
             </p>
+
+            {post.image && (
+              <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-80">
+                <img src={post.image} alt="Community match visual" className="w-full h-full object-cover" />
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-1.5">
               {post.tags?.map((tag, i) => (
@@ -252,13 +392,14 @@ export const CommunityPage = () => {
 
               <form onSubmit={(e) => handleAddComment(post.id, e)} className="flex gap-2 pt-2">
                 <input
+                  name="commentText"
                   type="text"
                   placeholder="Write a comment..."
                   value={commentInputs[post.id] || ''}
                   onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
                   className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500"
                 />
-                <Button type="submit" variant="primary" size="sm" icon={Send} />
+                <Button type="submit" variant="primary" size="sm" icon={Send} isLoading={submittingCommentPostId === post.id} disabled={submittingCommentPostId === post.id} />
               </form>
             </div>
           </div>

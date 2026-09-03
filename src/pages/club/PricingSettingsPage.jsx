@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -10,6 +10,9 @@ import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
+import { validateTimeRange, validateNumericRange, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import toast from 'react-hot-toast';
 
 export const PricingSettingsPage = () => {
@@ -19,33 +22,62 @@ export const PricingSettingsPage = () => {
   const myClub = clubs.find(c => c.managerIds?.includes(currentUser?.id)) || clubs[0];
   const myCourts = courts.filter(c => c.clubId === myClub?.id);
 
+  // Selected Court for customization
   const [selectedCourtId, setSelectedCourtId] = useState(myCourts[0]?.courtId || myCourts[0]?.id || '');
   const activeCourt = myCourts.find(c => (c.courtId || c.id) === selectedCourtId) || myCourts[0];
 
-  const [peakStart, setPeakStart] = useState(activeCourt?.peakWindow?.split('-')[0] || '17:00');
-  const [peakEnd, setPeakEnd] = useState(activeCourt?.peakWindow?.split('-')[1] || '21:00');
-  const [peakMultiplier, setPeakMultiplier] = useState(activeCourt?.peakMultiplier || 1.5);
-  const [weekendMultiplier, setWeekendMultiplier] = useState(activeCourt?.weekendMultiplier || 1.75);
+  // Pricing Rule States (Synced with activeCourt)
+  const [peakStart, setPeakStart] = useState('17:00');
+  const [peakEnd, setPeakEnd] = useState('21:00');
+  const [peakMultiplier, setPeakMultiplier] = useState(1.5);
+  const [weekendMultiplier, setWeekendMultiplier] = useState(1.75);
   const [applyToAll, setApplyToAll] = useState(false);
 
-  // Simulation State for Interactive Calculator
-  const [testDay, setTestDay] = useState('weekday_peak'); // 'weekday_offpeak' | 'weekday_peak' | 'weekend_offpeak' | 'weekend_peak'
+  // Async Mutation Loading State
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Test Calculator State
+  const [testDay, setTestDay] = useState('weekday_peak');
   const [testHours, setTestHours] = useState(1);
 
-  // Sync state when active court selection changes
+  // Sync state whenever selected court changes
   useEffect(() => {
     if (activeCourt) {
-      setPeakStart(activeCourt.peakWindow?.split('-')[0] || '17:00');
-      setPeakEnd(activeCourt.peakWindow?.split('-')[1] || '21:00');
-      setPeakMultiplier(activeCourt.peakMultiplier || 1.5);
-      setWeekendMultiplier(activeCourt.weekendMultiplier || 1.75);
-    }
-  }, [activeCourt?.courtId, activeCourt?.id]);
+      if (activeCourt.pricingSettings?.peakWindow) {
+        const [start, end] = activeCourt.pricingSettings.peakWindow.split('-');
+        setPeakStart(start || '17:00');
+        setPeakEnd(end || '21:00');
+      } else {
+        setPeakStart('17:00');
+        setPeakEnd('21:00');
+      }
 
-  const basePrice = activeCourt?.basePrice || 500;
-  const peakPricePreview = (basePrice * peakMultiplier).toFixed(2);
-  const weekendPricePreview = (basePrice * weekendMultiplier).toFixed(2);
-  const weekendPeakPricePreview = (basePrice * peakMultiplier * (weekendMultiplier > 1.2 ? 1.15 : 1.0)).toFixed(2);
+      setPeakMultiplier(activeCourt.pricingSettings?.peakMultiplier || 1.5);
+      setWeekendMultiplier(activeCourt.pricingSettings?.weekendMultiplier || 1.75);
+    }
+  }, [selectedCourtId]);
+
+  const currentWindow = activeCourt?.pricingSettings?.peakWindow || '17:00-21:00';
+  const currentPMult = activeCourt?.pricingSettings?.peakMultiplier || 1.5;
+  const currentWMult = activeCourt?.pricingSettings?.weekendMultiplier || 1.75;
+  const peakWindowStr = `${peakStart}-${peakEnd}`;
+  const pMult = parseFloat(peakMultiplier);
+  const wMult = parseFloat(weekendMultiplier);
+
+  const hasUnsavedPricingChanges = Boolean(
+    activeCourt && (
+      peakWindowStr !== currentWindow ||
+      pMult !== currentPMult ||
+      wMult !== currentWMult ||
+      applyToAll
+    )
+  );
+
+  useUnsavedChanges(hasUnsavedPricingChanges, 'You have unsaved pitch pricing adjustments. Are you sure you want to leave without saving?');
+
+  const basePrice = activeCourt ? parseFloat(activeCourt.basePrice) || 500 : 500;
+  const peakPricePreview = (basePrice * (parseFloat(peakMultiplier) || 1.0)).toFixed(2);
+  const weekendPricePreview = (basePrice * (parseFloat(weekendMultiplier) || 1.0)).toFixed(2);
 
   // Calculate live test quote
   const calculateTestTotal = () => {
@@ -56,41 +88,68 @@ export const PricingSettingsPage = () => {
     return (rate * testHours).toFixed(2);
   };
 
-  const handleSavePricing = (e) => {
-    e.preventDefault();
-    if (!activeCourt) return;
+  const isSavingRef = useRef(false);
 
-    if (peakStart && peakEnd && peakStart >= peakEnd) {
-      toast.error('Peak End Time must be after Peak Start Time!');
-      return;
-    }
+  const handleSavePricing = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (isSaving || isSavingRef.current || !activeCourt) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e || document, [
+      { check: () => validateTimeRange(peakStart, peakEnd), field: 'peakStart' },
+      { check: () => validateNumericRange(peakMultiplier, 1.0, 5.0, 'Peak Surge Multiplier'), field: 'peakMultiplier' },
+      { check: () => validateNumericRange(weekendMultiplier, 1.0, 5.0, 'Weekend Multiplier'), field: 'weekendMultiplier' }
+    ]);
+
+    if (!isValid) return;
 
     const pMult = parseFloat(peakMultiplier);
     const wMult = parseFloat(weekendMultiplier);
+    const peakWindowStr = `${peakStart}-${peakEnd}`;
 
-    if (isNaN(pMult) || pMult < 1.0) {
-      toast.error('Peak multiplier must be at least 1.0x.');
+    // Detect whether anything actually changed
+    const currentWindow = activeCourt.pricingSettings?.peakWindow || '17:00-21:00';
+    const currentPMult = activeCourt.pricingSettings?.peakMultiplier || 1.5;
+    const currentWMult = activeCourt.pricingSettings?.weekendMultiplier || 1.75;
+
+    const hasChanges =
+      peakWindowStr !== currentWindow ||
+      pMult !== currentPMult ||
+      wMult !== currentWMult ||
+      applyToAll;
+
+    if (!hasChanges) {
+      toast('Pricing rules are already up to date.', { icon: 'ℹ️' });
       return;
     }
 
-    if (isNaN(wMult) || wMult < 1.0) {
-      toast.error('Weekend multiplier must be at least 1.0x.');
-      return;
-    }
+    isSavingRef.current = true;
+    setIsSaving(true);
+    try {
+      const pricingData = {
+        peakWindow: peakWindowStr,
+        peakMultiplier: pMult,
+        weekendMultiplier: wMult
+      };
 
-    const pricingData = {
-      peakWindow: `${peakStart}-${peakEnd}`,
-      peakMultiplier: pMult,
-      weekendMultiplier: wMult
-    };
-
-    if (applyToAll && myCourts.length > 0) {
-      myCourts.forEach(c => {
-        updatePricingSettings(c.courtId || c.id, pricingData);
-      });
-      toast.success(`Pricing rules applied to all ${myCourts.length} pitches at ${myClub?.name || 'venue'}!`);
-    } else {
-      updatePricingSettings(activeCourt.courtId || activeCourt.id, pricingData);
+      if (applyToAll && myCourts.length > 0) {
+        myCourts.forEach(c => {
+          updatePricingSettings(c.courtId || c.id, pricingData);
+        });
+        toast.success(`Pricing rules applied to all ${myCourts.length} pitches at ${myClub?.name || 'venue'}!`);
+      } else {
+        updatePricingSettings(activeCourt.courtId || activeCourt.id, pricingData);
+        toast.success(`Pricing settings saved for ${activeCourt.name}!`);
+      }
+    } catch (err) {
+      logActionError('handleSavePricing', err);
+      toast.error(getErrorMessage(err, 'saving pricing rules'));
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => {
+        isSavingRef.current = false;
+      }, 400);
     }
   };
 
@@ -138,10 +197,12 @@ export const PricingSettingsPage = () => {
             variant="primary"
             size="md"
             icon={Save}
+            isLoading={isSaving}
+            disabled={isSaving}
             onClick={handleSavePricing}
             className="shadow-lg shadow-sport-500/20 text-xs font-black"
           >
-            Save Pricing Rules
+            {isSaving ? 'Saving Rules...' : 'Save Pricing Rules'}
           </Button>
         </div>
       </div>
@@ -251,6 +312,7 @@ export const PricingSettingsPage = () => {
                     Peak Start Time
                   </label>
                   <input
+                    name="peakStart"
                     type="time"
                     value={peakStart}
                     onChange={(e) => setPeakStart(e.target.value)}
@@ -263,6 +325,7 @@ export const PricingSettingsPage = () => {
                     Peak End Time
                   </label>
                   <input
+                    name="peakEnd"
                     type="time"
                     value={peakEnd}
                     onChange={(e) => setPeakEnd(e.target.value)}
@@ -283,6 +346,7 @@ export const PricingSettingsPage = () => {
                 </div>
 
                 <input
+                  name="peakMultiplier"
                   type="range"
                   min="1.0"
                   max="2.5"
@@ -341,6 +405,7 @@ export const PricingSettingsPage = () => {
                 </div>
 
                 <input
+                  name="weekendMultiplier"
                   type="range"
                   min="1.0"
                   max="3.0"
@@ -386,8 +451,16 @@ export const PricingSettingsPage = () => {
               <Button type="button" variant="outline" size="md" onClick={handleResetToDefaults}>
                 Reset Defaults
               </Button>
-              <Button type="submit" variant="primary" size="md" icon={Save} className="shadow-lg shadow-sport-500/25">
-                Save & Apply Pricing Rules
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                icon={Save}
+                isLoading={isSaving}
+                disabled={isSaving}
+                className="shadow-lg shadow-sport-500/25"
+              >
+                {isSaving ? 'Applying...' : 'Save & Apply Pricing Rules'}
               </Button>
             </div>
 

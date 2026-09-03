@@ -9,6 +9,7 @@ export const NotificationBell = () => {
   const { notifications, markNotificationRead, markAllNotificationsRead } = useDataStore();
   const { currentUser } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [isMarkingRead, setIsMarkingRead] = useState(false);
   const dropdownRef = useRef(null);
 
   // Filter notifications relevant to currentUser or club broadcast
@@ -33,6 +34,16 @@ export const NotificationBell = () => {
     setIsOpen(false);
     if (notif.linkUrl) {
       navigate(notif.linkUrl);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (isMarkingRead) return;
+    setIsMarkingRead(true);
+    try {
+      markAllNotificationsRead(currentUser?.id);
+    } finally {
+      setTimeout(() => setIsMarkingRead(false), 300);
     }
   };
 
@@ -74,11 +85,12 @@ export const NotificationBell = () => {
             {unreadCount > 0 && (
               <button
                 type="button"
-                onClick={() => markAllNotificationsRead(currentUser?.id)}
-                className="text-[10px] text-sport-500 hover:underline font-extrabold flex items-center space-x-1"
+                disabled={isMarkingRead}
+                onClick={handleMarkAllRead}
+                className="text-[10px] text-sport-500 hover:underline font-extrabold flex items-center space-x-1 cursor-pointer disabled:opacity-50"
               >
                 <Check className="w-3 h-3" />
-                <span>Mark all read</span>
+                <span>{isMarkingRead ? 'Updating...' : 'Mark all read'}</span>
               </button>
             )}
           </div>

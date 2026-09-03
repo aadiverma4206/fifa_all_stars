@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,6 +11,9 @@ import { useAuthStore } from '../../store/useAuthStore';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
+import { validateTitle, validatePositiveAmount, validateLength, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { validateFile, readFileAsDataUrl, ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_EXTENSIONS, DEFAULT_MAX_IMAGE_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
 import toast from 'react-hot-toast';
 
 const SURFACE_TYPES = [
@@ -18,32 +21,32 @@ const SURFACE_TYPES = [
   'Synthetic Grass',
   'Acrylic',
   'Wooden Parquet',
+  'Natural Grass',
   'Hybrid Turf'
 ];
 
-const ENVIRONMENT_TYPES = ['Outdoor', 'Indoor', 'Covered Dome', 'Rooftop'];
-const FORMAT_OPTIONS = ['5v5', '7v7', '3v3', '2v2', '11v11'];
+const ENVIRONMENT_TYPES = ['Outdoor', 'Indoor', 'Covered Roof'];
+const FORMAT_OPTIONS = ['5v5', '7v7', '8v8', '11v11', 'Custom'];
 
 const LOCAL_COURT_IMAGES = [
-  '/src/assets/images/courts/court-1.jpg',
-  '/src/assets/images/courts/court-2.jpg',
-  '/src/assets/images/courts/court-3.jpg',
-  '/src/assets/images/courts/court-4.jpg',
-  '/src/assets/images/courts/court-5.jpg',
-  '/src/assets/images/courts/court-6.jpg'
+  '/assets/images/courts/court-1.jpg',
+  '/assets/images/courts/court-2.jpg',
+  '/assets/images/courts/court-3.jpg',
+  '/assets/images/courts/court-4.jpg',
+  '/assets/images/courts/court-5.jpg',
+  '/assets/images/courts/court-6.jpg'
 ];
 
 export const ManageCourtsPage = () => {
-  const { clubs, courts, addCourt, updateCourt, toggleCourtStatus, removeCourt } = useDataStore();
   const { currentUser } = useAuthStore();
+  const { clubs, courts, addCourt, updateCourt, deleteCourt, toggleCourtStatus } = useDataStore();
 
-  // Find manager's club & courts
-  const myClub = clubs.find(c => c.managerIds?.includes(currentUser?.id)) || clubs[0];
+  const myClub = clubs.find(c => c.managerId === currentUser?.id) || clubs[0];
   const myCourts = courts.filter(c => c.clubId === myClub?.id);
 
-  // Filter & Search states
+  // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'AVAILABLE' | 'BLOCKED' | 'MAINTENANCE'
+  const [statusFilter, setStatusFilter] = useState('all');
   const [surfaceFilter, setSurfaceFilter] = useState('all');
 
   // Modal States
@@ -51,13 +54,25 @@ export const ManageCourtsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState(null);
 
+  // Async Mutation Loading States
+  const [isAddingCourt, setIsAddingCourt] = useState(false);
+  const [isUpdatingCourt, setIsUpdatingCourt] = useState(false);
+  const [togglingCourtId, setTogglingCourtId] = useState(null);
+  const [deletingCourtId, setDeletingCourtId] = useState(null);
+  const [courtToDelete, setCourtToDelete] = useState(null);
+
+  const isAddingCourtRef = useRef(false);
+  const isUpdatingCourtRef = useRef(false);
+  const togglingCourtRef = useRef(false);
+  const deletingCourtRef = useRef(false);
+
   // Add Pitch Form State
   const [courtName, setCourtName] = useState('');
   const [type, setType] = useState('Outdoor');
   const [surface, setSurface] = useState('3G Turf');
   const [basePrice, setBasePrice] = useState('500');
   const [format, setFormat] = useState('5v5');
-  const [courtImage, setCourtImage] = useState('/src/assets/images/courts/court-1.jpg');
+  const [courtImage, setCourtImage] = useState('/assets/images/courts/court-1.jpg');
   const [dimensions, setDimensions] = useState('30m x 15m');
   const [description, setDescription] = useState('');
 
@@ -70,6 +85,72 @@ export const ManageCourtsPage = () => {
   const [editImage, setEditImage] = useState('');
   const [editDimensions, setEditDimensions] = useState('');
   const [editDescription, setEditDescription] = useState('');
+
+  // Pitch Photo Upload States
+  const [addCourtFile, setAddCourtFile] = useState(null);
+  const [editCourtFile, setEditCourtFile] = useState(null);
+  const addCourtFileInputRef = useRef(null);
+  const editCourtFileInputRef = useRef(null);
+
+  const handleAddCourtFileChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setAddCourtFile(null);
+      return;
+    }
+    const file = files[0];
+    const validation = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      allowedExtensions: ALLOWED_IMAGE_EXTENSIONS,
+      maxSizeBytes: DEFAULT_MAX_IMAGE_SIZE,
+      fileCategoryName: 'pitch photo'
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      if (addCourtFileInputRef.current) addCourtFileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setAddCourtFile(file);
+      setCourtImage(dataUrl);
+      toast.success(`Pitch photo "${file.name}" ready (${formatFileSize(file.size)})`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to read pitch image.');
+    }
+  };
+
+  const handleEditCourtFileChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setEditCourtFile(null);
+      return;
+    }
+    const file = files[0];
+    const validation = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      allowedExtensions: ALLOWED_IMAGE_EXTENSIONS,
+      maxSizeBytes: DEFAULT_MAX_IMAGE_SIZE,
+      fileCategoryName: 'pitch photo'
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      if (editCourtFileInputRef.current) editCourtFileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setEditCourtFile(file);
+      setEditImage(dataUrl);
+      toast.success(`Pitch photo "${file.name}" ready (${formatFileSize(file.size)})`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to read pitch image.');
+    }
+  };
 
   // Stats Counters
   const availableCount = myCourts.filter(c => c.status === 'AVAILABLE').length;
@@ -98,80 +179,185 @@ export const ManageCourtsPage = () => {
   });
 
   // Handle Create Pitch
-  const handleAddCourt = (e) => {
+  const handleAddCourt = async (e) => {
     e.preventDefault();
-    if (!courtName || !courtName.trim()) {
-      toast.error('Pitch / Court Name cannot be empty.');
-      return;
-    }
+    if (isAddingCourt || isAddingCourtRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(courtName, 'Pitch / Court Name'), field: 'courtName' },
+      { check: () => validatePositiveAmount(basePrice, 'Base Hourly Rate', false), field: 'basePrice' },
+      { check: () => validateLength(description, 0, 500, 'Description'), field: 'description' }
+    ]);
+
+    if (!isValid) return;
 
     const price = parseFloat(basePrice);
-    if (isNaN(price) || price <= 0) {
-      toast.error('Base Hourly Rate must be a positive number greater than ₹0.');
-      return;
+
+    isAddingCourtRef.current = true;
+    setIsAddingCourt(true);
+    try {
+      addCourt(myClub.id, {
+        name: courtName.trim(),
+        type,
+        surface,
+        format,
+        basePrice: price,
+        image: courtImage || '/assets/images/courts/court-1.jpg',
+        dimensions: dimensions.trim() || '30m x 15m',
+        description: description.trim()
+      });
+
+      setIsAddModalOpen(false);
+      setCourtName('');
+      setBasePrice('500');
+      setDimensions('30m x 15m');
+      setDescription('');
+      setAddCourtFile(null);
+      if (addCourtFileInputRef.current) addCourtFileInputRef.current.value = '';
+      toast.success('Pitch added successfully!');
+    } catch (err) {
+      logActionError('handleAddCourt', err);
+      toast.error(getErrorMessage(err, 'creating pitch slot'));
+    } finally {
+      setIsAddingCourt(false);
+      setTimeout(() => {
+        isAddingCourtRef.current = false;
+      }, 400);
     }
-
-    addCourt(myClub.id, {
-      name: courtName.trim(),
-      type,
-      surface,
-      format,
-      basePrice: price,
-      image: courtImage || '/src/assets/images/courts/court-1.jpg',
-      dimensions: dimensions.trim() || '30m x 15m',
-      description: description.trim() || 'Professional grade futsal and football pitch.'
-    });
-
-    setIsAddModalOpen(false);
-    setCourtName('');
-    setBasePrice('500');
-    setDimensions('30m x 15m');
-    setDescription('');
   };
 
-  // Handle Open Edit Modal
-  const handleOpenEdit = (crt) => {
+  // Open Edit Modal
+  const handleOpenEditModal = (crt) => {
     setSelectedCourt(crt);
     setEditName(crt.name || '');
     setEditType(crt.type || 'Outdoor');
     setEditSurface(crt.surface || '3G Turf');
     setEditBasePrice(String(crt.basePrice || 500));
     setEditFormat(crt.format || '5v5');
-    setEditImage(crt.image || '/src/assets/images/courts/court-1.jpg');
+    setEditImage(crt.image || '/assets/images/courts/court-1.jpg');
     setEditDimensions(crt.dimensions || '30m x 15m');
     setEditDescription(crt.description || '');
+    setEditCourtFile(null);
+    if (editCourtFileInputRef.current) editCourtFileInputRef.current.value = '';
     setIsEditModalOpen(true);
   };
+  const handleOpenEdit = handleOpenEditModal;
 
   // Handle Save Edit
-  const handleSaveCourtEdit = (e) => {
+  const handleSaveCourtEdit = async (e) => {
     e.preventDefault();
-    if (!selectedCourt) return;
+    if (!selectedCourt || isUpdatingCourt || isUpdatingCourtRef.current) return;
 
-    if (!editName || !editName.trim()) {
-      toast.error('Pitch Name cannot be empty.');
-      return;
-    }
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(editName, 'Pitch Name'), field: 'editName' },
+      { check: () => validatePositiveAmount(editBasePrice, 'Base Hourly Rate', false), field: 'editBasePrice' },
+      { check: () => validateLength(editDescription, 0, 500, 'Description'), field: 'editDescription' }
+    ]);
+
+    if (!isValid) return;
 
     const price = parseFloat(editBasePrice);
-    if (isNaN(price) || price <= 0) {
-      toast.error('Base Hourly Rate must be a positive number greater than ₹0.');
+    const trimmedName = editName.trim();
+    const trimmedDims = editDimensions.trim();
+    const trimmedDesc = editDescription.trim();
+
+    // Detect whether anything actually changed
+    const hasChanges =
+      trimmedName !== (selectedCourt.name || '').trim() ||
+      editType !== selectedCourt.type ||
+      editSurface !== selectedCourt.surface ||
+      editFormat !== selectedCourt.format ||
+      price !== (parseFloat(selectedCourt.basePrice) || 0) ||
+      editImage !== (selectedCourt.image || '') ||
+      trimmedDims !== (selectedCourt.dimensions || '').trim() ||
+      trimmedDesc !== (selectedCourt.description || '').trim();
+
+    if (!hasChanges) {
+      toast('No changes detected for this pitch.', { icon: 'ℹ️' });
+      setIsEditModalOpen(false);
+      setSelectedCourt(null);
       return;
     }
 
-    updateCourt(selectedCourt.courtId || selectedCourt.id, {
-      name: editName.trim(),
-      type: editType,
-      surface: editSurface,
-      format: editFormat,
-      basePrice: price,
-      image: editImage || selectedCourt.image || '/src/assets/images/courts/court-1.jpg',
-      dimensions: editDimensions.trim() || selectedCourt.dimensions,
-      description: editDescription.trim() || selectedCourt.description
-    });
+    isUpdatingCourtRef.current = true;
+    setIsUpdatingCourt(true);
+    try {
+      updateCourt(selectedCourt.courtId || selectedCourt.id, {
+        name: trimmedName,
+        type: editType,
+        surface: editSurface,
+        format: editFormat,
+        basePrice: price,
+        image: editImage || selectedCourt.image || '/assets/images/courts/court-1.jpg',
+        dimensions: trimmedDims || selectedCourt.dimensions,
+        description: trimmedDesc || selectedCourt.description
+      });
 
-    setIsEditModalOpen(false);
-    setSelectedCourt(null);
+      setIsEditModalOpen(false);
+      setSelectedCourt(null);
+      setEditCourtFile(null);
+      if (editCourtFileInputRef.current) editCourtFileInputRef.current.value = '';
+    } catch (err) {
+      logActionError('handleSaveCourtEdit', err);
+      toast.error(getErrorMessage(err, 'updating pitch details'));
+    } finally {
+      setIsUpdatingCourt(false);
+      setTimeout(() => {
+        isUpdatingCourtRef.current = false;
+      }, 400);
+    }
+  };
+
+  const handleToggleStatus = async (courtId, status) => {
+    if (togglingCourtId || togglingCourtRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    togglingCourtRef.current = true;
+    setTogglingCourtId(courtId);
+    try {
+      toggleCourtStatus(courtId, status);
+    } catch (err) {
+      logActionError('handleToggleStatus', err);
+      toast.error(getErrorMessage(err, 'changing pitch status'));
+    } finally {
+      setTogglingCourtId(null);
+      setTimeout(() => {
+        togglingCourtRef.current = false;
+      }, 400);
+    }
+  };
+
+  const handleRequestDeleteCourt = (court) => {
+    if (deletingCourtId || deletingCourtRef.current) return;
+    setCourtToDelete(court);
+  };
+
+  const handleConfirmDeleteCourt = async () => {
+    if (!courtToDelete || deletingCourtId || deletingCourtRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const court = courtToDelete;
+    deletingCourtRef.current = true;
+    setCourtToDelete(null);
+    setDeletingCourtId(court.courtId || court.id);
+    try {
+      deleteCourt(court.courtId || court.id);
+      toast.success(`Pitch "${court.name}" removed successfully.`);
+    } catch (err) {
+      logActionError('handleConfirmDeleteCourt', err);
+      toast.error(getErrorMessage(err, 'removing pitch'));
+    } finally {
+      setDeletingCourtId(null);
+      setTimeout(() => {
+        deletingCourtRef.current = false;
+      }, 400);
+    }
   };
 
   const resetFilters = () => {
@@ -354,7 +540,10 @@ export const ManageCourtsPage = () => {
                     src={court.image || LOCAL_COURT_IMAGES[idx % LOCAL_COURT_IMAGES.length]}
                     alt={court.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => { e.target.src = '/src/assets/images/courts/court-1.jpg'; }}
+                    onError={(e) => { 
+                      e.target.onerror = null;
+                      e.target.src = '/assets/images/courts/court-1.jpg'; 
+                    }}
                   />
 
                   {/* Badges Overlay */}
@@ -439,40 +628,43 @@ export const ManageCourtsPage = () => {
                     <div className="grid grid-cols-3 gap-1.5 text-xs font-extrabold">
                       <button
                         type="button"
-                        onClick={() => toggleCourtStatus(court.courtId || court.id, 'AVAILABLE')}
-                        className={`py-2 px-2 rounded-xl border flex items-center justify-center space-x-1 transition-all cursor-pointer ${
+                        disabled={togglingCourtId === (court.courtId || court.id)}
+                        onClick={() => handleToggleStatus(court.courtId || court.id, 'AVAILABLE')}
+                        className={`py-2 px-2 rounded-xl border flex items-center justify-center space-x-1 transition-all cursor-pointer disabled:opacity-50 ${
                           isAvail 
                             ? 'bg-emerald-500 text-white border-emerald-500 shadow-md font-black' 
                             : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                         }`}
                       >
-                        <CheckCircle2 className="w-3 h-3" />
+                        {togglingCourtId === (court.courtId || court.id) ? <span className="animate-spin text-[10px]">⏳</span> : <CheckCircle2 className="w-3 h-3" />}
                         <span>Available</span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => toggleCourtStatus(court.courtId || court.id, 'BLOCKED')}
-                        className={`py-2 px-2 rounded-xl border flex items-center justify-center space-x-1 transition-all cursor-pointer ${
+                        disabled={togglingCourtId === (court.courtId || court.id)}
+                        onClick={() => handleToggleStatus(court.courtId || court.id, 'BLOCKED')}
+                        className={`py-2 px-2 rounded-xl border flex items-center justify-center space-x-1 transition-all cursor-pointer disabled:opacity-50 ${
                           isBlocked 
                             ? 'bg-rose-600 text-white border-rose-600 shadow-md font-black' 
                             : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                         }`}
                       >
-                        <Lock className="w-3 h-3" />
+                        {togglingCourtId === (court.courtId || court.id) ? <span className="animate-spin text-[10px]">⏳</span> : <Lock className="w-3 h-3" />}
                         <span>Blocked</span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => toggleCourtStatus(court.courtId || court.id, 'MAINTENANCE')}
-                        className={`py-2 px-2 rounded-xl border flex items-center justify-center space-x-1 transition-all cursor-pointer ${
+                        disabled={togglingCourtId === (court.courtId || court.id)}
+                        onClick={() => handleToggleStatus(court.courtId || court.id, 'MAINTENANCE')}
+                        className={`py-2 px-2 rounded-xl border flex items-center justify-center space-x-1 transition-all cursor-pointer disabled:opacity-50 ${
                           isMaint 
                             ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md font-black' 
                             : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                         }`}
                       >
-                        <Wrench className="w-3 h-3" />
+                        {togglingCourtId === (court.courtId || court.id) ? <span className="animate-spin text-[10px]">⏳</span> : <Wrench className="w-3 h-3" />}
                         <span>Maint.</span>
                       </button>
                     </div>
@@ -494,11 +686,9 @@ export const ManageCourtsPage = () => {
                       variant="danger"
                       size="sm"
                       icon={Trash2}
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to remove pitch "${court.name}"?`)) {
-                          removeCourt(court.courtId || court.id);
-                        }
-                      }}
+                      isLoading={deletingCourtId === (court.courtId || court.id)}
+                      disabled={deletingCourtId !== null}
+                      onClick={() => handleRequestDeleteCourt(court)}
                       className="text-xs font-bold px-2.5"
                       title="Remove Pitch"
                     >
@@ -522,6 +712,7 @@ export const ManageCourtsPage = () => {
               Pitch Name *
             </label>
             <input
+              name="courtName"
               type="text"
               placeholder="e.g. Pitch Charlie (5v5)"
               value={courtName}
@@ -537,6 +728,7 @@ export const ManageCourtsPage = () => {
                 Environment
               </label>
               <select
+                name="type"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -550,6 +742,7 @@ export const ManageCourtsPage = () => {
                 Surface Type
               </label>
               <select
+                name="surface"
                 value={surface}
                 onChange={(e) => setSurface(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -565,6 +758,7 @@ export const ManageCourtsPage = () => {
                 Format
               </label>
               <select
+                name="format"
                 value={format}
                 onChange={(e) => setFormat(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -578,6 +772,7 @@ export const ManageCourtsPage = () => {
                 Base Hourly Price (₹/hr) *
               </label>
               <input
+                name="basePrice"
                 type="number"
                 min="50"
                 value={basePrice}
@@ -593,6 +788,7 @@ export const ManageCourtsPage = () => {
               Pitch Dimensions
             </label>
             <input
+              name="dimensions"
               type="text"
               placeholder="e.g. 30m x 15m"
               value={dimensions}
@@ -603,13 +799,44 @@ export const ManageCourtsPage = () => {
 
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1.5 uppercase font-black">
-              Select Preset Pitch Cover Photo
+              Upload Pitch Photo (.jpg, .png, .webp · Max 10 MB)
+            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                ref={addCourtFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAddCourtFileChange}
+                className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sport-500/10 file:text-sport-600 dark:file:text-sport-400 hover:file:bg-sport-500/20 cursor-pointer"
+              />
+              {addCourtFile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddCourtFile(null);
+                    setCourtImage('/assets/images/courts/court-1.jpg');
+                    if (addCourtFileInputRef.current) addCourtFileInputRef.current.value = '';
+                  }}
+                  className="text-rose-500 hover:text-rose-600 text-xs font-bold whitespace-nowrap p-1 cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {addCourtFile && (
+              <div className="mb-2 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Selected: <strong className="text-slate-900 dark:text-white">{addCourtFile.name}</strong> ({formatFileSize(addCourtFile.size)})</span>
+                <span className="text-emerald-500 font-bold">✓ Loaded</span>
+              </div>
+            )}
+            <label className="block text-slate-500 dark:text-slate-400 text-[11px] mb-1.5 uppercase font-bold">
+              Or Choose from Presets:
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {LOCAL_COURT_IMAGES.map((img, idx) => (
                 <div
                   key={idx}
-                  onClick={() => setCourtImage(img)}
+                  onClick={() => { setCourtImage(img); setAddCourtFile(null); }}
                   className={`h-16 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
                     courtImage === img ? 'border-sport-500 ring-2 ring-sport-500' : 'border-slate-200 dark:border-slate-800 opacity-60 hover:opacity-100'
                   }`}
@@ -625,6 +852,7 @@ export const ManageCourtsPage = () => {
               Description (Optional)
             </label>
             <textarea
+              name="description"
               rows={2}
               placeholder="Special pitch features, netting, lighting notes..."
               value={description}
@@ -637,7 +865,14 @@ export const ManageCourtsPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" className="shadow-md">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isAddingCourt}
+              disabled={isAddingCourt}
+              className="shadow-md"
+            >
               ✅ Create Pitch Slot
             </Button>
           </div>
@@ -653,6 +888,7 @@ export const ManageCourtsPage = () => {
               Pitch Name *
             </label>
             <input
+              name="editName"
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
@@ -667,6 +903,7 @@ export const ManageCourtsPage = () => {
                 Environment
               </label>
               <select
+                name="editType"
                 value={editType}
                 onChange={(e) => setEditType(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -680,6 +917,7 @@ export const ManageCourtsPage = () => {
                 Surface Type
               </label>
               <select
+                name="editSurface"
                 value={editSurface}
                 onChange={(e) => setEditSurface(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -695,6 +933,7 @@ export const ManageCourtsPage = () => {
                 Format
               </label>
               <select
+                name="editFormat"
                 value={editFormat}
                 onChange={(e) => setEditFormat(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -708,6 +947,7 @@ export const ManageCourtsPage = () => {
                 Base Hourly Price (₹/hr) *
               </label>
               <input
+                name="editBasePrice"
                 type="number"
                 min="50"
                 value={editBasePrice}
@@ -723,6 +963,7 @@ export const ManageCourtsPage = () => {
               Pitch Dimensions
             </label>
             <input
+              name="editDimensions"
               type="text"
               value={editDimensions}
               onChange={(e) => setEditDimensions(e.target.value)}
@@ -732,9 +973,41 @@ export const ManageCourtsPage = () => {
 
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1.5 uppercase font-black">
-              Pitch Cover Image URL
+              Upload New Pitch Photo (.jpg, .png, .webp · Max 10 MB)
+            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                ref={editCourtFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleEditCourtFileChange}
+                className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sport-500/10 file:text-sport-600 dark:file:text-sport-400 hover:file:bg-sport-500/20 cursor-pointer"
+              />
+              {editCourtFile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditCourtFile(null);
+                    setEditImage(selectedCourt?.image || '/assets/images/courts/court-1.jpg');
+                    if (editCourtFileInputRef.current) editCourtFileInputRef.current.value = '';
+                  }}
+                  className="text-rose-500 hover:text-rose-600 text-xs font-bold whitespace-nowrap p-1 cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {editCourtFile && (
+              <div className="mb-2 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Selected: <strong className="text-slate-900 dark:text-white">{editCourtFile.name}</strong> ({formatFileSize(editCourtFile.size)})</span>
+                <span className="text-emerald-500 font-bold">✓ Loaded</span>
+              </div>
+            )}
+            <label className="block text-slate-700 dark:text-slate-300 mb-1 uppercase font-bold text-[11px]">
+              Or Pitch Cover Image URL / Presets
             </label>
             <input
+              name="editImage"
               type="text"
               value={editImage}
               onChange={(e) => setEditImage(e.target.value)}
@@ -745,7 +1018,7 @@ export const ManageCourtsPage = () => {
               {LOCAL_COURT_IMAGES.map((img, idx) => (
                 <div
                   key={idx}
-                  onClick={() => setEditImage(img)}
+                  onClick={() => { setEditImage(img); setEditCourtFile(null); }}
                   className={`h-14 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
                     editImage === img ? 'border-sport-500 ring-2 ring-sport-500' : 'border-slate-200 dark:border-slate-800 opacity-60 hover:opacity-100'
                   }`}
@@ -761,6 +1034,7 @@ export const ManageCourtsPage = () => {
               Description
             </label>
             <textarea
+              name="editDescription"
               rows={2}
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
@@ -772,13 +1046,73 @@ export const ManageCourtsPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="emerald" size="sm" className="shadow-md">
+            <Button
+              type="submit"
+              variant="emerald"
+              size="sm"
+              isLoading={isUpdatingCourt}
+              disabled={isUpdatingCourt}
+              className="shadow-md"
+            >
               Save Changes
             </Button>
           </div>
         </form>
       </Modal>
 
+      {/* ═══ DELETE PITCH CONFIRM MODAL ═══ */}
+    <Modal
+      isOpen={!!courtToDelete}
+      onClose={() => { if (!deletingCourtId) setCourtToDelete(null); }}
+      title="🗑️ Remove Pitch / Court Slot"
+      maxWidth="max-w-md"
+    >
+      {courtToDelete && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 space-y-2">
+            <p className="text-sm font-bold">Are you sure you want to permanently remove this pitch?</p>
+            <p className="text-xs font-semibold opacity-80">This cannot be undone. Any active bookings on this pitch may be affected.</p>
+          </div>
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Pitch Name:</span>
+              <span className="text-slate-900 dark:text-white font-bold">{courtToDelete.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Surface:</span>
+              <span className="text-slate-700 dark:text-slate-300">{courtToDelete.surface} · {courtToDelete.type}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Base Rate:</span>
+              <span className="text-sport-500 font-bold">₹{courtToDelete.basePrice}/hr</span>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setCourtToDelete(null)}
+              className="flex-1 border border-slate-200 dark:border-slate-700"
+            >
+              Keep Pitch
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              icon={Trash2}
+              isLoading={!!deletingCourtId}
+              disabled={!!deletingCourtId}
+              onClick={handleConfirmDeleteCourt}
+              className="flex-1"
+            >
+              Yes, Remove Pitch
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
     </div>
   );
 };

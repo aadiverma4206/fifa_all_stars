@@ -23,13 +23,7 @@ export const Navbar = () => {
   const roleNavLinks = getRoleNavItems(userRole);
   const homeRedirectRoute = getDefaultRoleRoute(userRole);
 
-  const publicNavLinks = [
-    { label: 'Find Games', path: '/games' },
-    { label: 'Courts', path: '/courts' },
-    { label: 'Tournaments', path: '/tournaments' },
-    { label: 'Leaderboard', path: '/leaderboard' },
-    { label: 'Community', path: '/community' }
-  ];
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -41,11 +35,18 @@ export const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    setProfileDropdownOpen(false);
-    toast.success('Logged out successfully.');
-    navigate('/login', { replace: true });
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      logout();
+      setProfileDropdownOpen(false);
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -88,34 +89,16 @@ export const Navbar = () => {
                 );
               })
             ) : (
-              <>
-                <Link
-                  to="/"
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
-                    isActive('/')
-                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-500/30 font-bold'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  Home
-                </Link>
-                {publicNavLinks.map((link) => {
-                  const active = isActive(link.path);
-                  return (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
-                        active
-                          ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-500/30 font-bold'
-                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </>
+              <Link
+                to="/"
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  isActive('/')
+                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-500/30 font-bold'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                Home
+              </Link>
             )}
           </nav>
 
@@ -201,10 +184,11 @@ export const Navbar = () => {
 
                       <button
                         onClick={handleLogout}
-                        className="w-full text-left flex items-center space-x-2.5 px-4 py-2.5 text-rose-500 hover:bg-rose-500/10 transition-colors font-black border-t border-slate-200 dark:border-slate-800"
+                        disabled={isLoggingOut}
+                        className="w-full text-left flex items-center space-x-2.5 px-4 py-2.5 text-rose-500 hover:bg-rose-500/10 transition-colors font-black border-t border-slate-200 dark:border-slate-800 disabled:opacity-50 cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" />
-                        <span>Switch Role / Logout</span>
+                        <span>{isLoggingOut ? 'Logging out...' : 'Switch Role / Logout'}</span>
                       </button>
                     </div>
                   )}
@@ -298,18 +282,6 @@ export const Navbar = () => {
                 >
                   Home
                 </Link>
-                {publicNavLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-4 py-2 rounded-xl text-xs font-black uppercase transition-colors ${
-                      isActive(link.path) ? 'text-sport-500 bg-sport-500/10' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
               </div>
               <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-black uppercase text-slate-900 dark:text-white">

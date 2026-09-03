@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -15,7 +15,9 @@ import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
-import { validateName, validatePositiveAmount } from '../../utils/validationUtils';
+import { validateName, validatePhone, validateLength, validatePositiveAmount, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { validateFile, readFileAsDataUrl, ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_EXTENSIONS, DEFAULT_MAX_AVATAR_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
 import toast from 'react-hot-toast';
 
 export const ProfilePage = () => {
@@ -23,7 +25,7 @@ export const ProfilePage = () => {
   const { bookings, games, gameVideos, cancelBooking, clubs, courts } = useDataStore();
 
   const isManager = currentUser?.role === 'CLUB_MANAGER';
-  const myClub = clubs?.find(c => c.managerIds?.includes(currentUser?.id)) || clubs?.[0];
+  const myClub = clubs.find(c => c.managerId === currentUser?.id) || clubs[0];
   const myCourts = courts?.filter(c => c.clubId === myClub?.id) || [];
   const clubBookings = bookings?.filter(b => b.clubId === myClub?.id) || [];
 
@@ -31,15 +33,62 @@ export const ProfilePage = () => {
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [activeHistoryTab, setActiveHistoryTab] = useState(isManager ? 'created' : 'joined');
+  const [activeTab, setActiveTab] = useState('OVERVIEW');
+
+  // Loading & Concurrency Locks
+  const [isToppingUp, setIsToppingUp] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [cancellingBookingId, setCancellingBookingId] = useState(null);
+  const [bookingToCancel, setBookingToCancel] = useState(null);
 
   // Form edit states
   const [name, setName] = useState(currentUser?.name || '');
   const [city, setCity] = useState(currentUser?.city || 'Raipur');
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [playingHand, setPlayingHand] = useState(currentUser?.playingHand || (isManager ? 'Venue Operations Director' : 'Right / Striker'));
-  const [phone, setPhone] = useState(currentUser?.phone || '+91 98765 43210');
+  const [phone, setPhone] = useState(currentUser?.phone || '');
 
-  const badgeInfo = getEloBadgeInfo(currentUser?.eloRating || currentUser?.elo || 1840);
+  // Avatar Upload States
+  const [avatarPreview, setAvatarPreview] = useState(currentUser?.profileImageUrl || currentUser?.avatar || '');
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarUploadProgress, setAvatarUploadProgress] = useState(0);
+  const avatarInputRef = useRef(null);
+
+  const handleAvatarFileChange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setAvatarFile(null);
+      return;
+    }
+    const file = files[0];
+    const validation = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      allowedExtensions: ALLOWED_IMAGE_EXTENSIONS,
+      maxSizeBytes: DEFAULT_MAX_AVATAR_SIZE,
+      fileCategoryName: 'profile photo'
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file, (percent) => {
+        setAvatarUploadProgress(percent);
+      });
+      setAvatarFile(file);
+      setAvatarPreview(dataUrl);
+      toast.success(`Photo "${file.name}" ready (${formatFileSize(file.size)})`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to process selected image.');
+    }
+  };
+
+  // User Elo stats
+  const eloScore = currentUser?.stats?.elo || currentUser?.eloRating || 1200;
+  const badgeInfo = getEloBadgeInfo(eloScore);
   const userBookings = bookings.filter(b => b.userId === currentUser?.id || b.userName === currentUser?.name);
 
   // Filtered Datasets
@@ -63,42 +112,122 @@ export const ProfilePage = () => {
     .filter(b => b.status === 'CONFIRMED')
     .reduce((sum, b) => sum + (parseFloat(b.amountPaid) || 0), 0);
 
-  const handleTopUp = (e) => {
+  const isToppingUpRef = useRef(false);
+  const isSavingProfileRef = useRef(false);
+  const isCancellingBookingRef = useRef(false);
+
+  const handleTopUp = async (e) => {
     e.preventDefault();
-    const amountCheck = validatePositiveAmount(topUpAmount, 'Top-Up Amount', false);
-    if (!amountCheck.isValid) {
-      toast.error(amountCheck.message);
-      return;
-    }
+    if (isToppingUp || isToppingUpRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validatePositiveAmount(topUpAmount, 'Top-Up Amount', false), field: 'topUpAmount' },
+      { check: () => parseFloat(topUpAmount) < 10 ? { isValid: false, message: 'Minimum top-up amount is ₹10.' } : { isValid: true }, field: 'topUpAmount' },
+      { check: () => parseFloat(topUpAmount) > 50000 ? { isValid: false, message: 'Maximum top-up amount is ₹50,000 per transaction.' } : { isValid: true }, field: 'topUpAmount' }
+    ]);
+
+    if (!isValid) return;
+
     const val = parseFloat(topUpAmount);
-    
-    updateWallet(val, 'Wallet Top-Up');
-    toast.success(`Top-up successful! Added ₹${val.toFixed(2)} to wallet.`);
-    setIsTopUpModalOpen(false);
+
+    isToppingUpRef.current = true;
+    setIsToppingUp(true);
+    try {
+      updateWallet(val, 'Top-Up: Manual wallet reload');
+      toast.success(`Top-up successful! Added ₹${val.toFixed(2)} to wallet.`);
+      setIsTopUpModalOpen(false);
+    } catch (err) {
+      logActionError('handleTopUp', err);
+      toast.error(getErrorMessage(err, 'processing wallet top-up'));
+    } finally {
+      setIsToppingUp(false);
+      setTimeout(() => {
+        isToppingUpRef.current = false;
+      }, 400);
+    }
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    const nameCheck = validateName(name, 'Full Name');
-    if (!nameCheck.isValid) {
-      toast.error(nameCheck.message);
+    if (isSavingProfile || isSavingProfileRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateName(name, 'Full Name'), field: 'name' },
+      { check: () => validatePhone(phone), field: 'phone' },
+      { check: () => validateLength(bio, 0, 300, 'Bio'), field: 'bio' }
+    ]);
+
+    if (!isValid) return;
+
+    // Detect whether anything actually changed
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedBio = bio.trim();
+    const trimmedHand = playingHand.trim();
+    const hasChanges =
+      trimmedName !== (currentUser?.name || '').trim() ||
+      trimmedPhone !== (currentUser?.phone || '').trim() ||
+      city !== (currentUser?.city || '') ||
+      trimmedBio !== (currentUser?.bio || '').trim() ||
+      trimmedHand !== (currentUser?.playingHand || '').trim() ||
+      !!avatarFile;
+
+    if (!hasChanges) {
+      toast('No changes detected in your profile.', { icon: 'ℹ️' });
+      setIsEditProfileModalOpen(false);
       return;
     }
 
-    updateProfile({
-      name: name.trim(),
-      city,
-      bio: bio.trim(),
-      playingHand: playingHand.trim(),
-      phone: phone.trim()
-    });
-    toast.success('Profile updated successfully!');
-    setIsEditProfileModalOpen(false);
+    isSavingProfileRef.current = true;
+    setIsSavingProfile(true);
+    try {
+      updateProfile({
+        name: trimmedName,
+        city,
+        bio: trimmedBio,
+        playingHand: trimmedHand,
+        phone: trimmedPhone,
+        ...(avatarPreview ? { profileImageUrl: avatarPreview, avatar: avatarPreview } : {})
+      });
+      toast.success('Profile updated successfully!');
+      setIsEditProfileModalOpen(false);
+      setAvatarFile(null);
+    } catch (err) {
+      logActionError('handleSaveProfile', err);
+      toast.error(getErrorMessage(err, 'updating profile'));
+    } finally {
+      setIsSavingProfile(false);
+      setTimeout(() => {
+        isSavingProfileRef.current = false;
+      }, 400);
+    }
   };
 
-  const handleCancelReservation = (bookingId) => {
-    cancelBooking(bookingId, 'User requested refund via Profile');
-    toast.success('Reservation cancelled. Refund request sent!');
+  const handleCancelReservation = async () => {
+    if (!bookingToCancel || cancellingBookingId || isCancellingBookingRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const bookingId = bookingToCancel.id;
+    isCancellingBookingRef.current = true;
+    setCancellingBookingId(bookingId);
+    try {
+      cancelBooking(bookingId, 'User requested refund via Profile');
+      toast.success('Reservation cancelled. Refund request sent!');
+      setBookingToCancel(null);
+    } catch (err) {
+      logActionError('handleCancelReservation', err);
+      toast.error(getErrorMessage(err, 'cancelling reservation'));
+    } finally {
+      setCancellingBookingId(null);
+      setTimeout(() => {
+        isCancellingBookingRef.current = false;
+      }, 400);
+    }
   };
 
   return (
@@ -576,7 +705,15 @@ export const ProfilePage = () => {
                   <div className="flex items-center space-x-4">
                     <span className="text-sm font-mono font-black text-sport-500">₹{b.amountPaid?.toFixed(2)}</span>
                     {b.status === 'CONFIRMED' && (
-                      <Button variant="ghost" size="sm" icon={RotateCcw} onClick={() => handleCancelReservation(b.id)} className="rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={RotateCcw}
+                        isLoading={cancellingBookingId === b.id}
+                        disabled={cancellingBookingId !== null}
+                        onClick={() => setBookingToCancel(b)}
+                        className="rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                      >
                         Cancel & Refund
                       </Button>
                     )}
@@ -595,9 +732,57 @@ export const ProfilePage = () => {
       {/* ═══ EDIT PROFILE MODAL ═══ */}
       <Modal isOpen={isEditProfileModalOpen} onClose={() => setIsEditProfileModalOpen(false)} title={isManager ? "Edit Manager Profile" : "Edit Player Profile"} maxWidth="max-w-md">
         <form onSubmit={handleSaveProfile} className="space-y-4 text-xs font-bold">
+          {/* Avatar Photo Upload */}
+          <div className="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <div className="relative">
+              <Avatar
+                src={avatarPreview || currentUser?.profileImageUrl || currentUser?.avatar}
+                name={currentUser?.name}
+                size="lg"
+                className="w-14 h-14 rounded-2xl border border-slate-300 dark:border-slate-700"
+              />
+              {avatarFile && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[9px] text-white">✓</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <label className="block text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 mb-1">
+                Profile Photo (JPG, PNG, WebP · Max 5MB)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleAvatarFileChange}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-sport-500/10 file:text-sport-600 dark:file:text-sport-400 hover:file:bg-sport-500/20 cursor-pointer"
+                />
+                {avatarFile && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatarFile(null);
+                      setAvatarPreview(currentUser?.profileImageUrl || currentUser?.avatar || '');
+                      if (avatarInputRef.current) avatarInputRef.current.value = '';
+                    }}
+                    className="text-rose-500 hover:text-rose-600 text-xs font-bold whitespace-nowrap cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              {avatarUploadProgress > 0 && avatarUploadProgress < 100 && (
+                <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden mt-1.5">
+                  <div className="bg-sport-500 h-full transition-all duration-150" style={{ width: `${avatarUploadProgress}%` }} />
+                </div>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1.5 uppercase font-black">Full Name *</label>
             <input
+              name="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -610,6 +795,7 @@ export const ProfilePage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1.5 uppercase font-black">City</label>
               <select
+                name="city"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-sport-500 focus:outline-none"
@@ -626,6 +812,7 @@ export const ProfilePage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1.5 uppercase font-black">Phone Number</label>
               <input
+                name="phone"
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -640,6 +827,7 @@ export const ProfilePage = () => {
               {isManager ? 'Designation / Title' : 'Preferred Position / Foot'}
             </label>
             <input
+              name="playingHand"
               type="text"
               value={playingHand}
               onChange={(e) => setPlayingHand(e.target.value)}
@@ -651,6 +839,7 @@ export const ProfilePage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1.5 uppercase font-black">Bio / Professional Summary</label>
             <textarea
+              name="bio"
               rows="3"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
@@ -663,7 +852,14 @@ export const ProfilePage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditProfileModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" className="shadow-md">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSavingProfile}
+              disabled={isSavingProfile}
+              className="shadow-md"
+            >
               Save Profile Changes
             </Button>
           </div>
@@ -690,6 +886,7 @@ export const ProfilePage = () => {
               ))}
             </div>
             <input
+              name="topUpAmount"
               type="number"
               step="50"
               value={topUpAmount}
@@ -703,13 +900,73 @@ export const ProfilePage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsTopUpModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="gold" size="sm" className="shadow-md">
+            <Button
+              type="submit"
+              variant="gold"
+              size="sm"
+              isLoading={isToppingUp}
+              disabled={isToppingUp}
+              className="shadow-md"
+            >
               Confirm Add Funds
             </Button>
           </div>
         </form>
       </Modal>
 
+      {/* ═══ CANCEL RESERVATION CONFIRM MODAL ═══ */}
+    <Modal
+      isOpen={!!bookingToCancel}
+      onClose={() => { if (!cancellingBookingId) setBookingToCancel(null); }}
+      title="⚠️ Cancel Reservation & Refund"
+      maxWidth="max-w-md"
+    >
+      {bookingToCancel && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 space-y-2">
+            <p className="text-sm font-bold">Are you sure you want to cancel this court reservation?</p>
+            <p className="text-xs font-semibold opacity-80">A refund request will be sent to the club for processing. Refund policies may apply.</p>
+          </div>
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Court:</span>
+              <span className="text-slate-900 dark:text-white font-bold">{bookingToCancel.courtName || 'Main Turf'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Date &amp; Time:</span>
+              <span className="text-slate-700 dark:text-slate-300">{bookingToCancel.date} · {bookingToCancel.startTime} – {bookingToCancel.endTime}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Amount Paid:</span>
+              <span className="text-sport-500 font-bold">₹{bookingToCancel.amountPaid?.toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setBookingToCancel(null)}
+              className="flex-1 border border-slate-200 dark:border-slate-700"
+            >
+              Keep Reservation
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              icon={RotateCcw}
+              isLoading={!!cancellingBookingId}
+              disabled={!!cancellingBookingId}
+              onClick={handleCancelReservation}
+              className="flex-1"
+            >
+              Yes, Cancel &amp; Refund
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
     </div>
   );
 };

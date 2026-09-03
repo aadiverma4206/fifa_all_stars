@@ -282,7 +282,7 @@ export const useDataStore = create(
       amenities: clubData.amenities || ["Floodlights", "Washrooms", "Parking"],
       status: clubData.status || "ACTIVE",
       managerIds: clubData.managerIds || [],
-      clubImageUrl: clubData.clubImageUrl || "/src/assets/images/courts/court-1.jpg",
+      clubImageUrl: clubData.clubImageUrl || "/assets/images/courts/court-1.jpg",
       rating: 5.0,
       reviewsCount: 1,
       description: clubData.description || "Official sports arena."
@@ -319,12 +319,21 @@ export const useDataStore = create(
   approveRefund: (bookingId, usersList, updateUsersListFn, customAmount, refundTier) => {
     const bookings = get().bookings;
     const target = bookings.find(b => b.id === bookingId);
-    if (!target) return;
+    if (!target) {
+      toast.error('Booking record not found.');
+      return;
+    }
 
-    const amountToRefund = customAmount !== undefined ? customAmount : target.amountPaid;
+    if (target.status === 'REFUNDED') {
+      toast.error('This booking has already been refunded.');
+      return;
+    }
+
+    const parsedAmt = customAmount !== undefined ? parseFloat(customAmount) : target.amountPaid;
+    const amountToRefund = isNaN(parsedAmt) || parsedAmt < 0 ? target.amountPaid : parsedAmt;
 
     if (updateUsersListFn && usersList) {
-      const updated = usersList.map(u => u.id === target.userId ? { ...u, walletBalance: (u.walletBalance || 0) + amountToRefund } : u);
+      const updated = usersList.map(u => u.id === target.userId ? { ...u, walletBalance: Math.round(((u.walletBalance || 0) + amountToRefund) * 100) / 100 } : u);
       updateUsersListFn(updated);
     }
 
@@ -345,18 +354,31 @@ export const useDataStore = create(
   rejectRefund: (bookingId, reason) => {
     const bookings = get().bookings;
     const target = bookings.find(b => b.id === bookingId);
-    if (!target) return;
+    if (!target) {
+      toast.error('Booking record not found.');
+      return;
+    }
+
+    if (target.status === 'REFUND_REJECTED') {
+      toast.error('This refund request has already been rejected.');
+      return;
+    }
+
+    if (target.status === 'REFUNDED') {
+      toast.error('Cannot reject a booking that has already been refunded.');
+      return;
+    }
 
     set({
       bookings: bookings.map(b => b.id === bookingId ? { 
         ...b, 
         status: 'REFUND_REJECTED',
-        rejectionReason: reason,
+        rejectionReason: reason || 'Application declined by administrator',
         rejectedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
       } : b)
     });
 
-    get().addAuditLog('REFUND_REJECTED', target.id, `Rejected refund request: ${reason}`);
+    get().addAuditLog('REFUND_REJECTED', target.id, `Rejected refund request: ${reason || 'Application declined'}`);
     toast.success(`Refund request for ${target.id} rejected.`);
   },
 
@@ -463,7 +485,7 @@ export const useDataStore = create(
       weekendMultiplier: 1.75,
       peakWindow: "17:00-21:00",
       status: "AVAILABLE",
-      image: "/src/assets/images/courts/court-1.jpg",
+      image: "/assets/images/courts/court-1.jpg",
       ...courtData
     };
     set({ courts: [...get().courts, newCourt] });
@@ -487,12 +509,20 @@ export const useDataStore = create(
     toast.success(`Court status updated to ${newStatus}`);
   },
 
+  updateCourtStatus: (courtId, newStatus) => {
+    get().toggleCourtStatus(courtId, newStatus);
+  },
+
   removeCourt: (courtId) => {
     set({
       courts: get().courts.filter(c => c.courtId !== courtId && c.id !== courtId)
     });
     get().addAuditLog('COURT_REMOVED', courtId, `Pitch deleted by manager.`);
     toast.success('Pitch removed successfully.');
+  },
+
+  deleteCourt: (courtId) => {
+    get().removeCourt(courtId);
   },
 
   updatePricingSettings: (courtId, pricingData) => {
@@ -853,7 +883,15 @@ export const useDataStore = create(
   submitGameScore: (gameId, scoreData, usersList, updateUsersListFn, updaterName = 'Host/Manager') => {
     const games = get().games;
     const game = games.find(g => g.id === gameId);
-    if (!game) return;
+    if (!game) {
+      toast.error('Game not found.');
+      return;
+    }
+
+    if (game.status === 'COMPLETED' && game.score && game.score.teamA !== null && game.score.teamA !== undefined) {
+      toast.error('Final score has already been submitted for this game.');
+      return;
+    }
 
     let teamAScore = 0;
     let teamBScore = 0;
@@ -947,8 +985,19 @@ export const useDataStore = create(
 
   // --- BOOKING ACTIONS ---
   createBooking: (bookingData) => {
+    const existing = get().bookings.find(b => 
+      b.courtId === bookingData.courtId && 
+      b.date === bookingData.date && 
+      b.startTime === bookingData.startTime && 
+      b.status === 'CONFIRMED'
+    );
+    if (existing) {
+      toast.error('This pitch slot has already been booked for this date and time.');
+      return null;
+    }
+
     const newBooking = {
-      id: `bkg_${Date.now()}`,
+      id: `bkg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       status: 'CONFIRMED',
       createdAt: getTodayDate(0),
       ...bookingData
@@ -958,17 +1007,47 @@ export const useDataStore = create(
   },
 
   cancelBooking: (bookingId, reason) => {
+    const target = get().bookings.find(b => b.id === bookingId);
+    if (!target) {
+      toast.error('Booking not found.');
+      return;
+    }
+
+    if (target.status === 'CANCELLED' || target.status === 'REFUND_PENDING' || target.status === 'REFUNDED') {
+      toast.error('This reservation has already been cancelled or refund is pending.');
+      return;
+    }
+
     set({
-      bookings: get().bookings.map(b => b.id === bookingId ? { ...b, status: 'REFUND_PENDING', refundTier: '100%', cancellationReason: reason } : b)
+      bookings: get().bookings.map(b => b.id === bookingId ? { ...b, status: 'REFUND_PENDING', refundTier: '100%', cancellationReason: reason || 'Cancelled by user' } : b)
     });
   },
 
   // --- TOURNAMENT BRACKET ADVANCEMENT ---
   registerTeamForTournament: (tournamentId, teamData) => {
+    const tournament = get().tournaments.find(t => t.id === tournamentId);
+    if (!tournament) {
+      toast.error('Tournament not found.');
+      return { success: false, message: 'Tournament not found' };
+    }
+
+    const maxTeams = tournament.maxTeams || 16;
+    const currentTeams = tournament.teams || [];
+    if (currentTeams.length >= maxTeams) {
+      toast.error('This tournament has reached maximum squad capacity.');
+      return { success: false, message: 'Tournament is full' };
+    }
+
+    const alreadyRegistered = currentTeams.some(t => t.name?.toLowerCase().trim() === teamData.name?.toLowerCase().trim());
+    if (alreadyRegistered) {
+      toast.error(`Squad "${teamData.name}" is already registered in this tournament.`);
+      return { success: false, message: 'Squad already registered' };
+    }
+
+    const updatedTeams = [...currentTeams, { ...teamData, status: 'CONFIRMED' }];
     set({
       tournaments: get().tournaments.map(t => {
         if (t.id === tournamentId) {
-          const updatedTeams = [...(t.teams || []), { ...teamData, status: 'CONFIRMED' }];
           return {
             ...t,
             teams: updatedTeams,
@@ -978,6 +1057,7 @@ export const useDataStore = create(
         return t;
       })
     });
+    return { success: true };
   },
 
   advanceTournamentMatch: (tournamentId, matchId, winnerTeamName, scoreStr) => {
@@ -1045,7 +1125,46 @@ export const useDataStore = create(
   }
 }),
     {
-      name: 'fifa_all_stars_data_storage'
+      name: 'fifa_all_stars_data_storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          if (Array.isArray(state.clubs)) {
+            state.clubs.forEach(c => {
+              if (c.clubImageUrl?.includes('/src/assets/images/')) {
+                c.clubImageUrl = c.clubImageUrl.replace('/src/assets/images/', '/assets/images/');
+              }
+            });
+          }
+          if (Array.isArray(state.courts)) {
+            state.courts.forEach(crt => {
+              if (crt.image?.includes('/src/assets/images/')) {
+                crt.image = crt.image.replace('/src/assets/images/', '/assets/images/');
+              }
+            });
+          }
+          if (Array.isArray(state.tournaments)) {
+            state.tournaments.forEach(t => {
+              if (t.banner?.includes('/src/assets/images/')) {
+                t.banner = t.banner.replace('/src/assets/images/', '/assets/images/');
+              }
+            });
+          }
+          if (Array.isArray(state.games)) {
+            state.games.forEach(g => {
+              if (g.organizer?.avatar?.includes('/src/assets/images/')) {
+                g.organizer.avatar = g.organizer.avatar.replace('/src/assets/images/', '/assets/images/');
+              }
+              if (Array.isArray(g.confirmedPlayers)) {
+                g.confirmedPlayers.forEach(p => {
+                  if (p.avatar?.includes('/src/assets/images/')) {
+                    p.avatar = p.avatar.replace('/src/assets/images/', '/assets/images/');
+                  }
+                });
+              }
+            });
+          }
+        }
+      }
     }
   )
 );

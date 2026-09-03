@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Trophy, Calendar, Users, Award, Shield, ArrowLeft, Plus } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -7,51 +7,103 @@ import Button from '../../components/common/Button';
 import BackButton from '../../components/common/BackButton';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
+import { validateName, validateLength, validateFormAndFocus } from '../../utils/validationUtils';
+import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
 export const TournamentDetailsPage = () => {
   const { id } = useParams();
-  const { tournaments, registerTeamForTournament } = useDataStore();
+  const navigate = useNavigate();
   const { currentUser, updateWallet } = useAuthStore();
+  const { tournaments, registerTeamForTournament } = useDataStore();
 
   const tournament = tournaments.find(t => t.id === id) || tournaments[0];
+
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [teamName, setTeamName] = useState('');
-  const [captainName, setCaptainName] = useState(currentUser?.name || 'Arjun Mehta');
-  const [teamLogo, setTeamLogo] = useState('⚽');
+  const [captainName, setCaptainName] = useState(currentUser?.name || '');
+  const [teamLogo, setTeamLogo] = useState('⚡');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const isRegisteringRef = useRef(false);
 
-  const handleRegisterTeam = (e) => {
+  const handleRegisterTeam = async (e) => {
     e.preventDefault();
-    if (!currentUser) {
-      toast.error('Please sign in to register your squad for this tournament.');
-      return;
-    }
-    if (!teamName || !teamName.trim()) {
-      toast.error('Please enter a valid squad name.');
-      return;
-    }
+    if (isRegistering || isRegisteringRef.current) return;
+
+    if (!checkNetworkOnline()) return;
+
+    const maxTeams = tournament.maxTeams || 16;
+    const currentTeams = tournament.teams || [];
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => !currentUser ? { isValid: false, message: 'Please sign in to register your squad for this tournament.' } : { isValid: true }, field: 'teamName' },
+      { check: () => validateLength(teamName, 2, 40, 'Squad Name'), field: 'teamName' },
+      { check: () => currentTeams.length >= maxTeams ? { isValid: false, message: 'This tournament has already reached maximum squad capacity.' } : { isValid: true }, field: 'teamName' },
+      { check: () => currentTeams.some(t => t.name?.toLowerCase().trim() === teamName.trim().toLowerCase()) ? { isValid: false, message: `Squad "${teamName}" is already registered for this tournament.` } : { isValid: true }, field: 'teamName' },
+      { check: () => {
+        const fee = parseFloat(tournament.entryFee) || 0;
+        if (fee > 0 && (currentUser?.walletBalance || 0) < fee) {
+          return { isValid: false, message: `Insufficient wallet balance! Entry fee is ₹${fee}, but your balance is ₹${currentUser?.walletBalance?.toFixed(2)}. Please top up your wallet.` };
+        }
+        return { isValid: true };
+      }, field: 'teamName' }
+    ]);
+
+    if (!isValid) return;
 
     const fee = parseFloat(tournament.entryFee) || 0;
-    if (fee > 0 && (currentUser.walletBalance || 0) < fee) {
-      toast.error(`Insufficient wallet balance! Entry fee is ₹${fee}, but your balance is ₹${currentUser.walletBalance?.toFixed(2)}. Please top up your wallet.`);
-      return;
+
+    isRegisteringRef.current = true;
+    setIsRegistering(true);
+    try {
+      if (fee > 0 && updateWallet) {
+        updateWallet(-fee, `Tournament Entry: ${tournament.title}`);
+      }
+
+      const res = registerTeamForTournament(tournament.id, {
+        id: `tm_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        name: teamName.trim(),
+        captain: captainName.trim() || currentUser.name,
+        logo: teamLogo
+      });
+
+      if (res && res.success === false) {
+        if (fee > 0 && updateWallet) {
+          updateWallet(fee, `Refund: Tournament registration declined`);
+        }
+      } else {
+        toast.success(`Squad "${teamName.trim()}" registered for ${tournament.title}!`);
+        setIsRegisterModalOpen(false);
+        setTeamName('');
+      }
+    } catch (err) {
+      logActionError('handleRegisterTeam', err);
+      toast.error(getErrorMessage(err, 'registering squad for tournament'));
+    } finally {
+      setIsRegistering(false);
+      setTimeout(() => {
+        isRegisteringRef.current = false;
+      }, 400);
     }
-
-    if (fee > 0 && updateWallet) {
-      updateWallet(-fee, `Tournament Entry: ${tournament.title}`);
-    }
-
-    registerTeamForTournament(tournament.id, {
-      id: `tm_${Date.now()}`,
-      name: teamName.trim(),
-      captain: captainName.trim() || currentUser.name,
-      logo: teamLogo
-    });
-
-    toast.success(`Squad "${teamName}" registered for ${tournament.title}!`);
-    setIsRegisterModalOpen(false);
-    setTeamName('');
   };
+
+  if (!tournament) {
+    return (
+      <div className="space-y-6 py-12 max-w-md mx-auto text-center">
+        <BackButton fallback="/player/tournaments" label="Back to Tournaments" />
+        <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+          <div className="text-4xl">🏆</div>
+          <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase">Tournament Not Found</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            This tournament may have concluded, expired, or been removed.
+          </p>
+          <Button variant="primary" size="md" onClick={() => navigate('/player/tournaments')} className="font-bold text-xs uppercase">
+            View All Tournaments
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 py-4 max-w-5xl mx-auto">
@@ -209,6 +261,7 @@ export const TournamentDetailsPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1">Squad Name</label>
             <input
+              name="teamName"
               type="text"
               placeholder="e.g. Raipur Strikers FC"
               value={teamName}
@@ -250,7 +303,13 @@ export const TournamentDetailsPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsRegisterModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="gold" size="sm">
+            <Button
+              type="submit"
+              variant="gold"
+              size="sm"
+              isLoading={isRegistering}
+              disabled={isRegistering || (parseFloat(tournament.entryFee) > 0 && (currentUser?.walletBalance || 0) < parseFloat(tournament.entryFee))}
+            >
               Confirm Registration (₹{tournament.entryFee})
             </Button>
           </div>

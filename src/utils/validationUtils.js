@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import { getTodayDate } from './dateUtils';
 
 /**
@@ -42,11 +43,48 @@ export const validatePhone = (phone) => {
   return { isValid: true, message: '' };
 };
 
+// Email or Phone Validation
+export const validateEmailOrPhone = (input) => {
+  if (!input || !input.trim()) {
+    return { isValid: false, message: 'Email address or mobile number is required.' };
+  }
+  const clean = input.trim();
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const phoneRegex = /^[+]?[0-9\s-]{7,15}$/;
+  if (!emailRegex.test(clean) && !phoneRegex.test(clean)) {
+    return { isValid: false, message: 'Please enter a valid email address or 10-digit mobile number.' };
+  }
+  return { isValid: true, message: '' };
+};
+
 // Password Validation
 export const validatePassword = (password, minLength = 6) => {
   if (!password) return { isValid: false, message: 'Password is required.' };
   if (password.length < minLength) {
     return { isValid: false, message: `Password must be at least ${minLength} characters long.` };
+  }
+  return { isValid: true, message: '' };
+};
+
+// Confirm Password Validation
+export const validateConfirmPassword = (password, confirmPassword) => {
+  if (!confirmPassword) {
+    return { isValid: false, message: 'Please confirm your password.' };
+  }
+  if (password !== confirmPassword) {
+    return { isValid: false, message: 'Passwords do not match. Please re-enter.' };
+  }
+  return { isValid: true, message: '' };
+};
+
+// Length Bounds Validation
+export const validateLength = (value, min, max, fieldName = 'Field') => {
+  const str = String(value || '').trim();
+  if (str.length < min) {
+    return { isValid: false, message: `${fieldName} must be at least ${min} characters long.` };
+  }
+  if (max && str.length > max) {
+    return { isValid: false, message: `${fieldName} cannot exceed ${max} characters.` };
   }
   return { isValid: true, message: '' };
 };
@@ -82,6 +120,17 @@ export const validateDateNotPast = (dateStr, fieldName = 'Date') => {
   return { isValid: true, message: '' };
 };
 
+// Date Range Validation (e.g. from <= to)
+export const validateDateRange = (startDate, endDate, fieldName = 'Date range') => {
+  if (!startDate || !endDate) {
+    return { isValid: false, message: `${fieldName} requires both start and end dates.` };
+  }
+  if (startDate > endDate) {
+    return { isValid: false, message: `${fieldName}: End date cannot be earlier than start date.` };
+  }
+  return { isValid: true, message: '' };
+};
+
 // Amount / Price Validation
 export const validatePositiveAmount = (amount, fieldName = 'Amount', allowZero = true) => {
   const num = parseFloat(amount);
@@ -93,6 +142,21 @@ export const validatePositiveAmount = (amount, fieldName = 'Amount', allowZero =
   }
   if (num < 0) {
     return { isValid: false, message: `${fieldName} cannot be negative.` };
+  }
+  return { isValid: true, message: '' };
+};
+
+// Numeric Float Range Validation
+export const validateNumericRange = (val, min, max, fieldName = 'Value') => {
+  const num = parseFloat(val);
+  if (isNaN(num)) {
+    return { isValid: false, message: `${fieldName} must be a valid number.` };
+  }
+  if (min !== undefined && num < min) {
+    return { isValid: false, message: `${fieldName} cannot be less than ${min}.` };
+  }
+  if (max !== undefined && num > max) {
+    return { isValid: false, message: `${fieldName} cannot exceed ${max}.` };
   }
   return { isValid: true, message: '' };
 };
@@ -123,6 +187,19 @@ export const validateUrl = (urlStr, fieldName = 'URL') => {
   return { isValid: true, message: '' };
 };
 
+// Coordinate Validation (Lat: -90 to 90, Lng: -180 to 180)
+export const validateCoordinates = (lat, lng) => {
+  const nLat = parseFloat(lat);
+  const nLng = parseFloat(lng);
+  if (isNaN(nLat) || nLat < -90 || nLat > 90) {
+    return { isValid: false, message: 'Latitude must be a valid number between -90 and 90.' };
+  }
+  if (isNaN(nLng) || nLng < -180 || nLng > 180) {
+    return { isValid: false, message: 'Longitude must be a valid number between -180 and 180.' };
+  }
+  return { isValid: true, message: '' };
+};
+
 // Generic Non-Empty
 export const validateNonEmpty = (value, fieldName = 'Field') => {
   if (!value || !String(value).trim()) {
@@ -130,3 +207,40 @@ export const validateNonEmpty = (value, fieldName = 'Field') => {
   }
   return { isValid: true, message: '' };
 };
+
+/**
+ * Validates an array of rules sequentially.
+ * If any rule fails:
+ * - Emits toast.error(message)
+ * - Finds and focuses the first invalid field element
+ * - Returns false
+ * If all pass, returns true.
+ */
+export const validateFormAndFocus = (formOrEvent, rules = []) => {
+  const formEl = formOrEvent?.target?.tagName === 'FORM'
+    ? formOrEvent.target
+    : formOrEvent?.currentTarget?.tagName === 'FORM'
+    ? formOrEvent.currentTarget
+    : formOrEvent?.target?.closest ? formOrEvent.target.closest('form') : null;
+
+  for (const rule of rules) {
+    const result = typeof rule.check === 'function' ? rule.check() : rule.check;
+    if (result && !result.isValid) {
+      toast.error(result.message || 'Validation failed. Please verify your inputs.');
+      
+      if (rule.field) {
+        const selector = `[name="${rule.field}"], #${rule.field}, [data-field="${rule.field}"], input[placeholder*="${rule.field}" i], textarea[placeholder*="${rule.field}" i], select[name="${rule.field}"]`;
+        const fieldEl = formEl ? formEl.querySelector(selector) : document.querySelector(selector);
+        if (fieldEl && typeof fieldEl.focus === 'function') {
+          fieldEl.focus();
+          if (typeof fieldEl.scrollIntoView === 'function') {
+            fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+      return false;
+    }
+  }
+  return true;
+};
+

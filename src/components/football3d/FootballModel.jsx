@@ -140,36 +140,39 @@ export function FootballModel({ mouseRef, scrollRef, theme = 'dark', reducedMoti
   useFrame((state, delta) => {
     if (!meshRef.current || !groupRef.current) return;
     const t = state.clock.getElapsedTime();
+    const safeDelta = Math.min(delta, 0.05); // Clamp frame delta to prevent jitter/stutter
 
     if (!reducedMotion) {
-      // Smooth Realistic 3D Rotation
-      meshRef.current.rotation.y += delta * 0.4;
-      meshRef.current.rotation.x += delta * 0.2;
-      meshRef.current.rotation.z += delta * 0.1;
+      // Buttery-smooth 3D spin
+      meshRef.current.rotation.y += safeDelta * 0.38;
+      meshRef.current.rotation.x += safeDelta * 0.18;
+      meshRef.current.rotation.z += safeDelta * 0.08;
 
-      // Floating Physics (keeps ball nicely centered)
-      const floatY = Math.sin(t * 1.0) * 0.1;
-      const floatX = Math.cos(t * 0.7) * 0.05;
+      // Gentle floating physics
+      const floatY = Math.sin(t * 1.2) * 0.08;
+      const floatX = Math.cos(t * 0.8) * 0.04;
       groupRef.current.position.y = floatY;
       groupRef.current.position.x = floatX;
     }
 
     if (mouseRef?.current) {
       const { targetX, targetY } = mouseRef.current;
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetY * 0.2, 0.05);
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, targetX * 0.2, 0.05);
+      // Frame-rate independent exponential damping for liquid-smooth mouse tracking
+      const damp = 1 - Math.exp(-6 * safeDelta);
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetY * 0.22, damp);
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, targetX * 0.22, damp);
     }
   });
 
   return (
     <group ref={groupRef}>
-      {/* Scale increased to 1.58 for prominent realistic ball look without clipping */}
+      {/* Optimized sphere with physical sheen */}
       <mesh ref={meshRef} castShadow receiveShadow scale={1.58}>
-        <sphereGeometry args={[1, 128, 128]} />
+        <sphereGeometry args={[1, 64, 64]} />
         <meshPhysicalMaterial
           map={texture}
-          roughness={0.22}
-          metalness={0.06}
+          roughness={0.25}
+          metalness={0.08}
           clearcoat={0.65}
           clearcoatRoughness={0.08}
           reflectivity={0.85}

@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
-import { Settings, Plus } from 'lucide-react';
-import { useDataStore } from '../../store/useDataStore';
-import { useAuthStore } from '../../store/useAuthStore';
+import { Plus, Settings, DollarSign } from 'lucide-react';
+import { useClubStore } from '../../store/useClubStore';
 import CourtManagerRow from '../../components/clubManager/CourtManagerRow';
 import PricingForm from '../../components/clubManager/PricingForm';
-import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
+import Button from '../../components/common/Button';
+import { validateTitle, validatePositiveAmount, validateFormAndFocus } from '../../utils/validationUtils';
 import toast from 'react-hot-toast';
 
 export const ManageCourtsPage = () => {
-  const { currentUser } = useAuthStore();
-  const { clubs, courts, addCourt, updateCourt } = useDataStore();
-
-  const club = clubs.find(c => c.id === currentUser?.clubId) || clubs[0];
-  const clubCourts = courts.filter(crt => crt.clubId === club.id);
-
+  const { club, courts, updateCourt, addCourt } = useClubStore();
   const [editingCourt, setEditingCourt] = useState(null);
   const [isAddCourtModalOpen, setIsAddCourtModalOpen] = useState(false);
+  const [isAddingCourt, setIsAddingCourt] = useState(false);
+  const clubCourts = (courts || []).filter(c => c.clubId === club?.id) || [];
 
   // New Court Form
   const [name, setName] = useState('');
@@ -32,22 +29,37 @@ export const ManageCourtsPage = () => {
     }
   };
 
-  const handleAddCourt = (e) => {
+  const handleAddCourt = async (e) => {
     e.preventDefault();
-    addCourt({
-      clubId: club.id,
-      name,
-      format,
-      surfaceType,
-      basePricePerHour: parseFloat(basePrice),
-      peakPricePerHour: parseFloat(peakPrice),
-      peakHoursStart: '18:00',
-      peakHoursEnd: '22:00',
-      isIndoor: format === 'Futsal'
-    });
-    toast.success(`Added new court "${name}"!`);
-    setIsAddCourtModalOpen(false);
-    setName('');
+    if (isAddingCourt) return;
+
+    const isValid = validateFormAndFocus(e, [
+      { check: () => validateTitle(name, 'Court Name'), field: 'courtName' },
+      { check: () => validatePositiveAmount(basePrice, 'Base Price', false), field: 'basePrice' },
+      { check: () => validatePositiveAmount(peakPrice, 'Peak Price', false), field: 'peakPrice' }
+    ]);
+
+    if (!isValid) return;
+
+    setIsAddingCourt(true);
+    try {
+      addCourt({
+        clubId: club.id,
+        name: name.trim(),
+        format,
+        surfaceType,
+        basePricePerHour: parseFloat(basePrice),
+        peakPricePerHour: parseFloat(peakPrice),
+        peakHoursStart: '18:00',
+        peakHoursEnd: '22:00',
+        isIndoor: format === 'Futsal'
+      });
+      toast.success(`Added new court "${name}"!`);
+      setIsAddCourtModalOpen(false);
+      setName('');
+    } finally {
+      setIsAddingCourt(false);
+    }
   };
 
   return (
@@ -93,6 +105,7 @@ export const ManageCourtsPage = () => {
           <div>
             <label className="block text-slate-700 dark:text-slate-300 mb-1">Court Name</label>
             <input
+              name="courtName"
               type="text"
               placeholder="e.g. Pitch Delta (5v5)"
               value={name}
@@ -106,6 +119,7 @@ export const ManageCourtsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Format</label>
               <select
+                name="format"
                 value={format}
                 onChange={(e) => setFormat(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
@@ -118,6 +132,7 @@ export const ManageCourtsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Surface Type</label>
               <input
+                name="surfaceType"
                 type="text"
                 value={surfaceType}
                 onChange={(e) => setSurfaceType(e.target.value)}
@@ -130,6 +145,7 @@ export const ManageCourtsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Base Price ($/hr)</label>
               <input
+                name="basePrice"
                 type="number"
                 value={basePrice}
                 onChange={(e) => setBasePrice(e.target.value)}
@@ -139,6 +155,7 @@ export const ManageCourtsPage = () => {
             <div>
               <label className="block text-slate-700 dark:text-slate-300 mb-1">Peak Price ($/hr)</label>
               <input
+                name="peakPrice"
                 type="number"
                 value={peakPrice}
                 onChange={(e) => setPeakPrice(e.target.value)}
@@ -151,7 +168,13 @@ export const ManageCourtsPage = () => {
             <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddCourtModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isAddingCourt}
+              disabled={isAddingCourt}
+            >
               Save Court
             </Button>
           </div>
