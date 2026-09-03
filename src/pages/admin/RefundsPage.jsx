@@ -132,7 +132,9 @@ export const RefundsPage = () => {
       selectedBooking.id,
       usersList,
       (updatedUsers) => {
-        useAuthStore.setState({ usersList: updatedUsers });
+        const current = useAuthStore.getState().currentUser;
+        const updatedCurrent = current ? updatedUsers.find(u => u.id === current.id) || current : null;
+        useAuthStore.setState({ usersList: updatedUsers, currentUser: updatedCurrent });
       },
       amt,
       selectedTier

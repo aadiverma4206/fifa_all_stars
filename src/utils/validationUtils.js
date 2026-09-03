@@ -1,3 +1,5 @@
+import { getTodayDate } from './dateUtils';
+
 /**
  * Central Field-Specific Validation Utility (100% Secure)
  */
@@ -73,7 +75,7 @@ export const validateTimeRange = (startTime, endTime) => {
 // Date Validation: Prevents past dates
 export const validateDateNotPast = (dateStr, fieldName = 'Date') => {
   if (!dateStr) return { isValid: false, message: `${fieldName} is required.` };
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDate(0);
   if (dateStr < today) {
     return { isValid: false, message: `${fieldName} cannot be in the past. Please select today or a future date.` };
   }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { dummyUsers } from '../data/dummyUsers';
+import { getTodayDate } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 
 export const useAuthStore = create(
@@ -49,7 +50,7 @@ export const useAuthStore = create(
           eloRating: 1500,
           bio: bio || 'Passionate football player looking for 5v5 and 7v7 casual matches.',
           badges: ['NewRecruit'],
-          joinedDate: new Date().toISOString().split('T')[0],
+          joinedDate: getTodayDate(0),
           walletBalance: 1000.00, // Default welcome bonus
           status: 'ACTIVE',
           clubsJoined: [],
@@ -60,7 +61,7 @@ export const useAuthStore = create(
               id: `tx_welcome_${Date.now()}`,
               type: 'WELCOME_BONUS',
               amount: 1000.00,
-              date: new Date().toISOString().split('T')[0],
+              date: getTodayDate(0),
               status: 'SUCCESS',
               description: 'Welcome bonus credit'
             }
@@ -117,7 +118,7 @@ export const useAuthStore = create(
           bio: bio || 'General Manager of assigned football venue.',
           profileImageUrl: '/src/assets/images/avatars/avatar-3.jpg',
           badges: ['VerifiedPartner'],
-          joinedDate: new Date().toISOString().split('T')[0],
+          joinedDate: getTodayDate(0),
           walletBalance: 5000.00,
           status: 'ACTIVE',
           clubsJoined: clubId ? [clubId] : [],
@@ -244,7 +245,7 @@ export const useAuthStore = create(
           id: `tx_${Date.now()}`,
           type: amount >= 0 ? 'WALLET_TOPUP' : 'PAYMENT',
           amount: Math.abs(amount),
-          date: new Date().toISOString().split('T')[0],
+          date: getTodayDate(0),
           status: 'SUCCESS',
           description
         };

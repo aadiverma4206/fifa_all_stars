@@ -9,7 +9,7 @@ import Avatar from './Avatar';
 import toast from 'react-hot-toast';
 
 export const Navbar = () => {
-  const { currentUser, switchRole, setCurrentUser } = useAuthStore();
+  const { currentUser, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -23,6 +23,14 @@ export const Navbar = () => {
   const roleNavLinks = getRoleNavItems(userRole);
   const homeRedirectRoute = getDefaultRoleRoute(userRole);
 
+  const publicNavLinks = [
+    { label: 'Find Games', path: '/games' },
+    { label: 'Courts', path: '/courts' },
+    { label: 'Tournaments', path: '/tournaments' },
+    { label: 'Leaderboard', path: '/leaderboard' },
+    { label: 'Community', path: '/community' }
+  ];
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -34,7 +42,7 @@ export const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
-    setCurrentUser(null);
+    logout();
     setProfileDropdownOpen(false);
     toast.success('Logged out successfully.');
     navigate('/login', { replace: true });
@@ -80,7 +88,34 @@ export const Navbar = () => {
                 );
               })
             ) : (
-              <Link to="/" className="px-3.5 py-2 text-xs font-bold uppercase text-slate-700 dark:text-slate-200 hover:text-sport-500">Home</Link>
+              <>
+                <Link
+                  to="/"
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
+                    isActive('/')
+                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-500/30 font-bold'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  Home
+                </Link>
+                {publicNavLinks.map((link) => {
+                  const active = isActive(link.path);
+                  return (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
+                        active
+                          ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-500/30 font-bold'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </>
             )}
           </nav>
 
@@ -252,13 +287,38 @@ export const Navbar = () => {
               </button>
             </>
           ) : (
-            <div className="space-y-2 pt-1">
-              <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-black uppercase text-slate-900 dark:text-white">
-                Register Account
-              </Link>
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-3 rounded-xl bg-rose-500 text-xs font-black uppercase text-white shadow-md">
-                Sign In to Workspace
-              </Link>
+            <div className="space-y-3 pt-1">
+              <div className="space-y-1">
+                <Link
+                  to="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block px-4 py-2 rounded-xl text-xs font-black uppercase transition-colors ${
+                    isActive('/') ? 'text-sport-500 bg-sport-500/10' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  Home
+                </Link>
+                {publicNavLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-4 py-2 rounded-xl text-xs font-black uppercase transition-colors ${
+                      isActive(link.path) ? 'text-sport-500 bg-sport-500/10' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-black uppercase text-slate-900 dark:text-white">
+                  Register Account
+                </Link>
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-2.5 rounded-xl bg-rose-500 text-xs font-black uppercase text-white shadow-md">
+                  Sign In to Workspace
+                </Link>
+              </div>
             </div>
           )}
         </div>

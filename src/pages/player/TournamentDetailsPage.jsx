@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 export const TournamentDetailsPage = () => {
   const { id } = useParams();
   const { tournaments, registerTeamForTournament } = useDataStore();
-  const { currentUser } = useAuthStore();
+  const { currentUser, updateWallet } = useAuthStore();
 
   const tournament = tournaments.find(t => t.id === id) || tournaments[0];
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -22,12 +22,29 @@ export const TournamentDetailsPage = () => {
 
   const handleRegisterTeam = (e) => {
     e.preventDefault();
-    if (!teamName.trim()) return;
+    if (!currentUser) {
+      toast.error('Please sign in to register your squad for this tournament.');
+      return;
+    }
+    if (!teamName || !teamName.trim()) {
+      toast.error('Please enter a valid squad name.');
+      return;
+    }
+
+    const fee = parseFloat(tournament.entryFee) || 0;
+    if (fee > 0 && (currentUser.walletBalance || 0) < fee) {
+      toast.error(`Insufficient wallet balance! Entry fee is ₹${fee}, but your balance is ₹${currentUser.walletBalance?.toFixed(2)}. Please top up your wallet.`);
+      return;
+    }
+
+    if (fee > 0 && updateWallet) {
+      updateWallet(-fee, `Tournament Entry: ${tournament.title}`);
+    }
 
     registerTeamForTournament(tournament.id, {
       id: `tm_${Date.now()}`,
-      name: teamName,
-      captain: captainName,
+      name: teamName.trim(),
+      captain: captainName.trim() || currentUser.name,
       logo: teamLogo
     });
 

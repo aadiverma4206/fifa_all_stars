@@ -207,7 +207,7 @@ export const useDataStore = create(
     const newVid = {
       id: `vid_${Date.now()}`,
       videoStatus: 'AVAILABLE',
-      uploadDate: new Date().toISOString().split('T')[0],
+      uploadDate: getTodayDate(0),
       ...videoData
     };
 
@@ -891,7 +891,7 @@ export const useDataStore = create(
           const historyEntry = {
             gameId: game.id,
             title: game.title,
-            date: game.dateTime?.date || new Date().toISOString().split('T')[0],
+            date: game.dateTime?.date || getTodayDate(0),
             score: `${teamAScore} - ${teamBScore}`,
             format: game.format,
             venue: game.venueReference?.clubName || 'Turf Hub',
@@ -950,7 +950,7 @@ export const useDataStore = create(
     const newBooking = {
       id: `bkg_${Date.now()}`,
       status: 'CONFIRMED',
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: getTodayDate(0),
       ...bookingData
     };
     set({ bookings: [newBooking, ...get().bookings] });

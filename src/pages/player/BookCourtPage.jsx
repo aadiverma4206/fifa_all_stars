@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, Clock, MapPin, ShieldCheck, Zap, CheckCircle2, ArrowLeft, Lock, AlertTriangle } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -11,8 +11,9 @@ import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
 
 export const BookCourtPage = () => {
+  const { courtId: paramCourtId } = useParams();
   const [searchParams] = useSearchParams();
-  const courtId = searchParams.get('courtId') || 'crt_rp_101';
+  const courtId = paramCourtId || searchParams.get('courtId') || 'crt_rp_101';
   const navigate = useNavigate();
 
   const { courts, clubs, createBooking } = useDataStore();
@@ -33,7 +34,8 @@ export const BookCourtPage = () => {
 
   const startHour = parseInt(startTime.split(':')[0], 10);
   const isPeak = startHour >= 17 && startHour < 21;
-  const hourlyRate = isPeak ? court.basePrice * (court.peakMultiplier || 1.5) : court.basePrice;
+  const courtBasePrice = court?.basePrice || 500;
+  const hourlyRate = isPeak ? courtBasePrice * (court?.peakMultiplier || 1.5) : courtBasePrice;
   const baseSubtotal = hourlyRate * duration;
   const serviceFee = 50;
   const tax = Math.round(baseSubtotal * 0.05);
