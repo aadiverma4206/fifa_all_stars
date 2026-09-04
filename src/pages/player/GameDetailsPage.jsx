@@ -19,6 +19,26 @@ export const GameDetailsPage = () => {
   const { games, gameVideos, joinGame, leaveGame, submitGameScore, updateLiveScore, updateGameLifecycle, addGameVideo, switchPlayerTeam, updateGameDetails, removeGame } = useDataStore();
   const { currentUser, updateWallet, usersList, setCurrentUser } = useAuthStore();
 
+  const game = games.find(g => g.id === id) || games[0];
+  const maxSlots = game?.maxPlayers || MATCH_FORMAT_SLOTS[game?.format] || 10;
+  const teamCapacity = Math.ceil(maxSlots / 2);
+
+  const confirmedPlayers = game?.confirmedPlayers || [];
+  const teamAPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_A' || (!p.team && i < teamCapacity));
+  const teamBPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_B' || (!p.team && i >= teamCapacity));
+
+  const spotsLeft = Math.max(0, maxSlots - confirmedPlayers.length);
+  const isConfirmed = confirmedPlayers.some(p => p.id === currentUser?.id);
+  const isWaitlisted = game?.waitlist?.some(p => p.id === currentUser?.id);
+  const waitlistIndex = game?.waitlist?.findIndex(p => p.id === currentUser?.id);
+  const isFull = confirmedPlayers.length >= maxSlots || game?.status === 'FULL';
+  const isGameCompleted = game?.status === 'COMPLETED' || (game?.score !== null && game?.score !== undefined && game?.score?.teamA !== null && game?.score?.teamA !== undefined);
+  const linkedVideos = (gameVideos || []).filter(v => v.gameId === game?.id);
+  const hasLinkedVideo = linkedVideos.length > 0 || !!game?.videoReference;
+  const isManagerOrAdmin = currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN';
+  const canUploadVideo = isManagerOrAdmin || !hasLinkedVideo;
+  const isAuthorizedManager = isManagerOrAdmin || game?.organizer?.id === currentUser?.id;
+
   const [scoreTeamA, setScoreTeamA] = useState('');
   const [scoreTeamB, setScoreTeamB] = useState('');
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
@@ -116,26 +136,6 @@ export const GameDetailsPage = () => {
   // Confirmation Modal States
   const [isCancelMatchModalOpen, setIsCancelMatchModalOpen] = useState(false);
   const [isLeaveMatchModalOpen, setIsLeaveMatchModalOpen] = useState(false);
-
-  const game = games.find(g => g.id === id) || games[0];
-  const maxSlots = game?.maxPlayers || MATCH_FORMAT_SLOTS[game?.format] || 10;
-  const teamCapacity = Math.ceil(maxSlots / 2);
-
-  const confirmedPlayers = game?.confirmedPlayers || [];
-  const teamAPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_A' || (!p.team && i < teamCapacity));
-  const teamBPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_B' || (!p.team && i >= teamCapacity));
-
-  const spotsLeft = Math.max(0, maxSlots - confirmedPlayers.length);
-  const isConfirmed = confirmedPlayers.some(p => p.id === currentUser?.id);
-  const isWaitlisted = game?.waitlist?.some(p => p.id === currentUser?.id);
-  const waitlistIndex = game?.waitlist?.findIndex(p => p.id === currentUser?.id);
-  const isFull = confirmedPlayers.length >= maxSlots || game?.status === 'FULL';
-  const isGameCompleted = game?.status === 'COMPLETED' || (game?.score !== null && game?.score !== undefined && game?.score?.teamA !== null && game?.score?.teamA !== undefined);
-  const linkedVideos = (gameVideos || []).filter(v => v.gameId === game?.id);
-  const hasLinkedVideo = linkedVideos.length > 0 || !!game?.videoReference;
-  const isManagerOrAdmin = currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN';
-  const canUploadVideo = isManagerOrAdmin || !hasLinkedVideo;
-  const isAuthorizedManager = isManagerOrAdmin || game?.organizer?.id === currentUser?.id;
 
   const handleOpenEditModal = () => {
     setEditTitle(game.title || '');
@@ -769,7 +769,7 @@ export const GameDetailsPage = () => {
         {/* RIGHT COLUMN: Match Details, Scoreboard, Live Score & Controls */}
         <div className="lg:col-span-7 xl:col-span-7 space-y-5">
           
-          <div className="footy-card p-6 space-y-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+          <div className="footy-card p-4 sm:p-6 space-y-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
 
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
               <div className="space-y-2">
@@ -779,7 +779,7 @@ export const GameDetailsPage = () => {
                   </span>
                   <span className="text-xs font-bold text-slate-400">ID: {game.id}</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                <h1 className="text-xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white break-words">
                   {game.title}
                 </h1>
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center space-x-1.5">
@@ -840,13 +840,13 @@ export const GameDetailsPage = () => {
                   <span className="text-xs font-black uppercase text-rose-400 tracking-widest">🔴 LIVE IN-GAME SCORE (SCREEN DISPLAY ONLY)</span>
                 </div>
 
-                <div className="flex items-center justify-center space-x-8 py-2">
+                <div className="flex items-center justify-center space-x-4 sm:space-x-8 py-2">
                   <div className="text-center">
                     <span className="text-[10px] font-black text-sky-400 block uppercase mb-0.5">TEAM A</span>
                     <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.liveScore.teamA}</span>
                   </div>
-                  <div className="px-3.5 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40">
-                    <span className="text-lg font-black text-rose-400">VS</span>
+                  <div className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40">
+                    <span className="text-base sm:text-lg font-black text-rose-400">VS</span>
                   </div>
                   <div className="text-center">
                     <span className="text-[10px] font-black text-rose-400 block uppercase mb-0.5">TEAM B</span>
@@ -903,13 +903,13 @@ export const GameDetailsPage = () => {
                     <span className="text-xs font-black uppercase text-amber-400 tracking-widest">OFFICIAL MATCH SCORE RESULT</span>
                   </div>
 
-                  <div className="flex items-center justify-center space-x-8 py-2">
+                  <div className="flex items-center justify-center space-x-4 sm:space-x-8 py-2">
                     <div className="text-center">
                       <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-0.5">TEAM A</span>
                       <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.score.teamA}</span>
                     </div>
-                    <div className="px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700">
-                      <span className="text-lg font-black text-amber-500">VS</span>
+                    <div className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700">
+                      <span className="text-base sm:text-lg font-black text-amber-500">VS</span>
                     </div>
                     <div className="text-center">
                       <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-0.5">TEAM B</span>
@@ -917,9 +917,9 @@ export const GameDetailsPage = () => {
                     </div>
                   </div>
 
-                  <div className={`inline-flex items-center space-x-2 px-4 py-1.5 rounded-full ${outcomeInfo.bg} border ${outcomeInfo.border} ${outcomeInfo.color} text-xs font-black`}>
+                  <div className={`inline-flex flex-wrap items-center justify-center gap-1.5 px-4 py-1.5 rounded-full ${outcomeInfo.bg} border ${outcomeInfo.border} ${outcomeInfo.color} text-xs font-black max-w-full`}>
                     <span>{outcomeInfo.text}</span>
-                    <span>•</span>
+                    <span className="hidden xs:inline">•</span>
                     <span>⚡ Elo Recalculated</span>
                   </div>
                 </div>
@@ -1205,8 +1205,8 @@ export const GameDetailsPage = () => {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setIsPaymentModalOpen(false)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsPaymentModalOpen(false)} className="w-full sm:w-auto justify-center">
               Cancel
             </Button>
             <Button
@@ -1216,6 +1216,7 @@ export const GameDetailsPage = () => {
               icon={CreditCard}
               isLoading={isJoining}
               disabled={isJoining || (currentUser?.walletBalance || 0) < game.entryFee}
+              className="w-full sm:w-auto justify-center"
             >
               Pay ₹{game.entryFee} & Confirm Slot
             </Button>
@@ -1259,11 +1260,11 @@ export const GameDetailsPage = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setIsScoreModalOpen(false)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsScoreModalOpen(false)} className="w-full sm:w-auto justify-center">
               Cancel
             </Button>
-            <Button type="submit" variant="emerald" size="sm" isLoading={isSubmittingScore} disabled={isSubmittingScore}>
+            <Button type="submit" variant="emerald" size="sm" isLoading={isSubmittingScore} disabled={isSubmittingScore} className="w-full sm:w-auto justify-center">
               🏁 Finish Match & Publish Final Score
             </Button>
           </div>
@@ -1306,11 +1307,11 @@ export const GameDetailsPage = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setIsLiveScoreModalOpen(false)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsLiveScoreModalOpen(false)} className="w-full sm:w-auto justify-center">
               Cancel
             </Button>
-            <Button type="submit" variant="gold" size="sm" isLoading={isSubmittingLiveScore} disabled={isSubmittingLiveScore}>
+            <Button type="submit" variant="gold" size="sm" isLoading={isSubmittingLiveScore} disabled={isSubmittingLiveScore} className="w-full sm:w-auto justify-center">
               🔴 Update Live Screen Score
             </Button>
           </div>
@@ -1405,7 +1406,7 @@ export const GameDetailsPage = () => {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
             <Button
               type="button"
               variant="ghost"
@@ -1420,10 +1421,11 @@ export const GameDetailsPage = () => {
                 if (videoFileInputRef.current) videoFileInputRef.current.value = '';
               }}
               disabled={isSubmittingVideo}
+              className="w-full sm:w-auto justify-center"
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" icon={Film} isLoading={isSubmittingVideo} disabled={isSubmittingVideo}>
+            <Button type="submit" variant="primary" size="sm" icon={Film} isLoading={isSubmittingVideo} disabled={isSubmittingVideo} className="w-full sm:w-auto justify-center">
               {isSubmittingVideo ? `Uploading (${uploadProgress}%)...` : 'Upload & Link Match Video'}
             </Button>
           </div>
@@ -1609,18 +1611,18 @@ export const GameDetailsPage = () => {
           </div>
 
           {/* Footer Buttons */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}
-              className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer text-center"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmittingEdit}
-              className="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center"
             >
               {isSubmittingEdit ? 'Saving Changes...' : 'Save Changes'}
             </button>
@@ -1654,13 +1656,13 @@ export const GameDetailsPage = () => {
             <span className="text-slate-700 dark:text-slate-300">{game?.confirmedPlayers?.length || 0} players</span>
           </div>
         </div>
-        <div className="flex gap-3 pt-1">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-1">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setIsCancelMatchModalOpen(false)}
-            className="flex-1 border border-slate-200 dark:border-slate-700"
+            className="w-full sm:flex-1 border border-slate-200 dark:border-slate-700 justify-center"
           >
             Keep Match
           </Button>
@@ -1672,7 +1674,7 @@ export const GameDetailsPage = () => {
             isLoading={isActionLoading}
             disabled={isActionLoading}
             onClick={handleConfirmCancelMatch}
-            className="flex-1"
+            className="w-full sm:flex-1 justify-center"
           >
             Yes, Cancel Match
           </Button>
@@ -1704,13 +1706,13 @@ export const GameDetailsPage = () => {
             </div>
           )}
         </div>
-        <div className="flex gap-3 pt-1">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-1">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setIsLeaveMatchModalOpen(false)}
-            className="flex-1 border border-slate-200 dark:border-slate-700"
+            className="w-full sm:flex-1 border border-slate-200 dark:border-slate-700 justify-center"
           >
             Stay in Match
           </Button>
@@ -1721,7 +1723,7 @@ export const GameDetailsPage = () => {
             isLoading={isLeaving}
             disabled={isLeaving}
             onClick={handleLeaveMatch}
-            className="flex-1"
+            className="w-full sm:flex-1 justify-center"
           >
             Yes, Leave Match
           </Button>

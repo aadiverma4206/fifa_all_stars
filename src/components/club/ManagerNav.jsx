@@ -16,7 +16,7 @@ export const ManagerNav = () => {
   ];
 
   return (
-    <div className="footy-card p-2 flex items-center space-x-1.5 overflow-x-auto mb-6">
+    <div className="footy-card p-2 flex items-center space-x-1.5 overflow-x-auto mb-6 scrollbar-none max-w-full">
       {links.map((link) => {
         const Icon = link.icon;
         const active = isActive(link.path);

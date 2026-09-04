@@ -34,8 +34,8 @@ export const BottomNav = () => {
   };
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 transition-colors">
-      <div className="flex items-center justify-around h-16 px-2">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 transition-colors pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="flex items-center justify-around h-16 px-1 sm:px-2">
         {navItems.map((item) => {
           const IconComponent = iconMap[item.icon] || Flame;
           const active = isActive(item.path);
@@ -43,14 +43,14 @@ export const BottomNav = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center space-y-1 flex-1 py-1 transition-all ${
+              className={`flex flex-col items-center justify-center space-y-1 flex-1 py-1 transition-all min-w-0 ${
                 active
                   ? 'text-sport-500 font-black'
                   : 'text-slate-500 dark:text-slate-400 font-semibold hover:text-slate-900'
               }`}
             >
-              <IconComponent className="w-5 h-5" />
-              <span className="text-[10px] uppercase tracking-wider truncate max-w-[64px]">{item.label}</span>
+              <IconComponent className="w-5 h-5 flex-shrink-0" />
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-wider truncate max-w-[56px] sm:max-w-[64px]">{item.label}</span>
             </Link>
           );
         })}

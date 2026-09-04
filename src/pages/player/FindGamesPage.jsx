@@ -54,7 +54,7 @@ export const FindGamesPage = () => {
     } else {
       setCourtId('');
     }
-  }, [clubId]);
+  }, [clubId, courts]);
 
   const handleFormatChange = (newFormat) => {
     setFormat(newFormat);
@@ -264,7 +264,7 @@ export const FindGamesPage = () => {
 
       {/* 2. RECTANGULAR DATE SELECTION SECTION */}
       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none max-w-full">
           {dateTabs.map(tab => {
             const isActive = activeDate === tab.val;
             return (
@@ -336,21 +336,21 @@ export const FindGamesPage = () => {
               return (
                 <div
                   key={game.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-sport-500/50 transition-all shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-6 group"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 hover:border-sport-500/50 transition-all shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 sm:gap-6 group"
                 >
                   
                   {/* Section 1: Time & Format Badge */}
-                  <div className="flex items-center space-x-4">
-                    <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center min-w-[90px]">
-                      <span className="text-xl font-black text-slate-900 dark:text-white font-mono block leading-none">
+                  <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                    <div className="p-3 sm:p-3.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center min-w-[80px] sm:min-w-[90px] flex-shrink-0">
+                      <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white font-mono block leading-none">
                         {game.dateTime?.startTime || '19:00'}
                       </span>
-                      <span className="text-[10px] font-extrabold text-slate-400 block mt-1 uppercase">
+                      <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-400 block mt-1 uppercase">
                         {game.dateTime?.endTime ? `${game.dateTime.startTime}-${game.dateTime.endTime}` : '60 MINS'}
                       </span>
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Badge variant={game.format === '2v2' || game.format === '5v5' ? 'emerald' : 'blue'}>{game.format}</Badge>
                         <Badge variant={game.privacy === 'PRIVATE' ? 'danger' : 'gold'}>
@@ -377,13 +377,13 @@ export const FindGamesPage = () => {
                         </span>
                       </div>
                       
-                      <h3 className="text-lg font-black text-slate-900 dark:text-white group-hover:text-sport-500 transition-colors line-clamp-1">
+                      <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-sport-500 transition-colors line-clamp-1">
                         {game.title}
                       </h3>
 
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center space-x-1.5">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center space-x-1.5 truncate">
                         <MapPin className="w-3.5 h-3.5 text-sport-500 flex-shrink-0" />
-                        <span>{game.venueReference?.clubName} • {game.venueReference?.courtName || 'Pitch Alpha'}</span>
+                        <span className="truncate">{game.venueReference?.clubName} • {game.venueReference?.courtName || 'Pitch Alpha'}</span>
                       </p>
                     </div>
                   </div>
@@ -409,7 +409,7 @@ export const FindGamesPage = () => {
                   </div>
 
                   {/* Section 3: Spots Roster & Entry Fee */}
-                  <div className="flex items-center justify-between lg:justify-end gap-6 border-t lg:border-t-0 border-slate-200 dark:border-slate-800 pt-3 lg:pt-0">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center justify-between lg:justify-end gap-3 sm:gap-6 border-t lg:border-t-0 border-slate-200 dark:border-slate-800 pt-3 lg:pt-0">
                     <div>
                       <div className="flex items-center space-x-2 mb-1">
                         <Badge variant={isFull ? 'waitlist' : (spotsLeft === 1 ? 'danger' : 'emerald')} size="sm">
@@ -426,13 +426,13 @@ export const FindGamesPage = () => {
 
                     <div className="text-right">
                       <span className="text-[10px] font-bold text-slate-400 block uppercase">Match Fee</span>
-                      <span className="text-xl font-black text-sport-500">
+                      <span className="text-lg sm:text-xl font-black text-sport-500">
                         ₹{game.entryFee}
                       </span>
                     </div>
 
-                    <Link to={`/games/${game.id}`}>
-                      <Button variant="primary" size="md" icon={ArrowRight} className="px-5">
+                    <Link to={`/games/${game.id}`} className="w-full sm:w-auto">
+                      <Button variant="primary" size="md" icon={ArrowRight} className="w-full sm:w-auto px-5">
                         View Game
                       </Button>
                     </Link>

@@ -9,8 +9,8 @@ export const TournamentsPage = () => {
   return (
     <div className="space-y-8 py-4">
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
-          <Trophy className="w-8 h-8 text-amber-500" />
+        <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
+          <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
           <span>Championships & Leagues</span>
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">

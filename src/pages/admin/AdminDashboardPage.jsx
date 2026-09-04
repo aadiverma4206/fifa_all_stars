@@ -96,9 +96,9 @@ export const AdminDashboardPage = () => {
 
 
       {/* 2. RECTANGULAR KPI METRICS CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
         
-        <Link to="/admin/users" className="admin-card admin-card-hover p-4 space-y-2 block">
+        <Link to="/admin/users" className="admin-card admin-card-hover p-3 sm:p-4 space-y-2 block">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Users</span>
             <div className="w-7 h-7 rounded-md bg-sky-500/10 text-sky-500 flex items-center justify-center">
@@ -114,7 +114,7 @@ export const AdminDashboardPage = () => {
           </div>
         </Link>
 
-        <Link to="/admin/clubs" className="admin-card admin-card-hover p-4 space-y-2 block">
+        <Link to="/admin/clubs" className="admin-card admin-card-hover p-3 sm:p-4 space-y-2 block">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Venues & Clubs</span>
             <div className="w-7 h-7 rounded-md bg-sport-500/10 text-sport-500 flex items-center justify-center">
@@ -129,7 +129,7 @@ export const AdminDashboardPage = () => {
           </div>
         </Link>
 
-        <div className="admin-card p-4 space-y-2">
+        <div className="admin-card p-3 sm:p-4 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Gross Revenue</span>
             <div className="w-7 h-7 rounded-md bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
@@ -144,7 +144,7 @@ export const AdminDashboardPage = () => {
           </div>
         </div>
 
-        <Link to="/admin/refunds" className="admin-card admin-card-hover p-4 space-y-2 block">
+        <Link to="/admin/refunds" className="admin-card admin-card-hover p-3 sm:p-4 space-y-2 block">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Refunds</span>
             <div className="w-7 h-7 rounded-md bg-rose-500/10 text-rose-500 flex items-center justify-center">
@@ -159,7 +159,7 @@ export const AdminDashboardPage = () => {
           </div>
         </Link>
 
-        <Link to="/admin/tickets" className="admin-card admin-card-hover p-4 space-y-2 block">
+        <Link to="/admin/tickets" className="admin-card admin-card-hover p-3 sm:p-4 space-y-2 block">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Support Tickets</span>
             <div className="w-7 h-7 rounded-md bg-indigo-500/10 text-indigo-500 flex items-center justify-center">

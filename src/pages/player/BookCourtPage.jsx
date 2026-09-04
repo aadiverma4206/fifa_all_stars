@@ -84,8 +84,10 @@ export const BookCourtPage = () => {
     try {
       const startH = parseInt(startTime.split(':')[0], 10);
       const startM = parseInt(startTime.split(':')[1], 10);
-      const endH = startH + Math.floor(duration);
-      const endM = startM + (duration % 1 ? 30 : 0);
+      const totalStartMinutes = startH * 60 + startM;
+      const totalEndMinutes = totalStartMinutes + Math.round(duration * 60);
+      const endH = Math.floor(totalEndMinutes / 60);
+      const endM = totalEndMinutes % 60;
       const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
       const newBooking = createBooking({
@@ -151,7 +153,7 @@ export const BookCourtPage = () => {
         </div>
       )}
 
-      <div className="footy-card p-6 sm:p-8 space-y-6">
+      <div className="footy-card p-4 sm:p-8 space-y-6">
         
         {/* Header Pitch Info */}
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
@@ -161,7 +163,7 @@ export const BookCourtPage = () => {
               <Badge variant="blue">{court.surface}</Badge>
               <Badge variant={isUnavailable ? 'danger' : 'emerald'}>{court.status}</Badge>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase">
+            <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase">
               {court.name}
             </h1>
             <p className="text-xs font-semibold text-slate-400 flex items-center space-x-1">
@@ -242,7 +244,7 @@ export const BookCourtPage = () => {
           </div>
 
           {/* Pricing Breakdown Summary */}
-          <div className="footy-card p-6 space-y-4">
+          <div className="footy-card p-4 sm:p-6 space-y-4">
             <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center space-x-2">
               <Zap className="w-5 h-5 text-amber-500" />
               <span>INR Price Breakdown</span>

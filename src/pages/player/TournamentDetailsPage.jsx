@@ -141,13 +141,13 @@ export const TournamentDetailsPage = () => {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-4 pt-4 items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-4 pt-4 items-start sm:items-center justify-between">
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Prize Pool</span>
               <span className="text-2xl font-black text-amber-500">{tournament.prizePool}</span>
             </div>
 
-            <Button variant="gold" size="lg" icon={Plus} onClick={() => setIsRegisterModalOpen(true)}>
+            <Button variant="gold" size="lg" icon={Plus} onClick={() => setIsRegisterModalOpen(true)} className="w-full sm:w-auto justify-center">
               Register Squad (₹{tournament.entryFee})
             </Button>
           </div>

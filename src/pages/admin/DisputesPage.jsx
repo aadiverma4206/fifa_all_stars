@@ -407,7 +407,7 @@ export const DisputesPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-lg border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto w-full lg:w-auto">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-lg border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto max-w-full scrollbar-none w-full lg:w-auto">
           {[
             { id: 'ALL', label: `All (${stats.total})` },
             { id: 'OPEN', label: `⚠️ Open (${stats.openCount})` },
@@ -543,7 +543,7 @@ export const DisputesPage = () => {
                       Dispute Grievance Statement
                     </div>
                     <p className="text-xs font-medium text-slate-800 dark:text-slate-200 italic">
-                      "{dsp.reason}"
+                      &ldquo;{dsp.reason}&rdquo;
                     </p>
                   </div>
 

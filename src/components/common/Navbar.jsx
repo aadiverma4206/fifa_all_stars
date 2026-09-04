@@ -51,19 +51,19 @@ export const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
-      <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-12">
+      <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16 sm:h-20">
           
           {/* Brand Logo */}
-          <Link to={currentUser ? homeRedirectRoute : '/'} className="flex items-center space-x-3 group">
-            <div className="w-9 h-9 rounded-md bg-gradient-to-tr from-sport-600 to-emerald-400 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-              <Trophy className="w-5 h-5 text-white" />
+          <Link to={currentUser ? homeRedirectRoute : '/'} className="flex items-center space-x-2 sm:space-x-3 group min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-gradient-to-tr from-sport-600 to-emerald-400 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform flex-shrink-0">
+              <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white uppercase font-sans">
+            <div className="min-w-0">
+              <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white uppercase font-sans truncate block">
                 FIFA <span className="text-sport-500">ALL STARS</span>
               </span>
-              <span className="block text-[9px] font-semibold text-slate-400 dark:text-slate-500 tracking-widest -mt-1 uppercase">
+              <span className="block text-[8px] sm:text-[9px] font-semibold text-slate-400 dark:text-slate-500 tracking-widest -mt-1 uppercase truncate">
                 Footy Match Hub
               </span>
             </div>
@@ -213,12 +213,12 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile menu button & quick action icons */}
-          <div className="flex md:hidden items-center space-x-2">
+          <div className="flex md:hidden items-center space-x-1 sm:space-x-2 flex-shrink-0">
             <ThemeToggle />
             {currentUser && <NotificationBell />}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-2xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="p-1.5 sm:p-2 rounded-2xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -228,7 +228,7 @@ export const Navbar = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 px-4 pt-4 pb-6 space-y-4 bg-white dark:bg-slate-900 transition-colors shadow-2xl">
+        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 px-4 pt-4 pb-6 space-y-4 bg-white dark:bg-slate-900 transition-colors shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto">
           {currentUser ? (
             <>
               {/* User Profile Card on Mobile */}

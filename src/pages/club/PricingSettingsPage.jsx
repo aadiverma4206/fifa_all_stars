@@ -172,7 +172,7 @@ export const PricingSettingsPage = () => {
             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{myClub?.name || 'Club Venue'}</span>
             <Badge variant="gold" size="sm" className="rounded-md">⚡ SURGE ENGINE</Badge>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+          <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
             Peak & Dynamic Pricing Rules
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
@@ -247,8 +247,8 @@ export const PricingSettingsPage = () => {
       </div>
 
       {/* ═══ PITCH SELECTOR RIBBON ═══ */}
-      <div className="admin-card p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto">
+      <div className="admin-card p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between flex-wrap gap-3 max-w-full">
+        <div className="flex items-center gap-2 overflow-x-auto max-w-full scrollbar-none pb-1">
           <span className="text-xs font-black text-slate-400 uppercase tracking-wider whitespace-nowrap mr-1">Select Pitch:</span>
           {myCourts.map(c => {
             const isSelected = (c.courtId || c.id) === (activeCourt?.courtId || activeCourt?.id);

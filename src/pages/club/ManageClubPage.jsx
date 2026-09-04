@@ -303,7 +303,7 @@ export const ManageClubPage = () => {
             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{myClub?.name || 'Club Venue'}</span>
             <Badge variant="emerald" size="sm" className="rounded-md">✅ ACTIVE & VERIFIED</Badge>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+          <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
             Manage Venue Details & Profile
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
@@ -311,7 +311,7 @@ export const ManageClubPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap sm:flex-nowrap">
           <Button
             type="button"
             variant="outline"

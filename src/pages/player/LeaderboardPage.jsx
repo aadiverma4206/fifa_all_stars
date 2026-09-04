@@ -20,11 +20,11 @@ export const LeaderboardPage = () => {
   return (
     <div className="space-y-8 py-4 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
-          <Shield className="w-8 h-8 text-sport-500" />
+        <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
+          <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-sport-500" />
           <span>Elo Leaderboard & Rankings</span>
         </h1>
-        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
+        <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
           Top rated grassroots football players ranked by dynamic Elo across Indian cities
         </p>
       </div>
@@ -42,12 +42,12 @@ export const LeaderboardPage = () => {
           />
         </div>
 
-        <div className="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+        <div className="flex items-center space-x-1.5 overflow-x-auto max-w-full scrollbar-none w-full sm:w-auto pb-1 sm:pb-0">
           {['all', 'Raipur', 'Bangalore', 'Mumbai', 'Delhi', 'Pune'].map((city) => (
             <button
               key={city}
               onClick={() => setCityFilter(city)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all uppercase ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all uppercase whitespace-nowrap ${
                 cityFilter === city
                   ? 'bg-sport-500 text-white'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
