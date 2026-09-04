@@ -2,9 +2,8 @@ import React, { useState, useMemo, useRef } from 'react';
 import { 
   Building2, CheckCircle2, XCircle, UserPlus, MapPin, Search, Filter, 
   Clock, Star, ShieldCheck, AlertCircle, Eye, Edit3, Plus, Trash2, 
-  LayoutGrid, List, Check, Settings, Phone, Mail, Sparkles, Layers, 
-  Activity, ArrowUpDown, ChevronRight, Shield, RefreshCw, AlertTriangle,
-  Flame, Calendar, ExternalLink
+  LayoutGrid, List, Check, Settings, Layers, 
+  ChevronRight, AlertTriangle
 } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -139,28 +138,42 @@ export const ClubApprovalsPage = () => {
                    user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
           });
 
-        const matchesStatus = statusFilter === 'all' || 
-          (statusFilter === 'ACTIVE' && (club.status === 'ACTIVE' || !club.status)) ||
-          club.status === statusFilter;
+        const statusUpper = (statusFilter || 'ALL').toUpperCase();
+        const matchesStatus = 
+          statusUpper === 'ALL' ||
+          (statusUpper === 'ACTIVE' && (club.status === 'ACTIVE' || !club.status)) ||
+          (statusUpper === 'PENDING' && club.status === 'PENDING') ||
+          (statusUpper === 'UNASSIGNED' && (!club.managerIds || club.managerIds.length === 0)) ||
+          (statusUpper === 'SUSPENDED' && (club.status === 'SUSPENDED' || club.status === 'REJECTED')) ||
+          (club.status && club.status.toUpperCase() === statusUpper);
 
-        const matchesCity = cityFilter === 'all' || club.city?.toLowerCase() === cityFilter.toLowerCase();
+        const cityUpper = (cityFilter || 'ALL').toUpperCase();
+        const matchesCity = cityUpper === 'ALL' || (club.city && club.city.toUpperCase() === cityUpper);
         
         const hasManager = club.managerIds && club.managerIds.length > 0;
-        const matchesManager = managerFilter === 'all' || 
-          (managerFilter === 'assigned' && hasManager) || 
-          (managerFilter === 'unassigned' && !hasManager);
+        const managerUpper = (managerFilter || 'ALL').toUpperCase();
+        const matchesManager = 
+          managerUpper === 'ALL' || 
+          (managerUpper === 'ASSIGNED' && hasManager) || 
+          (managerUpper === 'UNASSIGNED' && !hasManager);
 
         return matchesSearch && matchesStatus && matchesCity && matchesManager;
       })
       .sort((a, b) => {
-        if (sortBy === 'name') return a.name.localeCompare(b.name);
-        if (sortBy === 'city') return (a.city || '').localeCompare(b.city || '');
-        if (sortBy === 'courts') {
+        const sortUpper = (sortBy || 'NEWEST').toUpperCase();
+        if (sortUpper === 'NAME') return (a.name || '').localeCompare(b.name || '');
+        if (sortUpper === 'CITY') return (a.city || '').localeCompare(b.city || '');
+        if (sortUpper === 'RATING') return (b.rating || 0) - (a.rating || 0);
+        if (sortUpper === 'COURTS') {
           const courtsA = courts.filter(c => c.clubId === a.id).length;
           const courtsB = courts.filter(c => c.clubId === b.id).length;
           return courtsB - courtsA;
         }
-        return (a.name || '').localeCompare(b.name || '');
+        // NEWEST: by createdAt or id descending
+        if (b.createdAt && a.createdAt) {
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        }
+        return (b.id || '').localeCompare(a.id || '');
       });
   }, [clubs, courts, usersList, searchTerm, statusFilter, cityFilter, managerFilter, sortBy]);
 
@@ -182,7 +195,12 @@ export const ClubApprovalsPage = () => {
     isApprovingClubRef.current = true;
     setIsApprovingClub(true);
     try {
-      approveClub(selectedClub.id, selectedManagerId);
+      if (selectedClub.status === 'ACTIVE') {
+        assignClubManager(selectedClub.id, selectedManagerId);
+        toast.success(`Manager assignment updated for ${selectedClub.name}`);
+      } else {
+        approveClub(selectedClub.id, selectedManagerId);
+      }
       if (approvalNotes.trim()) {
         toast.success(`Verification notes logged for ${selectedClub.name}`);
       }
@@ -383,18 +401,20 @@ export const ClubApprovalsPage = () => {
         status: clubFormData.status
       });
 
-      // Also auto-create a starter court for the new club
-      addCourt(created.id, {
-        name: `${created.name} Pitch 1 (5v5)`,
-        type: 'Outdoor',
-        surface: '3G Turf',
-        basePrice: 600,
-        peakMultiplier: 1.5,
-        weekendMultiplier: 1.75,
-        peakWindow: '17:00-21:00',
-        status: 'AVAILABLE',
-        image: created.clubImageUrl
-      });
+      // Also auto-create a starter court for the new club (guard against addClub returning undefined)
+      if (created && created.id) {
+        addCourt(created.id, {
+          name: `${created.name} Pitch 1 (5v5)`,
+          type: 'Outdoor',
+          surface: '3G Turf',
+          basePrice: 600,
+          peakMultiplier: 1.5,
+          weekendMultiplier: 1.75,
+          peakWindow: '17:00-21:00',
+          status: 'AVAILABLE',
+          image: created.clubImageUrl
+        });
+      }
 
       setIsAddClubModalOpen(false);
     } catch (err) {
@@ -661,6 +681,19 @@ export const ClubApprovalsPage = () => {
               {cities.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
+            </select>
+          </div>
+
+          <div className="w-36 sm:w-40">
+            <select
+              value={managerFilter}
+              onChange={(e) => setManagerFilter(e.target.value)}
+              aria-label="Filter venues by manager assignment"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sport-500 transition-all cursor-pointer"
+            >
+              <option value="all">All Managers</option>
+              <option value="assigned">Assigned</option>
+              <option value="unassigned">Unassigned</option>
             </select>
           </div>
         </div>

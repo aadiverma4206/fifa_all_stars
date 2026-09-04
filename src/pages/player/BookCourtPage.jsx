@@ -84,8 +84,10 @@ export const BookCourtPage = () => {
     try {
       const startH = parseInt(startTime.split(':')[0], 10);
       const startM = parseInt(startTime.split(':')[1], 10);
-      const endH = startH + Math.floor(duration);
-      const endM = startM + (duration % 1 ? 30 : 0);
+      const totalStartMinutes = startH * 60 + startM;
+      const totalEndMinutes = totalStartMinutes + Math.round(duration * 60);
+      const endH = Math.floor(totalEndMinutes / 60);
+      const endM = totalEndMinutes % 60;
       const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
       const newBooking = createBooking({

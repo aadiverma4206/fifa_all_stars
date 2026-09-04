@@ -543,7 +543,7 @@ export const DisputesPage = () => {
                       Dispute Grievance Statement
                     </div>
                     <p className="text-xs font-medium text-slate-800 dark:text-slate-200 italic">
-                      "{dsp.reason}"
+                      &ldquo;{dsp.reason}&rdquo;
                     </p>
                   </div>
 

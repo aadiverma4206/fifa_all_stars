@@ -25,7 +25,7 @@ export const ProfilePage = () => {
   const { bookings, games, gameVideos, cancelBooking, clubs, courts } = useDataStore();
 
   const isManager = currentUser?.role === 'CLUB_MANAGER';
-  const myClub = clubs.find(c => c.managerId === currentUser?.id) || clubs[0];
+  const myClub = clubs.find(c => c.managerIds?.includes(currentUser?.id) || c.managerId === currentUser?.id) || clubs[0];
   const myCourts = courts?.filter(c => c.clubId === myClub?.id) || [];
   const clubBookings = bookings?.filter(b => b.clubId === myClub?.id) || [];
 

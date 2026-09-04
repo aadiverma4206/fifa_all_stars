@@ -19,6 +19,26 @@ export const GameDetailsPage = () => {
   const { games, gameVideos, joinGame, leaveGame, submitGameScore, updateLiveScore, updateGameLifecycle, addGameVideo, switchPlayerTeam, updateGameDetails, removeGame } = useDataStore();
   const { currentUser, updateWallet, usersList, setCurrentUser } = useAuthStore();
 
+  const game = games.find(g => g.id === id) || games[0];
+  const maxSlots = game?.maxPlayers || MATCH_FORMAT_SLOTS[game?.format] || 10;
+  const teamCapacity = Math.ceil(maxSlots / 2);
+
+  const confirmedPlayers = game?.confirmedPlayers || [];
+  const teamAPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_A' || (!p.team && i < teamCapacity));
+  const teamBPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_B' || (!p.team && i >= teamCapacity));
+
+  const spotsLeft = Math.max(0, maxSlots - confirmedPlayers.length);
+  const isConfirmed = confirmedPlayers.some(p => p.id === currentUser?.id);
+  const isWaitlisted = game?.waitlist?.some(p => p.id === currentUser?.id);
+  const waitlistIndex = game?.waitlist?.findIndex(p => p.id === currentUser?.id);
+  const isFull = confirmedPlayers.length >= maxSlots || game?.status === 'FULL';
+  const isGameCompleted = game?.status === 'COMPLETED' || (game?.score !== null && game?.score !== undefined && game?.score?.teamA !== null && game?.score?.teamA !== undefined);
+  const linkedVideos = (gameVideos || []).filter(v => v.gameId === game?.id);
+  const hasLinkedVideo = linkedVideos.length > 0 || !!game?.videoReference;
+  const isManagerOrAdmin = currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN';
+  const canUploadVideo = isManagerOrAdmin || !hasLinkedVideo;
+  const isAuthorizedManager = isManagerOrAdmin || game?.organizer?.id === currentUser?.id;
+
   const [scoreTeamA, setScoreTeamA] = useState('');
   const [scoreTeamB, setScoreTeamB] = useState('');
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
@@ -116,26 +136,6 @@ export const GameDetailsPage = () => {
   // Confirmation Modal States
   const [isCancelMatchModalOpen, setIsCancelMatchModalOpen] = useState(false);
   const [isLeaveMatchModalOpen, setIsLeaveMatchModalOpen] = useState(false);
-
-  const game = games.find(g => g.id === id) || games[0];
-  const maxSlots = game?.maxPlayers || MATCH_FORMAT_SLOTS[game?.format] || 10;
-  const teamCapacity = Math.ceil(maxSlots / 2);
-
-  const confirmedPlayers = game?.confirmedPlayers || [];
-  const teamAPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_A' || (!p.team && i < teamCapacity));
-  const teamBPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_B' || (!p.team && i >= teamCapacity));
-
-  const spotsLeft = Math.max(0, maxSlots - confirmedPlayers.length);
-  const isConfirmed = confirmedPlayers.some(p => p.id === currentUser?.id);
-  const isWaitlisted = game?.waitlist?.some(p => p.id === currentUser?.id);
-  const waitlistIndex = game?.waitlist?.findIndex(p => p.id === currentUser?.id);
-  const isFull = confirmedPlayers.length >= maxSlots || game?.status === 'FULL';
-  const isGameCompleted = game?.status === 'COMPLETED' || (game?.score !== null && game?.score !== undefined && game?.score?.teamA !== null && game?.score?.teamA !== undefined);
-  const linkedVideos = (gameVideos || []).filter(v => v.gameId === game?.id);
-  const hasLinkedVideo = linkedVideos.length > 0 || !!game?.videoReference;
-  const isManagerOrAdmin = currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN';
-  const canUploadVideo = isManagerOrAdmin || !hasLinkedVideo;
-  const isAuthorizedManager = isManagerOrAdmin || game?.organizer?.id === currentUser?.id;
 
   const handleOpenEditModal = () => {
     setEditTitle(game.title || '');

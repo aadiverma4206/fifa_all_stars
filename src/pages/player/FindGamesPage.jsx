@@ -54,7 +54,7 @@ export const FindGamesPage = () => {
     } else {
       setCourtId('');
     }
-  }, [clubId]);
+  }, [clubId, courts]);
 
   const handleFormatChange = (newFormat) => {
     setFormat(newFormat);

@@ -7,16 +7,20 @@ import { canNavigate } from '../../utils/navigationGuardian';
  * Smart BackButton component that safely handles browser history and fallback URLs.
  * If user opened direct URL or refreshed (history state idx is 0), it navigates to the fallback path.
  */
-export const BackButton = ({ to, fallback = '/player/home', label = 'Back', className = '' }) => {
+export const BackButton = ({ to, fallback = '/player/home', label = 'Back', className = '', onClick }) => {
   const navigate = useNavigate();
 
   const handleBack = (e) => {
     e.preventDefault();
+    if (onClick) {
+      onClick(e);
+      return;
+    }
     if (!canNavigate(to || 'BACK_NAVIGATION')) return;
 
     if (to) {
       navigate(to);
-    } else if (window.history.state && window.history.state.idx > 0) {
+    } else if (typeof window !== 'undefined' && window.history?.state && window.history.state.idx > 0) {
       navigate(-1);
     } else {
       navigate(fallback);
