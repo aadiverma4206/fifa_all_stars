@@ -304,7 +304,7 @@ export const PlayerHomePage = () => {
             </div>
 
             {/* Filter Tabs Ribbon */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-md border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-md border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto max-w-full scrollbar-none">
               {[
                 { id: 'all', label: 'All Open Games', count: accessibleGames.length, icon: Flame },
                 { id: 'my_club', label: 'My Club Games', count: myClubGames.length, icon: ShieldCheck },

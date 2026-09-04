@@ -177,8 +177,8 @@ export const CommunityPage = () => {
   return (
     <div className="space-y-8 py-4 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
-          <Users className="w-8 h-8 text-sport-500" />
+        <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
+          <Users className="w-6 h-6 sm:w-8 sm:h-8 text-sport-500" />
           <span>Community & Monthly Challenges</span>
         </h1>
         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
@@ -225,8 +225,8 @@ export const CommunityPage = () => {
       </div>
 
       {/* City Filter Bar */}
-      <div className="footy-card p-3 flex items-center space-x-2 overflow-x-auto">
-        <span className="text-xs font-extrabold text-slate-400 uppercase px-2">Filter City:</span>
+      <div className="footy-card p-3 flex items-center space-x-2 overflow-x-auto max-w-full scrollbar-none">
+        <span className="text-xs font-extrabold text-slate-400 uppercase px-2 whitespace-nowrap">Filter City:</span>
         {['all', 'Raipur', 'Bangalore', 'Mumbai', 'Delhi', 'Pune'].map((c) => (
           <button
             key={c}
@@ -244,7 +244,7 @@ export const CommunityPage = () => {
 
       {/* Community Polls Section */}
       {polls.length > 0 && (
-        <div className="footy-card p-6 space-y-4">
+        <div className="footy-card p-4 sm:p-6 space-y-4">
           <div className="flex items-center space-x-2">
             <Vote className="w-5 h-5 text-sky-500" />
             <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Community Poll ({polls[0].city})</h3>
@@ -301,7 +301,7 @@ export const CommunityPage = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
           <div>
             <input
               ref={postImageInputRef}
@@ -322,7 +322,7 @@ export const CommunityPage = () => {
               <span className="ml-2 text-[10px] text-slate-400 font-bold">({formatFileSize(postImageFile.size)})</span>
             )}
           </div>
-          <Button variant="primary" size="sm" icon={Send} isLoading={isPosting} disabled={isPosting} onClick={handleCreatePost}>
+          <Button variant="primary" size="sm" icon={Send} isLoading={isPosting} disabled={isPosting} onClick={handleCreatePost} className="w-full sm:w-auto">
             Post to {currentUser?.city || 'Raipur'} Feed
           </Button>
         </div>
@@ -331,7 +331,7 @@ export const CommunityPage = () => {
       {/* Posts Feed */}
       <div className="space-y-6">
         {filteredPosts.map((post) => (
-          <div key={post.id} className="footy-card p-6 space-y-4">
+          <div key={post.id} className="footy-card p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Avatar src={post.authorAvatar} name={post.authorName} size="md" />

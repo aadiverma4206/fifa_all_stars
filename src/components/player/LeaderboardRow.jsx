@@ -16,22 +16,22 @@ export const LeaderboardRow = ({ user, rank }) => {
     : 'bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold';
 
   return (
-    <div className="footy-card p-4 flex items-center justify-between transition-all hover:scale-[1.01]">
+    <div className="footy-card p-3 sm:p-4 flex items-center justify-between transition-all hover:scale-[1.01] gap-2">
       
       {/* Left: Rank & User */}
-      <div className="flex items-center space-x-4">
-        <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs shadow-sm ${rankColor}`}>
+      <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
+        <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-xs shadow-sm flex-shrink-0 ${rankColor}`}>
           {rank}
         </span>
 
-        <Avatar src={user.profileImageUrl || user.avatar} name={user.name} size="md" status="active" />
+        <Avatar src={user.profileImageUrl || user.avatar} name={user.name} size="md" status="active" className="flex-shrink-0" />
 
-        <div>
-          <div className="flex items-center space-x-2">
-            <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{user.name}</h4>
-            <Badge variant="emerald" size="sm">{user.skillLevel || 'Advanced'}</Badge>
+        <div className="min-w-0">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
+            <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{user.name}</h4>
+            <Badge variant="emerald" size="sm" className="hidden xs:inline-flex">{user.skillLevel || 'Advanced'}</Badge>
           </div>
-          <p className="text-xs text-slate-400 font-semibold">{user.city || 'Raipur'} • {user.playingHand || 'Striker'}</p>
+          <p className="text-[11px] sm:text-xs text-slate-400 font-semibold truncate">{user.city || 'Raipur'} • {user.playingHand || 'Striker'}</p>
         </div>
       </div>
 

@@ -398,33 +398,33 @@ export const LoginPage = () => {
           <motion.div
             animate={isShaking ? { x: [-12, 12, -8, 8, -4, 4, 0] } : {}}
             transition={{ duration: 0.5 }}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-10 shadow-xl space-y-6"
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-10 shadow-xl space-y-6"
           >
             
             {/* Header & Role Selection Tabs (Data Transparency Enforced) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                     FIFA <span className="text-sport-500">ALL STARS</span>
                   </h1>
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                     Sign in to your role workspace portal
                   </p>
                 </div>
-                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20 whitespace-nowrap">
                   🔒 Data Transparency
                 </span>
               </div>
 
               {/* 3 Role Selection Pills */}
-              <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-extrabold">
+              <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 bg-slate-100 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] sm:text-xs font-extrabold">
                 <button
                   type="button"
                   onClick={() => handleRoleSelect('PLAYER')}
-                  className={`py-2 px-2 rounded-lg transition-all ${
+                  className={`py-2 px-1 sm:px-2 rounded-lg transition-all text-center truncate cursor-pointer ${
                     selectedRole === 'PLAYER' 
-                      ? 'bg-emerald-500 text-white shadow-md' 
+                      ? 'bg-emerald-500 text-white shadow-md font-black' 
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
@@ -433,9 +433,9 @@ export const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => handleRoleSelect('CLUB_MANAGER')}
-                  className={`py-2 px-2 rounded-lg transition-all ${
+                  className={`py-2 px-1 sm:px-2 rounded-lg transition-all text-center truncate cursor-pointer ${
                     selectedRole === 'CLUB_MANAGER' 
-                      ? 'bg-sky-500 text-white shadow-md' 
+                      ? 'bg-sky-500 text-white shadow-md font-black' 
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
@@ -444,9 +444,9 @@ export const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => handleRoleSelect('SUPER_ADMIN')}
-                  className={`py-2 px-2 rounded-lg transition-all ${
+                  className={`py-2 px-1 sm:px-2 rounded-lg transition-all text-center truncate cursor-pointer ${
                     selectedRole === 'SUPER_ADMIN' 
-                      ? 'bg-amber-500 text-white shadow-md' 
+                      ? 'bg-amber-500 text-white shadow-md font-black' 
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >

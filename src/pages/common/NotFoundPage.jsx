@@ -19,7 +19,7 @@ export const NotFoundPage = () => {
           <span>404 PAGE NOT FOUND</span>
         </div>
 
-        <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+        <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
           OUT OF BOUNDS!
         </h1>
 

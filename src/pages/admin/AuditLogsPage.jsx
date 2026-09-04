@@ -316,8 +316,8 @@ export const AuditLogsPage = () => {
       </div>
 
       <div className="admin-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-medium border-collapse">
+        <div className="overflow-x-auto max-w-full">
+          <table className="w-full text-left text-xs font-medium border-collapse min-w-[700px]">
             <thead className="bg-slate-100/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
               <tr>
                 <th className="py-3.5 px-5">Timestamp</th>

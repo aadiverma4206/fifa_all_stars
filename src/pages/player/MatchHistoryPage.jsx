@@ -207,7 +207,7 @@ export const MatchHistoryPage = () => {
   };
 
   return (
-    <div className="space-y-6 py-6 max-w-[1700px] w-full mx-auto px-4 sm:px-8 lg:px-10 overflow-x-hidden">
+    <div className="space-y-6 py-6 max-w-[1700px] w-full mx-auto px-2.5 sm:px-8 lg:px-10 overflow-x-hidden">
 
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
@@ -245,7 +245,7 @@ export const MatchHistoryPage = () => {
         
         {/* Source Tab Segmented Ribbon */}
         {currentUser && (
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-md border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto w-full sm:w-auto inline-flex">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-md border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto max-w-full scrollbar-none w-full sm:w-auto inline-flex">
             {[
               { key: 'mine', label: isManager ? `🏟️ ${myClub?.name || 'My Venue'} Matches (${myCompletedGames.length})` : `⚡ My Match History (${myCompletedGames.length})` },
               { key: 'all', label: `🌐 All Completed Matches (${completedGames.length})` }

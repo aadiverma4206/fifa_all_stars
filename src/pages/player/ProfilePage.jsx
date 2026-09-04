@@ -231,12 +231,12 @@ export const ProfilePage = () => {
   };
 
   return (
-    <div className="space-y-6 py-6 max-w-[1700px] w-full mx-auto px-4 sm:px-8 lg:px-10 overflow-x-hidden">
+    <div className="space-y-6 py-4 sm:py-6 max-w-[1700px] w-full mx-auto px-3 sm:px-8 lg:px-10 overflow-x-hidden">
       
       {/* ═══════════════════════════════════════════
           1. PROFILE HERO HEADER CARD
          ═══════════════════════════════════════════ */}
-      <div className="admin-card p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6">
+      <div className="admin-card p-4 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6">
         
         <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 w-full lg:w-auto">
           <Avatar 
@@ -247,9 +247,9 @@ export const ProfilePage = () => {
             className="rounded-2xl w-20 h-20 sm:w-24 sm:h-24 shadow-md" 
           />
           
-          <div className="space-y-2 flex-1">
+          <div className="space-y-2 flex-1 min-w-0">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                 {currentUser?.name}
               </h1>
               
@@ -268,7 +268,7 @@ export const ProfilePage = () => {
               </Badge>
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold break-words">
               @{currentUser?.name?.toLowerCase()?.replace(/\s+/g, '')} • {currentUser?.phone || '+91 98765 43210'} • {currentUser?.email || 'manager@turf.com'}
             </p>
 

@@ -531,7 +531,7 @@ export const ClubApprovalsPage = () => {
       </div>
 
       {/* 2. KPI ANALYTICS ROW */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
         {/* Total Venues */}
         <div 
           onClick={() => { setStatusFilter('ALL'); setCityFilter('ALL'); }}
@@ -666,7 +666,7 @@ export const ClubApprovalsPage = () => {
         </div>
 
         {/* Center: Segmented Filter Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-lg border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto w-full lg:w-auto">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-lg border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto max-w-full scrollbar-none w-full lg:w-auto">
           {[
             { id: 'ALL', label: `All (${stats.total})` },
             { id: 'PENDING', label: `⏳ Pending (${stats.pending})` },
@@ -1005,8 +1005,8 @@ export const ClubApprovalsPage = () => {
       ) : (
         /* --- COMPREHENSIVE DATA TABLE VIEW --- */
         <div className="admin-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-medium border-collapse">
+          <div className="overflow-x-auto max-w-full scrollbar-none">
+            <table className="w-full min-w-[720px] text-left text-xs font-medium border-collapse">
               <thead className="bg-slate-100/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                 <tr>
                   <th className="py-3.5 px-5">Venue & Location</th>

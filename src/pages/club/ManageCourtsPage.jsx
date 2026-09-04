@@ -376,7 +376,7 @@ export const ManageCourtsPage = () => {
             <Building2 className="w-5 h-5 text-sport-500" />
             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{myClub?.name || 'Club Venue'}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+          <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
             Manage Courts & Pitch Slots
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
@@ -409,7 +409,7 @@ export const ManageCourtsPage = () => {
       </div>
 
       {/* ═══ KPI SUMMARY STATS CARDS ═══ */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
         {[
           { label: 'Total Pitches', value: myCourts.length, sub: 'Configured in venue', color: 'text-sport-500', bg: 'bg-sport-500/10 border-sport-500/20', filter: 'all' },
           { label: 'Available Now', value: availableCount, sub: 'Open for booking', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', filter: 'AVAILABLE' },
@@ -1087,13 +1087,13 @@ export const ManageCourtsPage = () => {
               <span className="text-sport-500 font-bold">₹{courtToDelete.basePrice}/hr</span>
             </div>
           </div>
-          <div className="flex gap-3 pt-1">
+          <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-1">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => setCourtToDelete(null)}
-              className="flex-1 border border-slate-200 dark:border-slate-700"
+              className="w-full sm:flex-1 border border-slate-200 dark:border-slate-700 justify-center"
             >
               Keep Pitch
             </Button>
@@ -1105,7 +1105,7 @@ export const ManageCourtsPage = () => {
               isLoading={!!deletingCourtId}
               disabled={!!deletingCourtId}
               onClick={handleConfirmDeleteCourt}
-              className="flex-1"
+              className="w-full sm:flex-1 justify-center"
             >
               Yes, Remove Pitch
             </Button>

@@ -485,7 +485,7 @@ export const ManagerGamesPage = () => {
             <Building2 className="w-5 h-5 text-sport-500" />
             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{myClub?.name || 'Club Venue'}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2.5">
+          <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2.5">
             <span>Venue Game Sessions</span>
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
@@ -575,7 +575,7 @@ export const ManagerGamesPage = () => {
       {/* 1. CATEGORY SEGMENTED RIBBON TABS (Upcoming vs Live vs All Active) */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto w-full sm:w-auto inline-flex">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto max-w-full scrollbar-none w-full sm:w-auto inline-flex">
             {[
               { key: 'upcoming', label: `⚡ Upcoming & Open (${upcomingGames.length})` },
               { key: 'ongoing', label: `🔴 Live Matches (${liveGames.length})` },
@@ -1357,13 +1357,13 @@ export const ManagerGamesPage = () => {
               <span className="text-slate-700 dark:text-slate-300">{gameToRemove.confirmedPlayers?.length || 0} / {gameToRemove.maxPlayers}</span>
             </div>
           </div>
-          <div className="flex gap-3 pt-1">
+          <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-1">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => setGameToRemove(null)}
-              className="flex-1 border border-slate-200 dark:border-slate-700"
+              className="w-full sm:flex-1 border border-slate-200 dark:border-slate-700 justify-center"
             >
               Keep Session
             </Button>
@@ -1375,7 +1375,7 @@ export const ManagerGamesPage = () => {
               isLoading={!!removingGameId}
               disabled={!!removingGameId}
               onClick={handleConfirmRemoveGame}
-              className="flex-1"
+              className="w-full sm:flex-1 justify-center"
             >
               Yes, Cancel &amp; Remove
             </Button>

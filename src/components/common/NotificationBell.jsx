@@ -68,7 +68,7 @@ export const NotificationBell = () => {
 
       {/* Notifications Dropdown Modal */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-3 z-50 text-xs font-semibold space-y-2">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:max-w-none sm:w-96 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-3 z-50 text-xs font-semibold space-y-2">
           
           <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <div className="flex items-center space-x-2">

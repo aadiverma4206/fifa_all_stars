@@ -8,7 +8,7 @@ export const Footer = () => {
       <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-12 space-y-8">
         
         {/* Footer Navigation Columns */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-xs font-semibold text-slate-400">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-xs font-semibold text-slate-400">
           <div className="space-y-3">
             <h4 className="text-white font-extrabold uppercase text-xs">New to FIFA All Stars?</h4>
             <ul className="space-y-2">

@@ -123,7 +123,7 @@ export const ClubDashboardPage = () => {
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="footy-card p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white border-slate-800 shadow-2xl relative overflow-hidden"
+        className="footy-card p-4 sm:p-8 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white border-slate-800 shadow-2xl relative overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-96 h-96 bg-sport-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -139,7 +139,7 @@ export const ClubDashboardPage = () => {
 
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-white">
+                <h1 className="text-xl sm:text-3xl font-black tracking-tight uppercase text-white">
                   {myClub?.name || 'Club Manager Portal'}
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
@@ -189,9 +189,9 @@ export const ClubDashboardPage = () => {
 
 
       {/* 2. KPI METRICS OVERVIEW CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         
-        <div className="footy-card p-5 space-y-3 bg-gradient-to-br from-white via-white to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
+        <div className="footy-card p-3.5 sm:p-5 space-y-3 bg-gradient-to-br from-white via-white to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Pitches & Courts</span>
             <div className="w-8 h-8 rounded-xl bg-sport-500/10 text-sport-500 flex items-center justify-center font-black">
@@ -542,13 +542,13 @@ export const ClubDashboardPage = () => {
                 <span className="text-slate-700 dark:text-slate-300">{gameToRemove.confirmedPlayers?.length || 0} registered</span>
               </div>
             </div>
-            <div className="flex gap-3 pt-1">
+            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setGameToRemove(null)}
-                className="flex-1 border border-slate-200 dark:border-slate-700"
+                className="w-full sm:flex-1 border border-slate-200 dark:border-slate-700 justify-center"
               >
                 Keep Session
               </Button>
@@ -560,7 +560,7 @@ export const ClubDashboardPage = () => {
                 isLoading={!!removingGameId}
                 disabled={!!removingGameId}
                 onClick={handleConfirmRemoveGame}
-                className="flex-1"
+                className="w-full sm:flex-1 justify-center"
               >
                 Yes, Cancel & Remove
               </Button>
