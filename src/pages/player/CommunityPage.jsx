@@ -88,7 +88,7 @@ export const CommunityPage = () => {
         authorId: currentUser?.id || 'usr_player_demo',
         authorName: currentUser?.name || 'Arjun Mehta',
         authorAvatar: currentUser?.profileImageUrl || currentUser?.avatar,
-        authorElo: currentUser?.eloRating || currentUser?.elo || 1840,
+        authorPosition: currentUser?.position || 'ST',
         content: postText.trim(),
         tags: ['FIFAAllStars', currentUser?.city || 'Raipur'],
         ...(postImagePreview ? { image: postImagePreview } : {})
@@ -338,7 +338,7 @@ export const CommunityPage = () => {
                 <div>
                   <div className="flex items-center space-x-2">
                     <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{post.authorName}</h4>
-                    <Badge variant="emerald" size="sm">{post.authorElo} Elo</Badge>
+                    <Badge variant="emerald" size="sm">⚽ {post.authorPosition || 'STRIKER'}</Badge>
                   </div>
                   <span className="text-[10px] text-slate-400 font-semibold">{post.city || 'Raipur'} • {post.timestamp}</span>
                 </div>

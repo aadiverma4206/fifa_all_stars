@@ -64,7 +64,7 @@ export const LoginPage = () => {
       email: 'player@fifaallstars.com',
       pass: 'Player@123',
       badge: '⚽ Player Portal',
-      description: 'Book pitch slots, join pickup games & view Elo ratings.',
+      description: 'Book pitch slots, join pickup games & view player ratings & stats.',
     },
     CLUB_MANAGER: {
       role: 'CLUB_MANAGER',
@@ -388,7 +388,7 @@ export const LoginPage = () => {
               Play Casual Football Anywhere
             </h2>
             <p className="text-xs sm:text-sm font-semibold text-slate-200 max-w-md leading-relaxed">
-              Join thousands of football lovers. Book pitches, join pick-up 5v5/7v7 games, and feel the game energy with gentle, inclusive community vibes.
+              Join thousands of football lovers. Book pitches, join 11v11 football matches, and feel the game energy with gentle, inclusive community vibes.
             </p>
           </div>
         </div>

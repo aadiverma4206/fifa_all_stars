@@ -243,7 +243,7 @@ export const AuditLogsPage = () => {
             {stats.matchCount}
           </div>
           <div className="text-[11px] font-semibold text-slate-400 mt-1">
-            Dispute rulings & Elo adjustments
+            Dispute rulings & rating adjustments
           </div>
         </div>
       </div>

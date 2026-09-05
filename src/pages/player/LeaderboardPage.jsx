@@ -9,7 +9,8 @@ export const LeaderboardPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const playersOnly = usersList.filter(u => u.role === 'PLAYER' || u.role === 'player');
-  const sortedPlayers = [...playersOnly].sort((a, b) => (b.eloRating || b.elo || 0) - (a.eloRating || a.elo || 0));
+  const getPlayerPoints = (u) => u.stats?.points ?? ((u.stats?.wins || 0) * 3 + (u.stats?.draws || 0));
+  const sortedPlayers = [...playersOnly].sort((a, b) => getPlayerPoints(b) - getPlayerPoints(a));
 
   const filteredPlayers = sortedPlayers.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -22,10 +23,10 @@ export const LeaderboardPage = () => {
       <div>
         <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center space-x-2">
           <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-sport-500" />
-          <span>Elo Leaderboard & Rankings</span>
+          <span>Player Rankings & Leaderboard</span>
         </h1>
         <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
-          Top rated grassroots football players ranked by dynamic Elo across Indian cities
+          Top grassroots football players ranked by match points, victories, and performance across Indian cities
         </p>
       </div>
 

@@ -6,6 +6,7 @@ import { dummyGames } from '../data/dummyGames';
 import { dummyTournaments } from '../data/dummyTournaments';
 import { dummyCommunityPosts, dummyPolls, dummyChallenges } from '../data/dummyCommunity';
 import { calculateNewElo } from '../utils/eloCalculator';
+import { calculateFootballMatchResult, normalizeFootballPosition } from '../utils/footballLogic.js';
 import { getTodayDate } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 
@@ -18,6 +19,7 @@ export const MATCH_FORMAT_SLOTS = {
   '6v6': 12,
   '7v7': 14,
   '8v8': 16,
+  '9v9': 18,
   '11v11': 22
 };
 
@@ -37,8 +39,8 @@ export const useDataStore = create(
     {
       id: "notif_1",
       userId: "usr_player_demo",
-      title: "⚽ New 5v5 Game Available",
-      message: "A new 5v5 game is available at Bernabeu Arena Turf. Entry fee: ₹150. Join now before all slots are filled.",
+      title: "⚽ New 11v11 Game Available",
+      message: "A new 11v11 game is available at Bernabeu Arena Turf. Entry fee: ₹150. Join now before all slots are filled.",
       date: "Just now",
       read: false,
       linkUrl: "/games/gam_101",
@@ -49,7 +51,7 @@ export const useDataStore = create(
       id: "notif_2",
       userId: "usr_player_demo",
       title: "💳 Payment Successful & Slot Secured",
-      message: "Your payment of ₹150 for Raipur Friday Night 5v5 Super Match was successful. Slot confirmed!",
+      message: "Your payment of ₹150 for Raipur Friday Night 11v11 Super Match was successful. Slot confirmed!",
       date: "2 hours ago",
       read: true,
       linkUrl: "/games/gam_101",
@@ -60,7 +62,7 @@ export const useDataStore = create(
       id: "notif_3",
       userId: "usr_p2",
       title: "🔥 Match Started! (ONGOING)",
-      message: "Bangalore Techie Fastbreak 5v5 is now ONGOING at Silicon Turf Hub.",
+      message: "Bangalore Techie Fastbreak 11v11 is now ONGOING at Silicon Turf Hub.",
       date: "1 hour ago",
       read: false,
       linkUrl: "/games/gam_103",
@@ -133,7 +135,7 @@ export const useDataStore = create(
     {
       id: "dsp_1",
       gameId: "gam_101",
-      gameTitle: "Raipur 5v5 Showdown at Bernabeu Arena",
+      gameTitle: "Raipur 11v11 Showdown at Bernabeu Arena",
       reportedBy: "Arjun Mehta",
       disputedScore: "Team A 4 - 3 Team B",
       reason: "Team B claimed time was over before 4th goal",
@@ -146,7 +148,7 @@ export const useDataStore = create(
     {
       id: "bkg_101",
       courtId: "crt_rp_101",
-      courtName: "Raipur Pitch Alpha (5v5)",
+      courtName: "Raipur Pitch Alpha (11v11)",
       clubId: "clb_raipur_1",
       clubName: "Bernabeu Arena Turf",
       city: "Raipur",
@@ -164,7 +166,7 @@ export const useDataStore = create(
     {
       id: "bkg_102",
       courtId: "crt_blr_201",
-      courtName: "Silicon Pitch 1 (5v5)",
+      courtName: "Silicon Pitch 1 (11v11)",
       clubId: "clb_blr_1",
       clubName: "Silicon Turf Hub",
       city: "Bangalore",
@@ -398,7 +400,7 @@ export const useDataStore = create(
       } : d)
     });
 
-    get().addAuditLog('DISPUTE_RESOLVED', target.gameTitle, `Overrode match result: ${winnerTeam} declared winner (${scoreStr}). Elo adjusted.`);
+    get().addAuditLog('DISPUTE_RESOLVED', target.gameTitle, `Overrode match result: ${winnerTeam} declared winner (${scoreStr}). Ratings adjusted.`);
     toast.success(`Dispute resolved! ${winnerTeam} declared winner (${scoreStr}).`);
   },
 
@@ -646,11 +648,12 @@ export const useDataStore = create(
         assignedTeam = teamACount <= teamBCount ? 'TEAM_A' : 'TEAM_B';
       }
 
+      const playerPos = player.position || (player.playingHand ? player.playingHand.split('/')[1]?.trim() : null) || 'MID';
       const newConfirmed = [...(targetGame.confirmedPlayers || []), {
         id: player.id,
         name: player.name,
         avatar: player.profileImageUrl || player.avatar,
-        position: player.playingHand?.split('/')[1]?.trim() || 'MID',
+        position: normalizeFootballPosition(playerPos),
         team: assignedTeam
       }];
 
@@ -688,11 +691,12 @@ export const useDataStore = create(
       return { success: true, promoted: false, message: `Successfully joined ${assignedTeam === 'TEAM_A' ? 'Team A' : 'Team B'} roster!` };
     } else {
       const waitlistPos = (targetGame.waitlist?.length || 0) + 1;
+      const playerPos = player.position || (player.playingHand ? player.playingHand.split('/')[1]?.trim() : null) || 'MID';
       const newWaitlist = [...(targetGame.waitlist || []), {
         id: player.id,
         name: player.name,
         avatar: player.profileImageUrl || player.avatar,
-        position: player.playingHand?.split('/')[1]?.trim() || 'MID'
+        position: normalizeFootballPosition(playerPos)
       }];
 
       set({
@@ -744,13 +748,19 @@ export const useDataStore = create(
       return;
     }
 
-    const wasConfirmed = targetGame.confirmedPlayers?.some(p => p.id === userId);
+    const leavingPlayer = targetGame.confirmedPlayers?.find(p => p.id === userId);
+    const wasConfirmed = !!leavingPlayer;
     let newConfirmed = targetGame.confirmedPlayers?.filter(p => p.id !== userId) || [];
     let newWaitlist = [...(targetGame.waitlist || [])];
     let promotedPlayer = null;
 
     if (wasConfirmed && newWaitlist.length > 0) {
-      promotedPlayer = newWaitlist.shift();
+      const waitlistCandidate = newWaitlist.shift();
+      // Ensure promoted player fills the exact vacated team slot to keep teams balanced
+      promotedPlayer = {
+        ...waitlistCandidate,
+        team: leavingPlayer?.team || 'TEAM_A'
+      };
       newConfirmed.push(promotedPlayer);
     }
 
@@ -780,18 +790,20 @@ export const useDataStore = create(
   },
 
   createGame: (newGameData, creatorUser) => {
-    const format = newGameData.format || '5v5';
-    const computedMaxPlayers = newGameData.maxPlayers || MATCH_FORMAT_SLOTS[format] || 10;
+    const format = newGameData.format || '11v11';
+    const computedMaxPlayers = newGameData.maxPlayers || MATCH_FORMAT_SLOTS[format] || 22;
     const isPlayerCreator = creatorUser?.role === 'PLAYER';
     const isManagerCreator = creatorUser?.role === 'CLUB_MANAGER' || creatorUser?.role === 'SUPER_ADMIN';
 
     let confirmedPlayers = [];
     if (isPlayerCreator && creatorUser) {
+      const creatorPos = creatorUser.position || (creatorUser.playingHand ? creatorUser.playingHand.split('/')[1]?.trim() : null) || 'ST';
       confirmedPlayers = [{
         id: creatorUser.id,
         name: creatorUser.name,
         avatar: creatorUser.profileImageUrl || creatorUser.avatar,
-        position: creatorUser.playingHand?.split('/')[1]?.trim() || 'ST'
+        position: normalizeFootballPosition(creatorPos),
+        team: 'TEAM_A'
       }];
     }
     // Note: If Manager/Admin creates, confirmedPlayers is [] (0 slots taken by manager, 100% slots available for players)
@@ -906,13 +918,18 @@ export const useDataStore = create(
 
     const isTeamAWin = teamAScore > teamBScore;
     const isDraw = teamAScore === teamBScore;
+    const goalDiff = Math.abs(teamAScore - teamBScore);
 
     const confirmed = game.confirmedPlayers || [];
-    const teamA = confirmed.slice(0, Math.ceil(confirmed.length / 2));
-    const teamB = confirmed.slice(Math.ceil(confirmed.length / 2));
+    const maxSlots = game.maxPlayers || MATCH_FORMAT_SLOTS[game.format] || 10;
+    const teamCap = Math.ceil(maxSlots / 2);
 
-    const avgEloA = teamA.reduce((sum, p) => sum + (p.elo || 1500), 0) / (teamA.length || 1);
-    const avgEloB = teamB.reduce((sum, p) => sum + (p.elo || 1500), 0) / (teamB.length || 1);
+    // Football team separation: respect player's assigned team property
+    const teamA = confirmed.filter((p, idx) => p.team === 'TEAM_A' || (!p.team && idx < teamCap));
+    const teamB = confirmed.filter((p, idx) => p.team === 'TEAM_B' || (!p.team && idx >= teamCap));
+
+    const avgEloA = teamA.reduce((sum, p) => sum + (p.elo || p.eloRating || 1500), 0) / (teamA.length || 1);
+    const avgEloB = teamB.reduce((sum, p) => sum + (p.elo || p.eloRating || 1500), 0) / (teamB.length || 1);
 
     if (updateUsersListFn && typeof updateUsersListFn === 'function' && Array.isArray(usersList)) {
       const updatedUsers = usersList.map(u => {
@@ -920,11 +937,13 @@ export const useDataStore = create(
         const inB = teamB.some(p => p.id === u.id);
         const isOrganizer = game.organizer?.id === u.id;
 
-        if (inA || inB || isOrganizer) {
+        if (inA || inB) {
+          const playerTeam = inA ? 'TEAM_A' : 'TEAM_B';
+          const matchImpact = calculateFootballMatchResult(teamAScore, teamBScore, playerTeam);
           const outcome = isDraw ? 0.5 : (inA ? (isTeamAWin ? 1 : 0) : (isTeamAWin ? 0 : 1));
           const oppElo = inA ? avgEloB : avgEloA;
           const currentElo = u.eloRating || u.elo || 1500;
-          const newElo = (inA || inB) ? calculateNewElo(currentElo, oppElo, outcome, 32) : currentElo;
+          const newElo = calculateNewElo(currentElo, oppElo, outcome, 32, goalDiff);
           
           const historyEntry = {
             gameId: game.id,
@@ -933,7 +952,59 @@ export const useDataStore = create(
             score: `${teamAScore} - ${teamBScore}`,
             format: game.format,
             venue: game.venueReference?.clubName || 'Turf Hub',
-            role: isOrganizer ? 'Host' : (inA ? 'Team A' : 'Team B')
+            team: inA ? 'Team A' : 'Team B',
+            role: inA ? 'Team A' : 'Team B',
+            result: matchImpact.result,
+            outcomeCode: matchImpact.outcomeCode,
+            goalsFor: matchImpact.goalsFor,
+            goalsAgainst: matchImpact.goalsAgainst,
+            goalDiff: matchImpact.goalDiff,
+            cleanSheet: matchImpact.cleanSheet,
+            pointsEarned: matchImpact.pointsEarned
+          };
+
+          const existingHistory = u.gameHistory || [];
+          const updatedHistory = [historyEntry, ...existingHistory.filter(h => h.gameId !== game.id)];
+
+          // Update cumulative football player stats
+          const prevStats = u.stats || {};
+          const newMatchesPlayed = (prevStats.matchesPlayed || existingHistory.length) + 1;
+          const newWins = (prevStats.wins || 0) + (matchImpact.isWin ? 1 : 0);
+          const newDraws = (prevStats.draws || 0) + (matchImpact.isDraw ? 1 : 0);
+          const newLosses = (prevStats.losses || 0) + (matchImpact.isLoss ? 1 : 0);
+          const newCleanSheets = (prevStats.cleanSheets || 0) + (matchImpact.cleanSheet ? 1 : 0);
+          const newPoints = (prevStats.points || 0) + matchImpact.pointsEarned;
+          const newWinRate = Math.round((newWins / newMatchesPlayed) * 100);
+
+          const updatedStats = {
+            ...prevStats,
+            matchesPlayed: newMatchesPlayed,
+            wins: newWins,
+            draws: newDraws,
+            losses: newLosses,
+            cleanSheets: newCleanSheets,
+            points: newPoints,
+            winRate: newWinRate,
+            elo: newElo
+          };
+
+          return {
+            ...u,
+            eloRating: newElo,
+            elo: newElo,
+            stats: updatedStats,
+            gameHistory: updatedHistory
+          };
+        } else if (isOrganizer) {
+          // Non-playing organizer/manager: Record match in organizer log without altering player Elo or player stats
+          const historyEntry = {
+            gameId: game.id,
+            title: game.title,
+            date: game.dateTime?.date || getTodayDate(0),
+            score: `${teamAScore} - ${teamBScore}`,
+            format: game.format,
+            venue: game.venueReference?.clubName || 'Turf Hub',
+            role: 'Host'
           };
 
           const existingHistory = u.gameHistory || [];
@@ -941,8 +1012,6 @@ export const useDataStore = create(
 
           return {
             ...u,
-            eloRating: newElo,
-            elo: newElo,
             gameHistory: updatedHistory
           };
         }
@@ -980,7 +1049,7 @@ export const useDataStore = create(
       gameId
     });
 
-    toast.success('Match score recorded & Elo ratings updated!');
+    toast.success('Match score recorded & player ratings updated!');
   },
 
   // --- BOOKING ACTIONS ---
@@ -1140,6 +1209,13 @@ export const useDataStore = create(
               if (crt.image?.includes('/src/assets/images/')) {
                 crt.image = crt.image.replace('/src/assets/images/', '/assets/images/');
               }
+              if (crt.name) {
+                crt.name = crt.name.replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)');
+                crt.name = crt.name.replace(/Futsal Dome/gi, 'Stadium Dome');
+              }
+              if (crt.format && crt.format !== '11v11') {
+                crt.format = '11v11';
+              }
             });
           }
           if (Array.isArray(state.tournaments)) {
@@ -1160,6 +1236,23 @@ export const useDataStore = create(
                     p.avatar = p.avatar.replace('/src/assets/images/', '/assets/images/');
                   }
                 });
+              }
+              if (g.format && g.format !== '11v11') {
+                g.format = '11v11';
+                g.maxSlots = 22;
+              }
+              if (g.title) {
+                g.title = g.title.replace(/\b(?:5v5|7v7|3v3|2v2|1v1|8v8)\b/gi, '11v11');
+              }
+              if (g.courtName) {
+                g.courtName = g.courtName.replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)').replace(/Futsal Dome/gi, 'Stadium Dome');
+              }
+            });
+          }
+          if (Array.isArray(state.bookings)) {
+            state.bookings.forEach(b => {
+              if (b.courtName) {
+                b.courtName = b.courtName.replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)').replace(/Futsal Dome/gi, 'Stadium Dome');
               }
             });
           }

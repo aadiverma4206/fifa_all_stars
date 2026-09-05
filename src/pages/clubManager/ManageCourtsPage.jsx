@@ -17,7 +17,7 @@ export const ManageCourtsPage = () => {
 
   // New Court Form
   const [name, setName] = useState('');
-  const [format, setFormat] = useState('5v5');
+  const [format, setFormat] = useState('11v11');
   const [surfaceType, setSurfaceType] = useState('3G Artificial Turf');
   const [basePrice, setBasePrice] = useState('45');
   const [peakPrice, setPeakPrice] = useState('65');
@@ -107,7 +107,7 @@ export const ManageCourtsPage = () => {
             <input
               name="courtName"
               type="text"
-              placeholder="e.g. Pitch Delta (5v5)"
+              placeholder="e.g. Pitch Delta (11v11)"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
@@ -124,9 +124,7 @@ export const ManageCourtsPage = () => {
                 onChange={(e) => setFormat(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="5v5">5v5</option>
-                <option value="7v7">7v7</option>
-                <option value="Futsal">Futsal</option>
+                <option value="11v11">11v11 Official Match</option>
               </select>
             </div>
             <div>

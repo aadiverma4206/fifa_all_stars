@@ -1,7 +1,7 @@
 export const dummyTournaments = [
   {
     id: "trn_101",
-    title: "All-India Grassroots Futsal Cup 2026",
+    title: "All-India Grassroots 11v11 Football Cup 2026",
     tagline: "Knockout Championship Trophy & ₹1,00,000 Prize Pool",
     format: "Knockout",
     type: "Knockout",
@@ -17,7 +17,7 @@ export const dummyTournaments = [
     registeredTeamsCount: 8,
     status: "CONFIRMED",
     champion: "Raipur Strikers FC",
-    description: "Annual premier 5v5 knockout cup in Raipur featuring certified referees and live streaming.",
+    description: "Annual premier 11v11 knockout cup in Raipur featuring certified referees and live streaming.",
     teams: [
       { id: "tm_1", name: "Raipur Strikers FC", captain: "Arjun Mehta", status: "CONFIRMED", logo: "⚡" },
       { id: "tm_2", name: "Bangalore Dynamos", captain: "Siddharth Rao", status: "CONFIRMED", logo: "🔥" },
@@ -37,15 +37,15 @@ export const dummyTournaments = [
       ]
     },
     rules: [
-      "20 minutes match duration",
-      "No tackle from behind",
-      "Accumulated fouls result in 10m penalty"
+      "90 minutes standard match duration (2 x 45 min halves)",
+      "Official IFAB / FIFA rules with certified referees",
+      "Corner kicks, offside rule, and throw-ins apply"
     ]
   },
 
   {
     id: "trn_102",
-    title: "Silicon City Futsal League 2026",
+    title: "Silicon City 11v11 Football League 2026",
     tagline: "8-Team Round-Robin League & ₹75,000 Cash Pool",
     format: "Round-Robin",
     type: "Round-Robin",
@@ -61,7 +61,7 @@ export const dummyTournaments = [
     registeredTeamsCount: 6,
     status: "TEAM_PENDING",
     champion: null,
-    description: "Round-robin league format where every team plays 5 matches guaranteed before top 4 playoff.",
+    description: "Round-robin 11v11 league format where every team plays 5 matches guaranteed before top 4 playoff.",
     teams: [
       { id: "tm_5", name: "Indiranagar Falcons", captain: "Tanya Sharma", status: "CONFIRMED", logo: "🦅" },
       { id: "tm_6", name: "Deccan Chargers", captain: "Neha Gupta", status: "TEAM_PENDING", logo: "⚡" }
@@ -72,8 +72,8 @@ export const dummyTournaments = [
       ]
     },
     rules: [
-      "Low-bounce size 4 futsal ball",
-      "Rolling substitutions"
+      "Official FIFA standard size 5 match ball",
+      "FIFA substitution guidelines (up to 5 substitutions)"
     ]
   },
 
@@ -95,9 +95,9 @@ export const dummyTournaments = [
     registeredTeamsCount: 4,
     status: "TEAM_PENDING",
     champion: null,
-    description: "High stakes 7v7 knockout cup in Deccan Pune.",
+    description: "High stakes 11v11 knockout cup in Deccan Pune.",
     teams: [],
     brackets: {},
-    rules: ["Official 7v7 rules with certified referee panel."]
+    rules: ["Official 11v11 rules with certified referee panel."]
   }
 ];

@@ -8,7 +8,7 @@ export const dummyCommunityPosts = [
     authorAvatar: "/assets/images/avatars/avatar-1.jpg",
     authorElo: 1840,
     timestamp: "2 hours ago",
-    content: "What a crazy 5v5 match tonight at Bernabeu Arena Raipur! Thanks to Ananya for saving 3 penalties in a row. MVP performance! 🧤🔥",
+    content: "What a crazy 11v11 match tonight at Bernabeu Arena Raipur! Thanks to Ananya for saving 3 penalties in a row. MVP performance! 🧤🔥",
     image: "",
     likes: 24,
     comments: [
@@ -30,7 +30,7 @@ export const dummyCommunityPosts = [
     comments: [
       { id: "c_2", author: "Tanya Sharma", avatar: "/assets/images/avatars/avatar-10.jpg", text: "I can join for midfield/defence! Just confirmed.", timestamp: "3 hours ago" }
     ],
-    tags: ["BangaloreFutsal", "NeedPlayers"]
+    tags: ["BangaloreFootball", "NeedPlayers"]
   }
 ];
 
@@ -40,7 +40,7 @@ export const dummyPolls = [
   {
     id: "poll_1",
     city: "Raipur",
-    question: "Which pitch surface do you prefer for 5v5 matches?",
+    question: "Which pitch surface do you prefer for 11v11 matches?",
     options: [
       { id: "opt_1", text: "3G Artificial Turf", votes: 42 },
       { id: "opt_2", text: "Synthetic Rubber Futsal", votes: 18 },
@@ -67,7 +67,7 @@ export const dummyChallenges = [
   {
     id: "ch_2",
     title: "Victory Streak Challenge",
-    description: "Win 3 matches in a row to boost your Elo rating",
+    description: "Win 3 matches in a row to boost your player OVR rating",
     target: 3,
     rewardBadge: "WinnerStreak",
     rewardWalletBonus: 350, // ₹350 wallet reward

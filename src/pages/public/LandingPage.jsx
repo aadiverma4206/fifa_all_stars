@@ -53,7 +53,7 @@ export const LandingPage = () => {
     },
     {
       q: 'Can anybody create a new game?',
-      a: 'Yes! Any registered player or venue manager can host a new game session, set the format (5v5 or 7v7), entry fee, and invite community players.'
+      a: 'Yes! Any registered player or venue manager can host a new game session, set the 11v11 match details, entry fee, and invite community players.'
     },
     {
       q: 'Is it safe to pay online?',
@@ -62,7 +62,7 @@ export const LandingPage = () => {
   ];
 
   const indianCities = [
-    { name: 'Raipur', pitches: ['Bernabeu Arena Turf (VIP Road)', 'Telibandha Futsal Dome', 'Magneto Sports Pitch'] },
+    { name: 'Raipur', pitches: ['Bernabeu Arena Turf (VIP Road)', 'Telibandha Stadium Pitch', 'Magneto Sports Pitch'] },
     { name: 'Bangalore', pitches: ['Silicon Turf Hub (Indiranagar)', 'Koramangala 3G Pitch', 'HSR Layout Arena'] },
     { name: 'Mumbai', pitches: ['Marine Drive Sports Complex', 'Bandra Futsal Turf', 'Andheri Sports Hub'] },
     { name: 'Pune', pitches: ['Champions Turf Arena (FC Road)', 'Deccan Gymkhana Turf', 'Kothrud Futsal Park'] },

@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDataStore } from '../../store/useDataStore';
-import { getEloBadgeInfo } from '../../utils/eloCalculator';
 import { getTodayDate } from '../../utils/dateUtils';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
@@ -86,9 +85,9 @@ export const ProfilePage = () => {
     }
   };
 
-  // User Elo stats
-  const eloScore = currentUser?.stats?.elo || currentUser?.eloRating || 1200;
-  const badgeInfo = getEloBadgeInfo(eloScore);
+  // User Football Match Record
+  const userWins = currentUser?.stats?.wins || 19;
+  const userLosses = currentUser?.stats?.losses || 5;
   const userBookings = bookings.filter(b => b.userId === currentUser?.id || b.userName === currentUser?.name);
 
   // Filtered Datasets
@@ -316,7 +315,7 @@ export const ProfilePage = () => {
 
         {/* Right Action & Rating Strip */}
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-          {isManager ? (
+          {isManager && (
             /* Manager Venue Card Box */
             <div className="flex items-center space-x-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 w-full sm:w-auto justify-center">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-black">
@@ -327,15 +326,6 @@ export const ProfilePage = () => {
                 <span className="text-xl font-mono font-black text-slate-900 dark:text-white">
                   {myClub?.rating || '4.9'} <span className="text-xs font-semibold text-slate-400">({myClub?.reviewsCount || 142} reviews)</span>
                 </span>
-              </div>
-            </div>
-          ) : (
-            /* Player Elo Rating Box */
-            <div className="flex items-center space-x-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 w-full sm:w-auto justify-center">
-              <span className="text-3xl">{badgeInfo.icon}</span>
-              <div className="text-left">
-                <span className="block text-[10px] font-black uppercase text-slate-400">{badgeInfo.title}</span>
-                <span className="text-xl font-mono font-black text-sport-500">{currentUser?.eloRating || currentUser?.elo || 1840} <span className="text-xs font-semibold text-slate-400">Elo</span></span>
               </div>
             </div>
           )}
