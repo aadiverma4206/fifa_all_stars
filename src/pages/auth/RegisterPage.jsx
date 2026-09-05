@@ -110,11 +110,11 @@ export const RegisterPage = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <span>Book pitch slots & join 5v5/7v7 pick-up matches</span>
+                <span>Book pitch slots & join 11v11 football matches</span>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <span>Track your Elo ratings, scores & video highlights</span>
+                <span>Track your player OVR ratings, scores & video highlights</span>
               </div>
             </div>
           </div>
@@ -135,7 +135,7 @@ export const RegisterPage = () => {
                 </span>
               </div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Register as a Player to start booking turfs, joining matches & tracking Elo scores.
+                Register as a Player to start booking turfs, joining matches & tracking player ratings.
               </p>
             </div>
 

@@ -39,8 +39,8 @@ export const useDataStore = create(
     {
       id: "notif_1",
       userId: "usr_player_demo",
-      title: "⚽ New 5v5 Game Available",
-      message: "A new 5v5 game is available at Bernabeu Arena Turf. Entry fee: ₹150. Join now before all slots are filled.",
+      title: "⚽ New 11v11 Game Available",
+      message: "A new 11v11 game is available at Bernabeu Arena Turf. Entry fee: ₹150. Join now before all slots are filled.",
       date: "Just now",
       read: false,
       linkUrl: "/games/gam_101",
@@ -51,7 +51,7 @@ export const useDataStore = create(
       id: "notif_2",
       userId: "usr_player_demo",
       title: "💳 Payment Successful & Slot Secured",
-      message: "Your payment of ₹150 for Raipur Friday Night 5v5 Super Match was successful. Slot confirmed!",
+      message: "Your payment of ₹150 for Raipur Friday Night 11v11 Super Match was successful. Slot confirmed!",
       date: "2 hours ago",
       read: true,
       linkUrl: "/games/gam_101",
@@ -62,7 +62,7 @@ export const useDataStore = create(
       id: "notif_3",
       userId: "usr_p2",
       title: "🔥 Match Started! (ONGOING)",
-      message: "Bangalore Techie Fastbreak 5v5 is now ONGOING at Silicon Turf Hub.",
+      message: "Bangalore Techie Fastbreak 11v11 is now ONGOING at Silicon Turf Hub.",
       date: "1 hour ago",
       read: false,
       linkUrl: "/games/gam_103",
@@ -135,7 +135,7 @@ export const useDataStore = create(
     {
       id: "dsp_1",
       gameId: "gam_101",
-      gameTitle: "Raipur 5v5 Showdown at Bernabeu Arena",
+      gameTitle: "Raipur 11v11 Showdown at Bernabeu Arena",
       reportedBy: "Arjun Mehta",
       disputedScore: "Team A 4 - 3 Team B",
       reason: "Team B claimed time was over before 4th goal",
@@ -148,7 +148,7 @@ export const useDataStore = create(
     {
       id: "bkg_101",
       courtId: "crt_rp_101",
-      courtName: "Raipur Pitch Alpha (5v5)",
+      courtName: "Raipur Pitch Alpha (11v11)",
       clubId: "clb_raipur_1",
       clubName: "Bernabeu Arena Turf",
       city: "Raipur",
@@ -166,7 +166,7 @@ export const useDataStore = create(
     {
       id: "bkg_102",
       courtId: "crt_blr_201",
-      courtName: "Silicon Pitch 1 (5v5)",
+      courtName: "Silicon Pitch 1 (11v11)",
       clubId: "clb_blr_1",
       clubName: "Silicon Turf Hub",
       city: "Bangalore",
@@ -400,7 +400,7 @@ export const useDataStore = create(
       } : d)
     });
 
-    get().addAuditLog('DISPUTE_RESOLVED', target.gameTitle, `Overrode match result: ${winnerTeam} declared winner (${scoreStr}). Elo adjusted.`);
+    get().addAuditLog('DISPUTE_RESOLVED', target.gameTitle, `Overrode match result: ${winnerTeam} declared winner (${scoreStr}). Ratings adjusted.`);
     toast.success(`Dispute resolved! ${winnerTeam} declared winner (${scoreStr}).`);
   },
 
@@ -1049,7 +1049,7 @@ export const useDataStore = create(
       gameId
     });
 
-    toast.success('Match score recorded & Elo ratings updated!');
+    toast.success('Match score recorded & player ratings updated!');
   },
 
   // --- BOOKING ACTIONS ---
@@ -1209,6 +1209,13 @@ export const useDataStore = create(
               if (crt.image?.includes('/src/assets/images/')) {
                 crt.image = crt.image.replace('/src/assets/images/', '/assets/images/');
               }
+              if (crt.name) {
+                crt.name = crt.name.replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)');
+                crt.name = crt.name.replace(/Futsal Dome/gi, 'Stadium Dome');
+              }
+              if (crt.format && crt.format !== '11v11') {
+                crt.format = '11v11';
+              }
             });
           }
           if (Array.isArray(state.tournaments)) {
@@ -1229,6 +1236,23 @@ export const useDataStore = create(
                     p.avatar = p.avatar.replace('/src/assets/images/', '/assets/images/');
                   }
                 });
+              }
+              if (g.format && g.format !== '11v11') {
+                g.format = '11v11';
+                g.maxSlots = 22;
+              }
+              if (g.title) {
+                g.title = g.title.replace(/\b(?:5v5|7v7|3v3|2v2|1v1|8v8)\b/gi, '11v11');
+              }
+              if (g.courtName) {
+                g.courtName = g.courtName.replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)').replace(/Futsal Dome/gi, 'Stadium Dome');
+              }
+            });
+          }
+          if (Array.isArray(state.bookings)) {
+            state.bookings.forEach(b => {
+              if (b.courtName) {
+                b.courtName = b.courtName.replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)').replace(/Futsal Dome/gi, 'Stadium Dome');
               }
             });
           }

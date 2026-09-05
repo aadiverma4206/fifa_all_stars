@@ -9,6 +9,7 @@ import Avatar from '../../components/common/Avatar';
 import Modal from '../../components/common/Modal';
 import { validateName, validateEmail, validatePassword, validatePhone, validateNonEmpty, validateFormAndFocus } from '../../utils/validationUtils';
 import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
+import { calculatePlayerOVR } from '../../utils/footballLogic';
 import toast from 'react-hot-toast';
 
 export const UserManagementPage = () => {
@@ -577,8 +578,8 @@ export const UserManagementPage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Elo Rating</span>
-                <span className="text-lg font-bold text-amber-500">{selectedUser.eloRating || 1500} Elo</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Player Rating</span>
+                <span className="text-lg font-bold text-amber-500">{selectedUser.stats?.ovr || calculatePlayerOVR(selectedUser.eloRating || selectedUser.elo || 1500)} OVR</span>
               </div>
               <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Wallet Balance</span>

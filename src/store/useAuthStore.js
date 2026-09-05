@@ -68,7 +68,7 @@ export const useAuthStore = create(
             position: normPos,
             preferredFoot: preferredFoot
           },
-          bio: bio || 'Passionate football player looking for 5v5 and 7v7 casual matches.',
+          bio: bio || 'Passionate football player looking for 11v11 competitive football matches.',
           badges: ['NewRecruit'],
           joinedDate: getTodayDate(0),
           walletBalance: 1000.00, // Default welcome bonus
@@ -333,10 +333,16 @@ export const useAuthStore = create(
           if (state.currentUser?.profileImageUrl?.includes('/src/assets/images/')) {
             state.currentUser.profileImageUrl = state.currentUser.profileImageUrl.replace('/src/assets/images/', '/assets/images/');
           }
+          if (state.currentUser?.bio) {
+            state.currentUser.bio = state.currentUser.bio.replace(/5v5\s*&\s*7v7/gi, '11v11').replace(/\b(?:5v5|7v7)\b/gi, '11v11');
+          }
           if (Array.isArray(state.usersList)) {
             state.usersList.forEach(u => {
               if (u.profileImageUrl?.includes('/src/assets/images/')) {
                 u.profileImageUrl = u.profileImageUrl.replace('/src/assets/images/', '/assets/images/');
+              }
+              if (u.bio) {
+                u.bio = u.bio.replace(/5v5\s*&\s*7v7/gi, '11v11').replace(/\b(?:5v5|7v7)\b/gi, '11v11');
               }
             });
           }

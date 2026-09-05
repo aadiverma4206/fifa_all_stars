@@ -196,7 +196,7 @@ export const MatchHistoryPage = () => {
     return matchesSearch && matchesFormat && matchesDate && matchesResult;
   });
 
-  const formats = ['all', '5v5', '7v7', '3v3', '2v2', '1v1'];
+  const formats = ['all', '11v11'];
 
   const resetAllFilters = () => {
     setSearchTerm('');
@@ -220,7 +220,7 @@ export const MatchHistoryPage = () => {
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
             {isManager 
               ? 'Official match records, final scores, and video archives for sessions hosted at your venue.'
-              : 'View completed pick-up matches, final scores, Elo ratings, and competitive results.'
+              : 'View completed pick-up matches, final scores, match ratings, and competitive results.'
             }
           </p>
         </div>
@@ -533,7 +533,7 @@ export const MatchHistoryPage = () => {
                             {result.type === 'WON' && (
                               <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[9px] uppercase mt-1 border border-emerald-500/20">
                                 <Zap className="w-3 h-3 text-amber-500 fill-amber-400" />
-                                <span>+32 ELO</span>
+                                <span>+3 PTS WIN</span>
                               </span>
                             )}
                           </div>

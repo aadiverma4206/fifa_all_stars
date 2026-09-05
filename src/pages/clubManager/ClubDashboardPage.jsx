@@ -70,7 +70,7 @@ export const ClubDashboardPage = () => {
             </div>
           </div>
           <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{clubCourts.length}</span>
-          <span className="text-[10px] text-slate-400 font-medium block">5v5 & 7v7 pitches</span>
+          <span className="text-[10px] text-slate-400 font-medium block">11v11 stadium pitches</span>
         </div>
       </div>
 

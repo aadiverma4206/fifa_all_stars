@@ -41,7 +41,7 @@ export const dummyUsers = [
       { id: "tx_01", type: "WALLET_TOPUP", amount: 50000.00, date: getTodayDate(-5), status: "SUCCESS" }
     ],
     gameHistory: [
-      { gameId: "gam_101", title: "Raipur 5v5 Showdown", score: "Team A 4 - 3 Team B", date: getTodayDate(-2) }
+      { gameId: "gam_101", title: "Raipur 11v11 Showdown", score: "Team A 4 - 3 Team B", date: getTodayDate(-2) }
     ]
   },
   {
@@ -201,7 +201,7 @@ export const dummyUsers = [
     preferredFoot: "Right",
     playingHand: "Right / Striker",
     city: "Raipur",
-    bio: "Passionate striker. Always down for competitive 5v5 & 7v7 pick-up sessions in Raipur.",
+    bio: "Passionate striker. Always down for competitive 11v11 football sessions in Raipur.",
     profileImageUrl: "/assets/images/avatars/avatar-1.jpg",
     badges: ["TopScorer", "MVPSpecialist", "CommunityCaptain"],
     joinedDate: "2024-02-01",
@@ -223,10 +223,10 @@ export const dummyUsers = [
       preferredFoot: "Right"
     },
     paymentHistory: [
-      { id: "tx_101", type: "GAME_FEE", amount: 250.00, date: "2026-08-26", status: "SUCCESS", description: "Entry Fee for Raipur 5v5 Showdown" }
+      { id: "tx_101", type: "GAME_FEE", amount: 250.00, date: "2026-08-26", status: "SUCCESS", description: "Entry Fee for Raipur 11v11 Showdown" }
     ],
     gameHistory: [
-      { gameId: "gam_101", title: "Raipur 5v5 Showdown at Bernabeu Arena", score: "Team A 4 - 3 Team B", date: "2026-08-26" }
+      { gameId: "gam_101", title: "Raipur 11v11 Showdown at Bernabeu Arena", score: "Team A 4 - 3 Team B", date: "2026-08-26" }
     ]
   },
   {

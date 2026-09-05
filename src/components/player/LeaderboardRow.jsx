@@ -1,11 +1,12 @@
 import React from 'react';
-import { getEloBadgeInfo } from '../../utils/eloCalculator';
 import Avatar from '../common/Avatar';
 import Badge from '../common/Badge';
 
 export const LeaderboardRow = ({ user, rank }) => {
-  const elo = user.eloRating || user.elo || 1000;
-  const badgeInfo = getEloBadgeInfo(elo);
+  const points = user.stats?.points ?? ((user.stats?.wins || 0) * 3 + (user.stats?.draws || 0));
+  const wins = user.stats?.wins || 0;
+  const matches = user.stats?.matchesPlayed || 0;
+  const position = user.position || user.playingHand || 'Striker';
 
   const rankColor = rank === 1
     ? 'bg-amber-400 text-slate-950 font-black'
@@ -31,23 +32,23 @@ export const LeaderboardRow = ({ user, rank }) => {
             <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{user.name}</h4>
             <Badge variant="emerald" size="sm" className="hidden xs:inline-flex">{user.skillLevel || 'Advanced'}</Badge>
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-400 font-semibold truncate">{user.city || 'Raipur'} • {user.playingHand || 'Striker'}</p>
+          <p className="text-[11px] sm:text-xs text-slate-400 font-semibold truncate">{user.city || 'Raipur'} • {position}</p>
         </div>
       </div>
 
-      {/* Right: Division Badge & Elo Score */}
+      {/* Right: Football Position Badge & Points */}
       <div className="flex items-center space-x-4">
         <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
-          <span>{badgeInfo.icon}</span>
-          <span>{badgeInfo.title}</span>
+          <span>⚽</span>
+          <span>{position}</span>
         </div>
 
         <div className="text-right">
           <span className="block text-lg font-black text-sport-500">
-            {elo} <span className="text-xs font-bold text-slate-400 uppercase">Elo</span>
+            {points} <span className="text-xs font-bold text-slate-400 uppercase">PTS</span>
           </span>
           <span className="text-[10px] font-bold text-slate-400">
-            {user.badges?.slice(0, 2).join(' • ') || 'Verified Player'}
+            {wins}W • {matches} Matches
           </span>
         </div>
       </div>

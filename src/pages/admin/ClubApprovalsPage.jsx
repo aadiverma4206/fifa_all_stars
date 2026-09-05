@@ -404,7 +404,7 @@ export const ClubApprovalsPage = () => {
       // Also auto-create a starter court for the new club (guard against addClub returning undefined)
       if (created && created.id) {
         addCourt(created.id, {
-          name: `${created.name} Pitch 1 (5v5)`,
+          name: `${created.name} Pitch 1 (11v11)`,
           type: 'Outdoor',
           surface: '3G Turf',
           basePrice: 600,
@@ -432,7 +432,7 @@ export const ClubApprovalsPage = () => {
     setSelectedClub(club);
     const existingCount = courts.filter(c => c.clubId === club.id).length;
     setCourtFormData({
-      name: `${club.name} Pitch ${existingCount + 1} (5v5)`,
+      name: `${club.name} Pitch ${existingCount + 1} (11v11)`,
       type: 'Outdoor',
       surface: '3G Turf',
       basePrice: 600,
@@ -628,7 +628,7 @@ export const ClubApprovalsPage = () => {
             {stats.totalCourts}
           </div>
           <div className="text-[11px] font-semibold text-slate-400 mt-1">
-            5v5 / 7v7 / Futsal Domes
+            11v11 Stadium Pitches
           </div>
         </div>
 
@@ -1813,7 +1813,7 @@ export const ClubApprovalsPage = () => {
               name="courtName"
               type="text"
               required
-              placeholder="E.g. Pitch Alpha (5v5)"
+              placeholder="E.g. Pitch Alpha (11v11)"
               value={courtFormData.name}
               onChange={(e) => setCourtFormData(prev => ({ ...prev, name: e.target.value }))}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-semibold"

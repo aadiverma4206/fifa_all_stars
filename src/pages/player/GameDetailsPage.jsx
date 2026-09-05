@@ -142,8 +142,8 @@ export const GameDetailsPage = () => {
     setEditDate(game.dateTime?.date || '');
     setEditStartTime(game.dateTime?.startTime || '19:00');
     setEditEndTime(game.dateTime?.endTime || '20:30');
-    setEditFormat(game.format || '5v5');
-    setEditMaxPlayers(String(game.maxPlayers || 10));
+    setEditFormat(game.format || '11v11');
+    setEditMaxPlayers(String(game.maxPlayers || 22));
     setEditEntryFee(String(game.entryFee || 0));
     setEditSkill(game.skill || 'Intermediate');
     setEditPrivacy(game.privacy || 'PUBLIC');
@@ -748,7 +748,7 @@ export const GameDetailsPage = () => {
               <div className={`inline-flex flex-wrap items-center justify-center gap-1.5 px-4 py-1.5 rounded-full ${outcomeInfo.bg} border ${outcomeInfo.border} ${outcomeInfo.color} text-xs font-black max-w-full`}>
                 <span>{outcomeInfo.text}</span>
                 <span className="hidden xs:inline">•</span>
-                <span>⚡ Elo Recalculated</span>
+                <span>⚡ Ratings Updated</span>
               </div>
             </div>
           );
@@ -809,7 +809,7 @@ export const GameDetailsPage = () => {
                   <Users className="w-4 h-4 text-sport-500" />
                   <span>Squad Rosters ({confirmedPlayers.length} / {maxSlots} Confirmed)</span>
                 </h3>
-                <p className="text-[11px] text-slate-400 font-semibold">Teams balance dynamically based on player Elo ratings</p>
+                <p className="text-[11px] text-slate-400 font-semibold">Teams balance dynamically based on player ratings</p>
               </div>
 
               {isConfirmed && !isGameCompleted && (
@@ -1147,7 +1147,7 @@ export const GameDetailsPage = () => {
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-amber-500 font-bold">⚡</span>
-                <span><strong>Elo Ratings:</strong> Final match scores dynamically update official player ranking points.</span>
+                <span><strong>Player Ratings:</strong> Final match scores dynamically update official player OVR ratings.</span>
               </div>
             </div>
           </div>
@@ -1257,7 +1257,7 @@ export const GameDetailsPage = () => {
       <Modal isOpen={isScoreModalOpen} onClose={() => setIsScoreModalOpen(false)} title="🏁 Enter Final Score & Finish Match">
         <form onSubmit={handleSubmitScore} className="space-y-4 text-xs font-bold">
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-semibold">
-            🏆 <strong>FINAL RESULT SUBMISSION:</strong> Entering the final score will mark the match as <strong>COMPLETED</strong>, trigger standard Elo rating calculations (K=32 factor) for all confirmed players, and move the match into <strong>Match History</strong>.
+            🏆 <strong>FINAL RESULT SUBMISSION:</strong> Entering the final score will mark the match as <strong>COMPLETED</strong>, trigger official match rating calculations for all confirmed players, and move the match into <strong>Match History</strong>.
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1304,7 +1304,7 @@ export const GameDetailsPage = () => {
       <Modal isOpen={isLiveScoreModalOpen} onClose={() => setIsLiveScoreModalOpen(false)} title="🔴 Record Live Score (Screen Only)">
         <form onSubmit={handleSubmitLiveScore} className="space-y-4 text-xs font-bold">
           <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 font-semibold">
-            ⚡ <strong>SCREEN SCORE ONLY:</strong> Live score updates the on-screen display for spectators & players. It will <strong>NOT</strong> mark the match as Completed, will <strong>NOT</strong> calculate Elo, and will <strong>NOT</strong> move it to Match History until you submit via "Enter Score & Finish Match".
+            ⚡ <strong>SCREEN SCORE ONLY:</strong> Live score updates the on-screen display for spectators & players. It will <strong>NOT</strong> mark the match as Completed, will <strong>NOT</strong> calculate player ratings, and will <strong>NOT</strong> move it to Match History until you submit via "Enter Score & Finish Match".
           </div>
 
           <div className="grid grid-cols-2 gap-4">

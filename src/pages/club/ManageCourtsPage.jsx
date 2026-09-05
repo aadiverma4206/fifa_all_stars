@@ -26,7 +26,7 @@ const SURFACE_TYPES = [
 ];
 
 const ENVIRONMENT_TYPES = ['Outdoor', 'Indoor', 'Covered Roof'];
-const FORMAT_OPTIONS = ['5v5', '7v7', '8v8', '11v11', 'Custom'];
+const FORMAT_OPTIONS = ['11v11'];
 
 const LOCAL_COURT_IMAGES = [
   '/assets/images/courts/court-1.jpg',
@@ -71,9 +71,9 @@ export const ManageCourtsPage = () => {
   const [type, setType] = useState('Outdoor');
   const [surface, setSurface] = useState('3G Turf');
   const [basePrice, setBasePrice] = useState('500');
-  const [format, setFormat] = useState('5v5');
+  const [format, setFormat] = useState('11v11');
   const [courtImage, setCourtImage] = useState('/assets/images/courts/court-1.jpg');
-  const [dimensions, setDimensions] = useState('30m x 15m');
+  const [dimensions, setDimensions] = useState('105m x 68m');
   const [description, setDescription] = useState('');
 
   // Edit Pitch Form State
@@ -81,9 +81,9 @@ export const ManageCourtsPage = () => {
   const [editType, setEditType] = useState('Outdoor');
   const [editSurface, setEditSurface] = useState('3G Turf');
   const [editBasePrice, setEditBasePrice] = useState('500');
-  const [editFormat, setEditFormat] = useState('5v5');
+  const [editFormat, setEditFormat] = useState('11v11');
   const [editImage, setEditImage] = useState('');
-  const [editDimensions, setEditDimensions] = useState('');
+  const [editDimensions, setEditDimensions] = useState('105m x 68m');
   const [editDescription, setEditDescription] = useState('');
 
   // Pitch Photo Upload States
@@ -235,9 +235,9 @@ export const ManageCourtsPage = () => {
     setEditType(crt.type || 'Outdoor');
     setEditSurface(crt.surface || '3G Turf');
     setEditBasePrice(String(crt.basePrice || 500));
-    setEditFormat(crt.format || '5v5');
+    setEditFormat(crt.format || '11v11');
     setEditImage(crt.image || '/assets/images/courts/court-1.jpg');
-    setEditDimensions(crt.dimensions || '30m x 15m');
+    setEditDimensions(crt.dimensions || '105m x 68m');
     setEditDescription(crt.description || '');
     setEditCourtFile(null);
     if (editCourtFileInputRef.current) editCourtFileInputRef.current.value = '';
@@ -578,8 +578,8 @@ export const ManageCourtsPage = () => {
 
                   {/* Format & Dimensions Bar */}
                   <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] font-black text-white/90 bg-slate-950/70 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10">
-                    <span>⚽ Format: {court.format || '5v5'}</span>
-                    <span>📏 {court.dimensions || '30m x 15m'}</span>
+                    <span>⚽ Format: {court.format || '11v11'}</span>
+                    <span>📏 {court.dimensions || '105m x 68m'}</span>
                   </div>
                 </div>
 
@@ -714,7 +714,7 @@ export const ManageCourtsPage = () => {
             <input
               name="courtName"
               type="text"
-              placeholder="e.g. Pitch Charlie (5v5)"
+              placeholder="e.g. Pitch Charlie (11v11)"
               value={courtName}
               onChange={(e) => setCourtName(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"

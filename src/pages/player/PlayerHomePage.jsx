@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { getEloBadgeInfo } from '../../utils/eloCalculator';
 import GameCard from '../../components/player/GameCard';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
@@ -24,8 +23,8 @@ export const PlayerHomePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFeedTab, setActiveFeedTab] = useState('all');
 
-  const eloRating = currentUser?.eloRating || currentUser?.elo || 1840;
-  const eloBadge = getEloBadgeInfo(eloRating);
+  const playerWins = currentUser?.stats?.wins || 19;
+  const playerPosition = currentUser?.position || 'ST';
 
   // Filter games based on privacy & player affiliation
   const accessibleGames = games.filter(g => {
@@ -117,7 +116,7 @@ export const PlayerHomePage = () => {
                   Welcome, {currentUser?.name || 'Player'}!
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-md bg-sport-500/20 text-sport-400 border border-sport-500/30 text-[10px] font-bold uppercase">
-                  {eloBadge.title}
+                  ⚽ {playerPosition ? `POS: ${playerPosition}` : 'VERIFIED PLAYER'}
                 </span>
               </div>
               <p className="text-xs font-medium text-slate-400 flex items-center space-x-1.5 mt-0.5">
@@ -130,17 +129,7 @@ export const PlayerHomePage = () => {
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full xl:w-auto">
-            
-            <div className="bg-slate-900/90 p-3 rounded-md border border-slate-800 flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold">
-                ⚡
-              </div>
-              <div>
-                <span className="text-[10px] font-semibold uppercase text-slate-400 block leading-tight">Elo Rating</span>
-                <span className="text-sm font-mono font-bold text-amber-400">{eloRating}</span>
-              </div>
-            </div>
+          <div className="grid grid-cols-3 gap-3 w-full xl:w-auto">
 
             <div className="bg-slate-900/90 p-3 rounded-md border border-slate-800 flex items-center space-x-3">
               <div className="w-8 h-8 rounded-md bg-sport-500/10 border border-sport-500/30 flex items-center justify-center text-sport-400">
@@ -201,7 +190,7 @@ export const PlayerHomePage = () => {
                 </span>
               </h2>
               <p className="text-xs sm:text-sm font-medium text-slate-300 max-w-xl">
-                Join verified grassroots football matches near you, confirm your roster spot, and rise through the Division Leaderboard.
+                Join verified grassroots football matches near you, confirm your roster spot, and rise through the Player Leaderboard.
               </p>
             </div>
 
@@ -394,7 +383,7 @@ export const PlayerHomePage = () => {
                   @{currentUser?.name?.toLowerCase()?.replace(/\s+/g, '') || 'player'}
                 </span>
                 <span className="inline-block px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-bold uppercase">
-                  {eloBadge.title} ({eloRating} ELO)
+                  ⚽ {playerPosition} • {playerWins} WINS
                 </span>
               </div>
             </div>

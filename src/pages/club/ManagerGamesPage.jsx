@@ -203,7 +203,7 @@ export const ManagerGamesPage = () => {
         }
       }, currentUser);
 
-      setTitle(''); setFormat('5v5'); setDate(getTodayDate(1));
+      setTitle(''); setFormat('11v11'); setDate(getTodayDate(1));
       setStartTime('19:00'); setEndTime('20:30'); setEntryFee('0');
       setSkill('All Levels'); setPrivacy('PUBLIC'); setDescription('');
       setIsCreateModalOpen(false);
@@ -223,7 +223,7 @@ export const ManagerGamesPage = () => {
   const handleOpenEditModal = (game) => {
     setSelectedGame(game);
     setEditTitle(game.title || '');
-    setEditFormat(game.format || '5v5');
+    setEditFormat(game.format || '11v11');
     setEditDate(game.dateTime?.date || game.date || getTodayDate(1));
     setEditStartTime(game.dateTime?.startTime || '19:00');
     setEditEndTime(game.dateTime?.endTime || '20:30');
@@ -943,7 +943,7 @@ export const ManagerGamesPage = () => {
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Friday Night 5v5 Super Match"
+              placeholder="e.g. Friday Night 11v11 Super Match"
               required
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
             />
@@ -1211,7 +1211,7 @@ export const ManagerGamesPage = () => {
         {selectedGame && (
           <form onSubmit={handleSubmitScore} className="space-y-4">
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-semibold text-amber-700 dark:text-amber-400">
-              🏆 Submitting the final score marks the match as <strong>COMPLETED</strong>, calculates player ELO, and records it in Match History.
+              🏆 Submitting the final score marks the match as <strong>COMPLETED</strong>, calculates player ratings, and records it in Match History.
             </div>
 
             <p className="text-xs font-black text-slate-700 dark:text-slate-300 text-center">

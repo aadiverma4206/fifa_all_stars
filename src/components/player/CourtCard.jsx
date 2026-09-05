@@ -6,6 +6,10 @@ import Badge from '../common/Badge';
 import Button from '../common/Button';
 
 export const CourtCard = ({ club, court }) => {
+  const displayName = (court?.name || club?.name || 'Football Pitch')
+    .replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)')
+    .replace(/Futsal Dome/gi, 'Stadium Dome');
+
   return (
     <Card className="flex flex-col justify-between h-full p-0">
       <div>
@@ -21,7 +25,7 @@ export const CourtCard = ({ club, court }) => {
             <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-tr from-slate-800 to-slate-900 text-slate-400 p-4 text-center">
               <span className="text-3xl font-black text-sport-500 mb-1">⚽</span>
               <span className="text-xs font-bold text-slate-300">{club?.name || 'Turf Venue'}</span>
-              <span className="text-[10px] text-slate-500 font-semibold">{court?.name}</span>
+              <span className="text-[10px] text-slate-500 font-semibold">{displayName}</span>
             </div>
           )}
 
@@ -44,7 +48,7 @@ export const CourtCard = ({ club, court }) => {
           </div>
 
           <div className="absolute bottom-3 left-3 right-3 text-white">
-            <h3 className="font-extrabold text-lg line-clamp-1">{court?.name || club?.name}</h3>
+            <h3 className="font-extrabold text-lg line-clamp-1">{displayName}</h3>
             <p className="text-xs text-slate-300 flex items-center space-x-1 font-semibold">
               <MapPin className="w-3 h-3 text-sport-500 flex-shrink-0" />
               <span className="truncate">{club?.name} • {club?.city || 'Raipur'}</span>

@@ -277,7 +277,7 @@ export const DisputesPage = () => {
                 Match Disputes & Result Overrides
               </h1>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                Review disputed pick-up games, adjudicate match winners, resolve contested scores, and adjust player Elo ratings.
+                Review disputed pick-up games, adjudicate match winners, resolve contested scores, and adjust player ratings.
               </p>
             </div>
           </div>
@@ -367,7 +367,7 @@ export const DisputesPage = () => {
             {stats.resolvedCount}
           </div>
           <div className="text-[11px] font-semibold text-slate-400 mt-1">
-            Elo adjusted & points credited
+            Ratings adjusted & points credited
           </div>
         </div>
 
@@ -620,13 +620,13 @@ export const DisputesPage = () => {
 
             <div className="space-y-1.5">
               <label className="block text-slate-700 dark:text-slate-300 font-bold">
-                Declared Winner & Elo Allocation
+                Declared Winner & Points Allocation
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'Team A', label: 'Team A Win', desc: '+25 Elo to Team A' },
-                  { id: 'Team B', label: 'Team B Win', desc: '+25 Elo to Team B' },
-                  { id: 'Draw', label: 'Official Draw', desc: '50/50 Elo split' }
+                  { id: 'Team A', label: 'Team A Win', desc: '+3 Pts to Team A' },
+                  { id: 'Team B', label: 'Team B Win', desc: '+3 Pts to Team B' },
+                  { id: 'Draw', label: 'Official Draw', desc: '1 Pt to each team' }
                 ].map(w => (
                   <button
                     type="button"
@@ -688,7 +688,7 @@ export const DisputesPage = () => {
                 isLoading={isResolving}
                 disabled={isResolving}
               >
-                Confirm Ruling & Recalculate Elo
+                Confirm Ruling & Recalculate Ratings
               </Button>
             </div>
 
@@ -705,7 +705,7 @@ export const DisputesPage = () => {
                 <span>Dismissing grievance for: {selectedDispute.gameTitle}</span>
               </div>
               <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
-                The original on-field referee result will remain active and no Elo modifications will be applied.
+                The original on-field referee result will remain active and no rating modifications will be applied.
               </p>
             </div>
 
@@ -833,7 +833,7 @@ export const DisputesPage = () => {
             >
               {games.map(g => (
                 <option key={g.id} value={g.id}>
-                  {g.title} ({g.format || '5v5'}) - {g.status}
+                  {g.title} ({g.format || '11v11'}) - {g.status}
                 </option>
               ))}
             </select>

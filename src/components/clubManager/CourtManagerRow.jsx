@@ -5,7 +5,8 @@ import Button from '../common/Button';
 
 export const CourtManagerRow = ({ court = {}, onEditPricing }) => {
   const isIndoor = court.isIndoor || court.type === 'Indoor';
-  const format = court.format || court.name?.match(/\((\d+v\d+)\)/)?.[1] || '5v5';
+  const format = court.format || court.name?.match(/\((\d+v\d+)\)/)?.[1] || '11v11';
+  const displayName = (court.name || 'Pitch').replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)').replace(/Futsal Dome/gi, 'Stadium Dome');
   const surface = court.surface || court.surfaceType || '3G Turf';
   const baseRate = court.basePricePerHour ?? court.basePrice ?? 500;
   const peakMultiplier = court.peakMultiplier ?? 1.5;
@@ -27,7 +28,7 @@ export const CourtManagerRow = ({ court = {}, onEditPricing }) => {
         />
         <div>
           <div className="flex items-center space-x-2">
-            <h4 className="font-bold text-sm text-slate-900 dark:text-white">{court.name || 'Pitch'}</h4>
+            <h4 className="font-bold text-sm text-slate-900 dark:text-white">{displayName}</h4>
             <Badge variant="emerald" size="sm" className="rounded-md">{format}</Badge>
             {isIndoor && <Badge variant="blue" size="sm" className="rounded-md">Indoor</Badge>}
           </div>
