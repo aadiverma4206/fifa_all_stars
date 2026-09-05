@@ -597,10 +597,210 @@ export const GameDetailsPage = () => {
         </div>
       </div>
 
+      {/* 1. MATCH SESSION HERO OVERVIEW CARD */}
+      <div className="footy-card p-4 sm:p-6 space-y-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                MATCH SESSION
+              </span>
+              <span className="text-xs font-bold text-slate-400">ID: {game.id}</span>
+            </div>
+            <h1 className="text-xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white break-words">
+              {game.title}
+            </h1>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center space-x-1.5">
+              <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <span>{game.venueReference?.clubName} • {game.venueReference?.courtName || 'Pitch Alpha'} ({game.venueReference?.city})</span>
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-1">
+            <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">ENTRY FEE</span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+              ₹{game.entryFee}
+            </span>
+          </div>
+        </div>
+
+        {/* 5-COLUMN INFO TILES */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 text-xs font-bold">
+          <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-emerald-500" /> Date
+            </span>
+            <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block">{game.dateTime?.date}</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+              <Clock className="w-3 h-3 text-sky-500" /> Time
+            </span>
+            <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block truncate">{game.dateTime?.startTime} - {game.dateTime?.endTime || '20:30'}</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+              <Trophy className="w-3 h-3 text-amber-500" /> Format
+            </span>
+            <span className="text-emerald-600 dark:text-emerald-400 text-xs font-black mt-0.5 block">{game.format} ({maxSlots})</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+              <Users className="w-3 h-3 text-rose-500" /> Roster
+            </span>
+            <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block">{confirmedPlayers.length} / {maxSlots}</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs col-span-2 sm:col-span-1">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
+              <Shield className="w-3 h-3 text-purple-500" /> Host
+            </span>
+            <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block truncate">{game.organizer?.name}</span>
+          </div>
+        </div>
+
+        {/* LIVE SCOREBOARD */}
+        {game.liveScore && game.status !== 'COMPLETED' && (
+          <div className="p-4 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white space-y-2 border-2 border-rose-500/60 text-center shadow-lg relative overflow-hidden">
+            <div className="flex items-center justify-center space-x-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+              </span>
+              <span className="text-xs font-black uppercase text-rose-400 tracking-widest">🔴 LIVE IN-GAME SCORE (SCREEN DISPLAY ONLY)</span>
+            </div>
+
+            <div className="flex items-center justify-center space-x-4 sm:space-x-8 py-2">
+              <div className="text-center">
+                <span className="text-[10px] font-black text-sky-400 block uppercase mb-0.5">TEAM A</span>
+                <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.liveScore.teamA}</span>
+              </div>
+              <div className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40">
+                <span className="text-base sm:text-lg font-black text-rose-400">VS</span>
+              </div>
+              <div className="text-center">
+                <span className="text-[10px] font-black text-rose-400 block uppercase mb-0.5">TEAM B</span>
+                <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.liveScore.teamB}</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] font-semibold text-slate-400">
+              ⏳ Live match score in progress. Match remains Active and will NOT enter Match History until "Enter Score & Finish Match" is submitted.
+            </p>
+          </div>
+        )}
+
+        {/* OFFICIAL FINAL SCOREBOARD */}
+        {game.score && (() => {
+          const outcomeInfo = (() => {
+            const teamA = parseInt(game.score.teamA, 10);
+            const teamB = parseInt(game.score.teamB, 10);
+            const isDraw = teamA === teamB;
+            const teamAWon = teamA > teamB;
+
+            const playerIndex = confirmedPlayers.findIndex(p => p.id === currentUser?.id);
+            if (currentUser && playerIndex !== -1) {
+              const playerObj = confirmedPlayers[playerIndex];
+              let playerTeam = playerObj.team;
+              if (!playerTeam) {
+                playerTeam = playerIndex < teamCapacity ? 'TEAM_A' : 'TEAM_B';
+              }
+
+              if (isDraw) return { text: '🤝 RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
+              
+              const won = (playerTeam === 'TEAM_A' && teamAWon) || (playerTeam === 'TEAM_B' && !teamAWon);
+              if (won) {
+                return { text: '🎉 VICTORY! YOU WON THIS MATCH', color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10' };
+              } else {
+                return { text: '❌ DEFEAT: YOU LOST THIS MATCH', color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/10' };
+              }
+            }
+
+            if (isDraw) return { text: '🏆 MATCH RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
+            return {
+              text: `🏆 WINNER: ${teamAWon ? 'TEAM A' : 'TEAM B'}`,
+              color: teamAWon ? 'text-sky-400' : 'text-rose-400',
+              border: teamAWon ? 'border-sky-500/30' : 'border-rose-500/30',
+              bg: teamAWon ? 'bg-sky-500/10' : 'bg-rose-500/10'
+            };
+          })();
+
+          return (
+            <div className="p-5 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white space-y-3 border border-slate-800 text-center shadow-lg relative overflow-hidden">
+              <div className="flex items-center justify-center space-x-2">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-black uppercase text-amber-400 tracking-widest">OFFICIAL MATCH SCORE RESULT</span>
+              </div>
+
+              <div className="flex items-center justify-center space-x-4 sm:space-x-8 py-2">
+                <div className="text-center">
+                  <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-0.5">TEAM A</span>
+                  <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.score.teamA}</span>
+                </div>
+                <div className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700">
+                  <span className="text-base sm:text-lg font-black text-amber-500">VS</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-0.5">TEAM B</span>
+                  <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.score.teamB}</span>
+                </div>
+              </div>
+
+              <div className={`inline-flex flex-wrap items-center justify-center gap-1.5 px-4 py-1.5 rounded-full ${outcomeInfo.bg} border ${outcomeInfo.border} ${outcomeInfo.color} text-xs font-black max-w-full`}>
+                <span>{outcomeInfo.text}</span>
+                <span className="hidden xs:inline">•</span>
+                <span>⚡ Elo Recalculated</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* LIVE SCORE AUDIT TIMELINE */}
+        {game.liveScoreHistory?.length > 0 && (
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  ⏱️ Live Score Updates Timeline & Log ({game.liveScoreHistory.length})
+                </h4>
+              </div>
+              <Badge variant="gold" size="sm">Audit Log</Badge>
+            </div>
+
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {game.liveScoreHistory.map((item, idx) => (
+                <div 
+                  key={item.id || idx} 
+                  className={`p-2.5 rounded-xl flex items-center justify-between text-xs border ${
+                    item.isFinal 
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold' 
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                      ⏰ {item.time}
+                    </span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                      Team A <span className="font-mono text-amber-500 font-black px-0.5">{item.score?.teamA ?? 0}</span> – <span className="font-mono text-amber-500 font-black px-0.5">{item.score?.teamB ?? 0}</span> Team B
+                    </span>
+                  </div>
+
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+                    <span>{item.isFinal ? '🏆 Final Result' : `by ${item.updatedBy || 'Host'}`}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 2. MAIN 2-COLUMN BALANCED CONTENT GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* LEFT COLUMN: Player Lineups & Squad Names (8 COLS) */}
-        <div className="lg:col-span-8 space-y-6">
+        {/* LEFT / CENTER COLUMN: Squad Lineups, Rules & Video Highlights (8 COLS) */}
+        <div className="lg:col-span-8 order-2 lg:order-1 space-y-6">
           {/* ROSTERS HEADER */}
           <div className="footy-card p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
@@ -750,6 +950,7 @@ export const GameDetailsPage = () => {
             </div>
           </div>
 
+          {/* MATCH RULES & GUIDANCE */}
           {game.description && (
             <div className="footy-card p-5 space-y-2 text-xs text-slate-600 dark:text-slate-300">
               <span className="font-black text-slate-900 dark:text-white uppercase block">Match Rules & Guidance:</span>
@@ -757,217 +958,45 @@ export const GameDetailsPage = () => {
             </div>
           )}
 
-          {isWaitlisted && (
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>You are currently <strong>#{waitlistIndex + 1}</strong> on the waitlist.</span>
+          {/* VIDEO HIGHLIGHTS */}
+          {linkedVideos.length > 0 && (
+            <div className="footy-card p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase flex items-center space-x-2">
+                  <Film className="w-4 h-4 text-sky-500" />
+                  <span>Official Match Video Highlights {linkedVideos.length > 1 ? `(${linkedVideos.length} Videos)` : ''}</span>
+                </h3>
+                <Badge variant="emerald" size="sm">{linkedVideos[0].videoStatus || 'AVAILABLE'}</Badge>
+              </div>
+
+              <div className="space-y-4">
+                {linkedVideos.map((videoItem, vIdx) => (
+                  <div key={videoItem.id || vIdx} className="space-y-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div className="rounded-2xl overflow-hidden bg-slate-950 aspect-video relative flex items-center justify-center border border-slate-800">
+                      <video
+                        src={videoItem.videoUrl}
+                        controls
+                        className="w-full h-full object-cover"
+                        poster="/assets/images/courts/court-1.jpg"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <h4 className="font-extrabold text-slate-900 dark:text-white">{videoItem.title}</h4>
+                      <p className="text-slate-400 font-semibold">{videoItem.description}</p>
+                      <span className="text-[10px] font-bold text-slate-500 block pt-0.5">Uploaded by: {videoItem.uploadedBy} • {videoItem.uploadDate}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
         </div>
 
-        {/* RIGHT COLUMN: Match Details, Scoreboard, Live Score & Controls */}
-        <div className="lg:col-span-7 xl:col-span-7 space-y-5">
+        {/* RIGHT COLUMN: Action & Entry Hub, Controls, Waitlist & Guidelines (4 COLS) */}
+        <div className="lg:col-span-4 order-1 lg:order-2 space-y-6 lg:sticky lg:top-20">
           
-          <div className="footy-card p-4 sm:p-6 space-y-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
-
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    MATCH SESSION
-                  </span>
-                  <span className="text-xs font-bold text-slate-400">ID: {game.id}</span>
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white break-words">
-                  {game.title}
-                </h1>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center space-x-1.5">
-                  <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>{game.venueReference?.clubName} • {game.venueReference?.courtName || 'Pitch Alpha'} ({game.venueReference?.city})</span>
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-1">
-                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">ENTRY FEE</span>
-                <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                  ₹{game.entryFee}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 text-xs font-bold">
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-emerald-500" /> Date
-                </span>
-                <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block">{game.dateTime?.date}</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-sky-500" /> Time
-                </span>
-                <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block truncate">{game.dateTime?.startTime} - {game.dateTime?.endTime || '20:30'}</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
-                  <Trophy className="w-3 h-3 text-amber-500" /> Format
-                </span>
-                <span className="text-emerald-600 dark:text-emerald-400 text-xs font-black mt-0.5 block">{game.format} ({maxSlots})</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
-                  <Users className="w-3 h-3 text-rose-500" /> Roster
-                </span>
-                <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block">{confirmedPlayers.length} / {maxSlots}</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase flex items-center gap-1">
-                  <Shield className="w-3 h-3 text-purple-500" /> Host
-                </span>
-                <span className="text-slate-900 dark:text-white text-xs font-extrabold mt-0.5 block truncate">{game.organizer?.name}</span>
-              </div>
-            </div>
-
-            {/* LIVE SCOREBOARD */}
-            {game.liveScore && game.status !== 'COMPLETED' && (
-              <div className="p-4 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white space-y-2 border-2 border-rose-500/60 text-center shadow-lg relative overflow-hidden">
-                <div className="flex items-center justify-center space-x-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
-                  </span>
-                  <span className="text-xs font-black uppercase text-rose-400 tracking-widest">🔴 LIVE IN-GAME SCORE (SCREEN DISPLAY ONLY)</span>
-                </div>
-
-                <div className="flex items-center justify-center space-x-4 sm:space-x-8 py-2">
-                  <div className="text-center">
-                    <span className="text-[10px] font-black text-sky-400 block uppercase mb-0.5">TEAM A</span>
-                    <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.liveScore.teamA}</span>
-                  </div>
-                  <div className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40">
-                    <span className="text-base sm:text-lg font-black text-rose-400">VS</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-[10px] font-black text-rose-400 block uppercase mb-0.5">TEAM B</span>
-                    <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.liveScore.teamB}</span>
-                  </div>
-                </div>
-
-                <p className="text-[11px] font-semibold text-slate-400">
-                  ⏳ Live match score in progress. Match remains Active and will NOT enter Match History until "Enter Score & Finish Match" is submitted.
-                </p>
-              </div>
-            )}
-
-            {/* OFFICIAL FINAL SCOREBOARD */}
-            {game.score && (() => {
-              const outcomeInfo = (() => {
-                const teamA = parseInt(game.score.teamA, 10);
-                const teamB = parseInt(game.score.teamB, 10);
-                const isDraw = teamA === teamB;
-                const teamAWon = teamA > teamB;
-
-                const playerIndex = confirmedPlayers.findIndex(p => p.id === currentUser?.id);
-                if (currentUser && playerIndex !== -1) {
-                  const playerObj = confirmedPlayers[playerIndex];
-                  let playerTeam = playerObj.team;
-                  if (!playerTeam) {
-                    playerTeam = playerIndex < teamCapacity ? 'TEAM_A' : 'TEAM_B';
-                  }
-
-                  if (isDraw) return { text: '🤝 RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
-                  
-                  const won = (playerTeam === 'TEAM_A' && teamAWon) || (playerTeam === 'TEAM_B' && !teamAWon);
-                  if (won) {
-                    return { text: '🎉 VICTORY! YOU WON THIS MATCH', color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10' };
-                  } else {
-                    return { text: '❌ DEFEAT: YOU LOST THIS MATCH', color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/10' };
-                  }
-                }
-
-                if (isDraw) return { text: '🏆 MATCH RESULT: DRAW', color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
-                return {
-                  text: `🏆 WINNER: ${teamAWon ? 'TEAM A' : 'TEAM B'}`,
-                  color: teamAWon ? 'text-sky-400' : 'text-rose-400',
-                  border: teamAWon ? 'border-sky-500/30' : 'border-rose-500/30',
-                  bg: teamAWon ? 'bg-sky-500/10' : 'bg-rose-500/10'
-                };
-              })();
-
-              return (
-                <div className="p-5 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white space-y-3 border border-slate-800 text-center shadow-lg relative overflow-hidden">
-                  
-                  <div className="flex items-center justify-center space-x-2">
-                    <Trophy className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs font-black uppercase text-amber-400 tracking-widest">OFFICIAL MATCH SCORE RESULT</span>
-                  </div>
-
-                  <div className="flex items-center justify-center space-x-4 sm:space-x-8 py-2">
-                    <div className="text-center">
-                      <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-0.5">TEAM A</span>
-                      <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.score.teamA}</span>
-                    </div>
-                    <div className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700">
-                      <span className="text-base sm:text-lg font-black text-amber-500">VS</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-[10px] font-extrabold text-slate-400 block uppercase mb-0.5">TEAM B</span>
-                      <span className="text-4xl sm:text-5xl font-black text-white font-mono">{game.score.teamB}</span>
-                    </div>
-                  </div>
-
-                  <div className={`inline-flex flex-wrap items-center justify-center gap-1.5 px-4 py-1.5 rounded-full ${outcomeInfo.bg} border ${outcomeInfo.border} ${outcomeInfo.color} text-xs font-black max-w-full`}>
-                    <span>{outcomeInfo.text}</span>
-                    <span className="hidden xs:inline">•</span>
-                    <span>⚡ Elo Recalculated</span>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* LIVE SCORE AUDIT TIMELINE */}
-            {game.liveScoreHistory?.length > 0 && (
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5 shadow-xs">
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-amber-500" />
-                    <h4 className="font-black text-xs uppercase tracking-widest text-slate-800 dark:text-slate-200">
-                      ⏱️ Live Score Updates Timeline & Log ({game.liveScoreHistory.length})
-                    </h4>
-                  </div>
-                  <Badge variant="gold" size="sm">Audit Log</Badge>
-                </div>
-
-                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                  {game.liveScoreHistory.map((item, idx) => (
-                    <div 
-                      key={item.id || idx} 
-                      className={`p-2.5 rounded-xl flex items-center justify-between text-xs border ${
-                        item.isFinal 
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold' 
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2.5">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                          ⏰ {item.time}
-                        </span>
-                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                          Team A <span className="font-mono text-amber-500 font-black px-0.5">{item.score?.teamA ?? 0}</span> – <span className="font-mono text-amber-500 font-black px-0.5">{item.score?.teamB ?? 0}</span> Team B
-                        </span>
-                      </div>
-
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
-                        <span>{item.isFinal ? '🏆 Final Result' : `by ${item.updatedBy || 'Host'}`}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* ACTION & ENTRY HUB */}
           <div className="footy-card p-5 space-y-4">
             <div className="flex items-center justify-between">
@@ -976,7 +1005,7 @@ export const GameDetailsPage = () => {
                 <span>Match Action & Entry Hub</span>
               </span>
               <span className="text-xs font-bold text-slate-400">
-                Wallet: <strong className="text-emerald-500 font-black">₹{currentUser?.walletBalance?.toFixed(2)}</strong>
+                Wallet: <strong className="text-emerald-500 font-black">₹{currentUser?.walletBalance?.toFixed(2) || '0.00'}</strong>
               </span>
             </div>
 
@@ -1089,39 +1118,39 @@ export const GameDetailsPage = () => {
             </div>
           </div>
 
-          {/* VIDEO HIGHLIGHTS */}
-          {linkedVideos.length > 0 && (
-            <div className="footy-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase flex items-center space-x-2">
-                  <Film className="w-4 h-4 text-sky-500" />
-                  <span>Official Match Video Highlights {linkedVideos.length > 1 ? `(${linkedVideos.length} Videos)` : ''}</span>
-                </h3>
-                <Badge variant="emerald" size="sm">{linkedVideos[0].videoStatus || 'AVAILABLE'}</Badge>
-              </div>
-
-              <div className="space-y-4">
-                {linkedVideos.map((videoItem, vIdx) => (
-                  <div key={videoItem.id || vIdx} className="space-y-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                    <div className="rounded-2xl overflow-hidden bg-slate-950 aspect-video relative flex items-center justify-center border border-slate-800">
-                      <video
-                        src={videoItem.videoUrl}
-                        controls
-                        className="w-full h-full object-cover"
-                        poster="/assets/images/courts/court-1.jpg"
-                      />
-                    </div>
-
-                    <div className="space-y-1 text-xs">
-                      <h4 className="font-extrabold text-slate-900 dark:text-white">{videoItem.title}</h4>
-                      <p className="text-slate-400 font-semibold">{videoItem.description}</p>
-                      <span className="text-[10px] font-bold text-slate-500 block pt-0.5">Uploaded by: {videoItem.uploadedBy} • {videoItem.uploadDate}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {/* WAITLIST STATUS BANNER */}
+          {isWaitlisted && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center space-x-2 shadow-xs">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>You are currently <strong>#{waitlistIndex + 1}</strong> on the automated waitlist queue.</span>
             </div>
           )}
+
+          {/* PITCH & MATCH GUIDELINES HELPER CARD */}
+          <div className="footy-card p-5 space-y-3.5 border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 text-xs shadow-xs">
+            <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2">
+              <span>🏟️</span>
+              <span>Pitch & Match Guidelines</span>
+            </h4>
+            <div className="space-y-2 text-slate-600 dark:text-slate-300 font-semibold text-[11px]">
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-500 font-bold">✓</span>
+                <span><strong>Reporting Time:</strong> Arrive 15 minutes before kickoff for kit check and warm-up.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-500 font-bold">✓</span>
+                <span><strong>Footwear:</strong> Turf shoes (TF) or AG studs recommended. Metal studs are strictly prohibited.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-500 font-bold">✓</span>
+                <span><strong>Fair Play:</strong> Respect referee decisions, teammates, and opponents at all times.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-amber-500 font-bold">⚡</span>
+                <span><strong>Elo Ratings:</strong> Final match scores dynamically update official player ranking points.</span>
+              </div>
+            </div>
+          </div>
 
         </div>
 
