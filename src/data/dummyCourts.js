@@ -1,9 +1,9 @@
 export const dummyCourts = [
-  // --- Raipur Courts (clb_raipur_1) ---
+  // --- Raipur Pitches (clb_raipur_1) ---
   {
     courtId: "crt_rp_101",
     clubId: "clb_raipur_1",
-    name: "Raipur Pitch Alpha (5v5)",
+    name: "Raipur Pitch Alpha (11v11)",
     type: "Outdoor",
     surface: "3G Turf",
     basePrice: 500, // ₹500/hr
@@ -16,7 +16,7 @@ export const dummyCourts = [
   {
     courtId: "crt_rp_102",
     clubId: "clb_raipur_1",
-    name: "Raipur Pitch Bravo (7v7)",
+    name: "Raipur Pitch Bravo (11v11)",
     type: "Outdoor",
     surface: "Synthetic Grass",
     basePrice: 800, // ₹800/hr
@@ -29,9 +29,9 @@ export const dummyCourts = [
   {
     courtId: "crt_rp_103",
     clubId: "clb_raipur_1",
-    name: "Raipur Futsal Dome (5v5)",
+    name: "Raipur Stadium Dome (11v11)",
     type: "Indoor",
-    surface: "Acrylic",
+    surface: "3G Turf",
     basePrice: 450, // ₹450/hr
     peakMultiplier: 1.5,
     weekendMultiplier: 1.75,
@@ -40,11 +40,11 @@ export const dummyCourts = [
     image: "/assets/images/courts/court-3.jpg"
   },
 
-  // --- Bangalore Courts (clb_blr_1) ---
+  // --- Bangalore Pitches (clb_blr_1) ---
   {
     courtId: "crt_blr_201",
     clubId: "clb_blr_1",
-    name: "Silicon Pitch 1 (5v5)",
+    name: "Silicon Pitch 1 (11v11)",
     type: "Outdoor",
     surface: "3G Turf",
     basePrice: 700, // ₹700/hr
@@ -57,7 +57,7 @@ export const dummyCourts = [
   {
     courtId: "crt_blr_202",
     clubId: "clb_blr_1",
-    name: "Silicon Arena 2 (7v7)",
+    name: "Silicon Arena 2 (11v11)",
     type: "Outdoor",
     surface: "Synthetic Grass",
     basePrice: 1100, // ₹1100/hr
@@ -68,13 +68,13 @@ export const dummyCourts = [
     image: "/assets/images/courts/court-5.jpg"
   },
 
-  // --- Pune Courts (clb_pune_1) ---
+  // --- Pune Pitches (clb_pune_1) ---
   {
     courtId: "crt_pune_301",
     clubId: "clb_pune_1",
-    name: "Deccan Pitch Red (5v5)",
+    name: "Deccan Pitch Red (11v11)",
     type: "Indoor",
-    surface: "Acrylic",
+    surface: "3G Turf",
     basePrice: 600, // ₹600/hr
     peakMultiplier: 1.5,
     weekendMultiplier: 1.75,
@@ -85,7 +85,7 @@ export const dummyCourts = [
   {
     courtId: "crt_pune_302",
     clubId: "clb_pune_1",
-    name: "Deccan Pitch Blue (5v5)",
+    name: "Deccan Pitch Blue (11v11)",
     type: "Indoor",
     surface: "3G Turf",
     basePrice: 550, // ₹550/hr
@@ -96,11 +96,11 @@ export const dummyCourts = [
     image: "/assets/images/courts/court-1.jpg"
   },
 
-  // --- Mumbai Courts (clb_mumbai_1) ---
+  // --- Mumbai Pitches (clb_mumbai_1) ---
   {
     courtId: "crt_mb_401",
     clubId: "clb_mumbai_1",
-    name: "Marine Pitch A (7v7)",
+    name: "Marine Pitch A (11v11)",
     type: "Outdoor",
     surface: "Synthetic Grass",
     basePrice: 1200, // ₹1200/hr

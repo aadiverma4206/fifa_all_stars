@@ -335,19 +335,9 @@ export const MatchHistoryPage = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Format:</span>
-              {formats.map(f => (
-                <button
-                  key={f}
-                  onClick={() => setFormatFilter(f)}
-                  className={`px-3 py-1 rounded-sm text-xs font-bold uppercase transition-all cursor-pointer ${
-                    formatFilter === f
-                      ? 'bg-sport-500 text-white font-bold'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {f === 'all' ? 'All Formats' : f}
-                </button>
-              ))}
+              <span className="px-3 py-1 rounded-sm text-xs font-bold uppercase bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs">
+                11v11 (Official Full Pitch)
+              </span>
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">

@@ -1,15 +1,17 @@
+import { calculateFootballElo } from './footballLogic.js';
+
 /**
- * Elo Rating calculation for FIFA All Stars match outcomes.
+ * Elo Rating calculation for FIFA All Stars football match outcomes.
+ * Uses FIFA World Ranking adapted goal difference scaling for football matches.
  * @param {number} currentElo 
  * @param {number} opponentAvgElo 
  * @param {number} outcome 1 for Win, 0.5 for Draw, 0 for Loss
  * @param {number} kFactor default 32
+ * @param {number} goalDifference absolute goal difference (default 0)
  * @returns {number} updated Elo score
  */
-export const calculateNewElo = (currentElo, opponentAvgElo, outcome, kFactor = 32) => {
-  const expectedScore = 1 / (1 + Math.pow(10, (opponentAvgElo - currentElo) / 400));
-  const newElo = Math.round(currentElo + kFactor * (outcome - expectedScore));
-  return Math.max(800, newElo);
+export const calculateNewElo = (currentElo, opponentAvgElo, outcome, kFactor = 32, goalDifference = 0) => {
+  return calculateFootballElo(currentElo, opponentAvgElo, outcome, kFactor, goalDifference);
 };
 
 export const getEloBadgeInfo = (elo) => {

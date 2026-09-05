@@ -58,8 +58,8 @@ export const GameDetailsPage = () => {
   const [editDate, setEditDate] = useState('');
   const [editStartTime, setEditStartTime] = useState('19:00');
   const [editEndTime, setEditEndTime] = useState('20:30');
-  const [editFormat, setEditFormat] = useState('5v5');
-  const [editMaxPlayers, setEditMaxPlayers] = useState('10');
+  const [editFormat, setEditFormat] = useState('11v11');
+  const [editMaxPlayers, setEditMaxPlayers] = useState('22');
   const [editEntryFee, setEditEntryFee] = useState('0');
   const [editSkill, setEditSkill] = useState('Intermediate');
   const [editPrivacy, setEditPrivacy] = useState('PUBLIC');
@@ -1546,16 +1546,7 @@ export const GameDetailsPage = () => {
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
                 required
               >
-                <option value="1v1">1v1 (2 Players - Singles)</option>
-                <option value="2v2">2v2 (4 Players - Doubles)</option>
-                <option value="3v3">3v3 (6 Players)</option>
-                <option value="4v4">4v4 (8 Players)</option>
-                <option value="5v5">5v5 (10 Players)</option>
-                <option value="6v6">6v6 (12 Players)</option>
-                <option value="7v7">7v7 (14 Players)</option>
-                <option value="8v8">8v8 (16 Players)</option>
-                <option value="11v11">11v11 (22 Players)</option>
-                <option value="custom">Custom Format</option>
+                <option value="11v11">11v11 (Standard Football - 22 Players)</option>
               </select>
             </div>
 

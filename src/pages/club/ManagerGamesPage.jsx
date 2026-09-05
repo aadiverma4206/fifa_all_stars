@@ -17,7 +17,7 @@ import { validateTitle, validateDateNotPast, validateTimeRange, validatePositive
 import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
-const FORMATS = ['5v5', '7v7', '3v3', '2v2', '1v1', '6v6', '11v11'];
+const FORMATS = ['11v11'];
 const SKILLS = ['All Levels', 'Beginner', 'Intermediate', 'Advanced'];
 const PRIVACY = ['PUBLIC', 'PRIVATE'];
 
@@ -98,7 +98,7 @@ export const ManagerGamesPage = () => {
 
   // Create Game Form State
   const [title, setTitle] = useState('');
-  const [format, setFormat] = useState('5v5');
+  const [format, setFormat] = useState('11v11');
   const [date, setDate] = useState(getTodayDate(1));
   const [startTime, setStartTime] = useState('19:00');
   const [endTime, setEndTime] = useState('20:30');
@@ -110,7 +110,7 @@ export const ManagerGamesPage = () => {
 
   // Edit Game Form State
   const [editTitle, setEditTitle] = useState('');
-  const [editFormat, setEditFormat] = useState('5v5');
+  const [editFormat, setEditFormat] = useState('11v11');
   const [editDate, setEditDate] = useState('');
   const [editStartTime, setEditStartTime] = useState('19:00');
   const [editEndTime, setEditEndTime] = useState('20:30');
@@ -690,19 +690,9 @@ export const ManagerGamesPage = () => {
             {/* Format Filter */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Format:</span>
-              {['all', '5v5', '7v7', '3v3', '2v2', '1v1'].map(fmt => (
-                <button
-                  key={fmt}
-                  onClick={() => setFormatFilter(fmt)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase transition-all cursor-pointer ${
-                    formatFilter === fmt
-                      ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {fmt === 'all' ? 'All' : fmt}
-                </button>
-              ))}
+              <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase bg-amber-500 text-slate-950 shadow-xs">
+                11v11 (Official Full Pitch)
+              </span>
             </div>
 
           </div>

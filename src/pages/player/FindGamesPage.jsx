@@ -35,9 +35,9 @@ export const FindGamesPage = () => {
   const [date, setDate] = useState(getTodayDate(1));
   const [startTime, setStartTime] = useState('19:00');
   const [endTime, setEndTime] = useState('20:30');
-  const [format, setFormat] = useState('5v5');
+  const [format, setFormat] = useState('11v11');
   const [skillLevel, setSkillLevel] = useState('Intermediate');
-  const [maxPlayers, setMaxPlayers] = useState('10');
+  const [maxPlayers, setMaxPlayers] = useState('22');
   const [entryFee, setEntryFee] = useState('0');
   const [privacy, setPrivacy] = useState('PUBLIC');
   const [description, setDescription] = useState('');
@@ -287,23 +287,12 @@ export const FindGamesPage = () => {
       {/* 3. FILTER BAR SECTION */}
       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs font-extrabold">
         
-        {/* Left Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider px-2">Formats:</span>
-          
-          {['all', '1v1', '2v2', '3v3', '4v4', '5v5', '6v6', '7v7'].map(fmt => (
-            <button
-              key={fmt}
-              onClick={() => setSelectedFormat(fmt)}
-              className={`px-3 py-1.5 rounded-lg border transition-all uppercase cursor-pointer ${
-                selectedFormat === fmt
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
-                  : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              {fmt === 'all' ? 'All Formats' : fmt}
-            </button>
-          ))}
+        {/* Left: Official 11v11 Football Format Indicator */}
+        <div className="flex items-center space-x-2 px-2">
+          <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Format:</span>
+          <span className="px-3.5 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-black uppercase text-xs shadow-xs">
+            11v11 (Official Full Pitch)
+          </span>
         </div>
 
         {/* Right Reset */}
@@ -599,16 +588,7 @@ export const FindGamesPage = () => {
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
                 required
               >
-                <option value="1v1">1v1 (2 Players - Singles)</option>
-                <option value="2v2">2v2 (4 Players - Doubles)</option>
-                <option value="3v3">3v3 (6 Players)</option>
-                <option value="4v4">4v4 (8 Players)</option>
-                <option value="5v5">5v5 (10 Players)</option>
-                <option value="6v6">6v6 (12 Players)</option>
-                <option value="7v7">7v7 (14 Players)</option>
-                <option value="8v8">8v8 (16 Players)</option>
-                <option value="11v11">11v11 (22 Players)</option>
-                <option value="custom">Custom Format</option>
+                <option value="11v11">11v11 (Standard Football - 22 Players)</option>
               </select>
             </div>
 

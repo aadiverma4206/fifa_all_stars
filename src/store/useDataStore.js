@@ -6,6 +6,7 @@ import { dummyGames } from '../data/dummyGames';
 import { dummyTournaments } from '../data/dummyTournaments';
 import { dummyCommunityPosts, dummyPolls, dummyChallenges } from '../data/dummyCommunity';
 import { calculateNewElo } from '../utils/eloCalculator';
+import { calculateFootballMatchResult, normalizeFootballPosition } from '../utils/footballLogic.js';
 import { getTodayDate } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 
@@ -18,6 +19,7 @@ export const MATCH_FORMAT_SLOTS = {
   '6v6': 12,
   '7v7': 14,
   '8v8': 16,
+  '9v9': 18,
   '11v11': 22
 };
 
@@ -646,11 +648,12 @@ export const useDataStore = create(
         assignedTeam = teamACount <= teamBCount ? 'TEAM_A' : 'TEAM_B';
       }
 
+      const playerPos = player.position || (player.playingHand ? player.playingHand.split('/')[1]?.trim() : null) || 'MID';
       const newConfirmed = [...(targetGame.confirmedPlayers || []), {
         id: player.id,
         name: player.name,
         avatar: player.profileImageUrl || player.avatar,
-        position: player.playingHand?.split('/')[1]?.trim() || 'MID',
+        position: normalizeFootballPosition(playerPos),
         team: assignedTeam
       }];
 
@@ -688,11 +691,12 @@ export const useDataStore = create(
       return { success: true, promoted: false, message: `Successfully joined ${assignedTeam === 'TEAM_A' ? 'Team A' : 'Team B'} roster!` };
     } else {
       const waitlistPos = (targetGame.waitlist?.length || 0) + 1;
+      const playerPos = player.position || (player.playingHand ? player.playingHand.split('/')[1]?.trim() : null) || 'MID';
       const newWaitlist = [...(targetGame.waitlist || []), {
         id: player.id,
         name: player.name,
         avatar: player.profileImageUrl || player.avatar,
-        position: player.playingHand?.split('/')[1]?.trim() || 'MID'
+        position: normalizeFootballPosition(playerPos)
       }];
 
       set({
@@ -744,13 +748,19 @@ export const useDataStore = create(
       return;
     }
 
-    const wasConfirmed = targetGame.confirmedPlayers?.some(p => p.id === userId);
+    const leavingPlayer = targetGame.confirmedPlayers?.find(p => p.id === userId);
+    const wasConfirmed = !!leavingPlayer;
     let newConfirmed = targetGame.confirmedPlayers?.filter(p => p.id !== userId) || [];
     let newWaitlist = [...(targetGame.waitlist || [])];
     let promotedPlayer = null;
 
     if (wasConfirmed && newWaitlist.length > 0) {
-      promotedPlayer = newWaitlist.shift();
+      const waitlistCandidate = newWaitlist.shift();
+      // Ensure promoted player fills the exact vacated team slot to keep teams balanced
+      promotedPlayer = {
+        ...waitlistCandidate,
+        team: leavingPlayer?.team || 'TEAM_A'
+      };
       newConfirmed.push(promotedPlayer);
     }
 
@@ -780,18 +790,20 @@ export const useDataStore = create(
   },
 
   createGame: (newGameData, creatorUser) => {
-    const format = newGameData.format || '5v5';
-    const computedMaxPlayers = newGameData.maxPlayers || MATCH_FORMAT_SLOTS[format] || 10;
+    const format = newGameData.format || '11v11';
+    const computedMaxPlayers = newGameData.maxPlayers || MATCH_FORMAT_SLOTS[format] || 22;
     const isPlayerCreator = creatorUser?.role === 'PLAYER';
     const isManagerCreator = creatorUser?.role === 'CLUB_MANAGER' || creatorUser?.role === 'SUPER_ADMIN';
 
     let confirmedPlayers = [];
     if (isPlayerCreator && creatorUser) {
+      const creatorPos = creatorUser.position || (creatorUser.playingHand ? creatorUser.playingHand.split('/')[1]?.trim() : null) || 'ST';
       confirmedPlayers = [{
         id: creatorUser.id,
         name: creatorUser.name,
         avatar: creatorUser.profileImageUrl || creatorUser.avatar,
-        position: creatorUser.playingHand?.split('/')[1]?.trim() || 'ST'
+        position: normalizeFootballPosition(creatorPos),
+        team: 'TEAM_A'
       }];
     }
     // Note: If Manager/Admin creates, confirmedPlayers is [] (0 slots taken by manager, 100% slots available for players)
@@ -906,13 +918,18 @@ export const useDataStore = create(
 
     const isTeamAWin = teamAScore > teamBScore;
     const isDraw = teamAScore === teamBScore;
+    const goalDiff = Math.abs(teamAScore - teamBScore);
 
     const confirmed = game.confirmedPlayers || [];
-    const teamA = confirmed.slice(0, Math.ceil(confirmed.length / 2));
-    const teamB = confirmed.slice(Math.ceil(confirmed.length / 2));
+    const maxSlots = game.maxPlayers || MATCH_FORMAT_SLOTS[game.format] || 10;
+    const teamCap = Math.ceil(maxSlots / 2);
 
-    const avgEloA = teamA.reduce((sum, p) => sum + (p.elo || 1500), 0) / (teamA.length || 1);
-    const avgEloB = teamB.reduce((sum, p) => sum + (p.elo || 1500), 0) / (teamB.length || 1);
+    // Football team separation: respect player's assigned team property
+    const teamA = confirmed.filter((p, idx) => p.team === 'TEAM_A' || (!p.team && idx < teamCap));
+    const teamB = confirmed.filter((p, idx) => p.team === 'TEAM_B' || (!p.team && idx >= teamCap));
+
+    const avgEloA = teamA.reduce((sum, p) => sum + (p.elo || p.eloRating || 1500), 0) / (teamA.length || 1);
+    const avgEloB = teamB.reduce((sum, p) => sum + (p.elo || p.eloRating || 1500), 0) / (teamB.length || 1);
 
     if (updateUsersListFn && typeof updateUsersListFn === 'function' && Array.isArray(usersList)) {
       const updatedUsers = usersList.map(u => {
@@ -920,11 +937,13 @@ export const useDataStore = create(
         const inB = teamB.some(p => p.id === u.id);
         const isOrganizer = game.organizer?.id === u.id;
 
-        if (inA || inB || isOrganizer) {
+        if (inA || inB) {
+          const playerTeam = inA ? 'TEAM_A' : 'TEAM_B';
+          const matchImpact = calculateFootballMatchResult(teamAScore, teamBScore, playerTeam);
           const outcome = isDraw ? 0.5 : (inA ? (isTeamAWin ? 1 : 0) : (isTeamAWin ? 0 : 1));
           const oppElo = inA ? avgEloB : avgEloA;
           const currentElo = u.eloRating || u.elo || 1500;
-          const newElo = (inA || inB) ? calculateNewElo(currentElo, oppElo, outcome, 32) : currentElo;
+          const newElo = calculateNewElo(currentElo, oppElo, outcome, 32, goalDiff);
           
           const historyEntry = {
             gameId: game.id,
@@ -933,7 +952,59 @@ export const useDataStore = create(
             score: `${teamAScore} - ${teamBScore}`,
             format: game.format,
             venue: game.venueReference?.clubName || 'Turf Hub',
-            role: isOrganizer ? 'Host' : (inA ? 'Team A' : 'Team B')
+            team: inA ? 'Team A' : 'Team B',
+            role: inA ? 'Team A' : 'Team B',
+            result: matchImpact.result,
+            outcomeCode: matchImpact.outcomeCode,
+            goalsFor: matchImpact.goalsFor,
+            goalsAgainst: matchImpact.goalsAgainst,
+            goalDiff: matchImpact.goalDiff,
+            cleanSheet: matchImpact.cleanSheet,
+            pointsEarned: matchImpact.pointsEarned
+          };
+
+          const existingHistory = u.gameHistory || [];
+          const updatedHistory = [historyEntry, ...existingHistory.filter(h => h.gameId !== game.id)];
+
+          // Update cumulative football player stats
+          const prevStats = u.stats || {};
+          const newMatchesPlayed = (prevStats.matchesPlayed || existingHistory.length) + 1;
+          const newWins = (prevStats.wins || 0) + (matchImpact.isWin ? 1 : 0);
+          const newDraws = (prevStats.draws || 0) + (matchImpact.isDraw ? 1 : 0);
+          const newLosses = (prevStats.losses || 0) + (matchImpact.isLoss ? 1 : 0);
+          const newCleanSheets = (prevStats.cleanSheets || 0) + (matchImpact.cleanSheet ? 1 : 0);
+          const newPoints = (prevStats.points || 0) + matchImpact.pointsEarned;
+          const newWinRate = Math.round((newWins / newMatchesPlayed) * 100);
+
+          const updatedStats = {
+            ...prevStats,
+            matchesPlayed: newMatchesPlayed,
+            wins: newWins,
+            draws: newDraws,
+            losses: newLosses,
+            cleanSheets: newCleanSheets,
+            points: newPoints,
+            winRate: newWinRate,
+            elo: newElo
+          };
+
+          return {
+            ...u,
+            eloRating: newElo,
+            elo: newElo,
+            stats: updatedStats,
+            gameHistory: updatedHistory
+          };
+        } else if (isOrganizer) {
+          // Non-playing organizer/manager: Record match in organizer log without altering player Elo or player stats
+          const historyEntry = {
+            gameId: game.id,
+            title: game.title,
+            date: game.dateTime?.date || getTodayDate(0),
+            score: `${teamAScore} - ${teamBScore}`,
+            format: game.format,
+            venue: game.venueReference?.clubName || 'Turf Hub',
+            role: 'Host'
           };
 
           const existingHistory = u.gameHistory || [];
@@ -941,8 +1012,6 @@ export const useDataStore = create(
 
           return {
             ...u,
-            eloRating: newElo,
-            elo: newElo,
             gameHistory: updatedHistory
           };
         }

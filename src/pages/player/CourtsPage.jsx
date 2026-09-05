@@ -31,7 +31,7 @@ export const CourtsPage = () => {
             <span>Turfs & Courts Directory</span>
           </h1>
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">
-            Find and reserve FIFA grade artificial grass and indoor futsal venues across Indian cities
+            Find and reserve FIFA grade 11v11 artificial grass and stadium pitches across Indian cities
           </p>
         </div>
 

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { dummyUsers } from '../data/dummyUsers';
 import { getTodayDate } from '../utils/dateUtils';
+import { calculatePlayerOVR, normalizeFootballPosition } from '../utils/footballLogic.js';
 import toast from 'react-hot-toast';
 
 export const useAuthStore = create(
@@ -36,6 +37,11 @@ export const useAuthStore = create(
           return { success: false, error: 'An account with this email address already exists.' };
         }
 
+        const initialElo = 1500;
+        const rawPos = playerData.position || (playingHand ? playingHand.split('/')[1]?.trim() : 'Midfielder');
+        const normPos = normalizeFootballPosition(rawPos);
+        const preferredFoot = playerData.preferredFoot || (playingHand ? playingHand.split('/')[0]?.trim() : 'Right');
+
         const newPlayer = {
           id: `usr_player_${Date.now()}`,
           name: name.trim(),
@@ -45,9 +51,23 @@ export const useAuthStore = create(
           role: 'PLAYER', // AUTOMATICALLY ASSIGNED PLAYER ROLE ONLY
           profileImageUrl: profileImageUrl || '/assets/images/avatars/avatar-1.jpg',
           city: city || 'Raipur',
-          playingHand: playingHand || 'Right / Midfielder',
+          position: normPos,
+          preferredFoot: preferredFoot,
+          playingHand: playingHand || `${preferredFoot} / ${normPos}`,
           skillLevel: 'Intermediate',
-          eloRating: 1500,
+          eloRating: initialElo,
+          stats: {
+            matchesPlayed: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            cleanSheets: 0,
+            points: 0,
+            winRate: 0,
+            ovr: calculatePlayerOVR(initialElo),
+            position: normPos,
+            preferredFoot: preferredFoot
+          },
           bio: bio || 'Passionate football player looking for 5v5 and 7v7 casual matches.',
           badges: ['NewRecruit'],
           joinedDate: getTodayDate(0),
@@ -269,7 +289,17 @@ export const useAuthStore = create(
       updateProfile: (data) => {
         const user = get().currentUser;
         if (!user) return;
-        const updated = { ...user, ...data };
+        
+        let extraFootballData = {};
+        if (data.playingHand && !data.position) {
+          const parts = data.playingHand.split('/');
+          if (parts.length > 1) {
+            extraFootballData.preferredFoot = parts[0].trim();
+            extraFootballData.position = normalizeFootballPosition(parts[1].trim());
+          }
+        }
+        
+        const updated = { ...user, ...data, ...extraFootballData };
         set({
           currentUser: updated,
           usersList: get().usersList.map(u => u.id === user.id ? updated : u)
