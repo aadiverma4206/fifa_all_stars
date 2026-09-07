@@ -32,6 +32,17 @@
   input, textarea, select, button {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
+
+  /* Disable number input spin arrows and prevent wheel adjustment */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
 }
 
 .scrollbar-none::-webkit-scrollbar {

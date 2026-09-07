@@ -206,57 +206,52 @@ export const MatchHistoryPage = () => {
     setCustomDate('');
   };
 
+  const formatMatchDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+    } catch (e) {}
+    return dateStr;
+  };
+
   return (
-    <div className="space-y-6 py-6 max-w-[1700px] w-full mx-auto px-2.5 sm:px-8 lg:px-10 overflow-x-hidden">
+    <div className="space-y-4 py-4 sm:py-6 max-w-4xl w-full mx-auto px-3 sm:px-6 lg:px-8 overflow-x-hidden">
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <BackButton fallback={isManager ? "/club/games" : "/player/find-games"} label={isManager ? "Back to Game Sessions" : "Back to Find Games"} className="mb-2 text-xs font-semibold" />
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2.5">
-            <Trophy className="w-6 h-6 text-amber-500 flex-shrink-0" />
-            <span>{isManager ? `${myClub?.name || 'Venue'} Match History & Results` : 'Match History & Results'}</span>
+          <BackButton fallback={isManager ? "/club/games" : "/player/find-games"} label={isManager ? "Back to Sessions" : "Back to Find Games"} className="mb-1.5 text-xs font-semibold" />
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 flex-shrink-0" />
+            <span>{isManager ? `${myClub?.name || 'Venue'} Match Records` : 'Match History & Results'}</span>
           </h1>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {isManager 
-              ? 'Official match records, final scores, and video archives for sessions hosted at your venue.'
-              : 'View completed pick-up matches, final scores, match ratings, and competitive results.'
+              ? 'Official match records and final scores hosted at your venue.'
+              : 'Completed pick-up fixtures, scores, highlights and match outcomes.'
             }
           </p>
         </div>
 
-        {/* Stats Row */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="px-3.5 py-2 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center shadow-xs">
-            <span className="block text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">{completedGames.length}</span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Matches</span>
-          </div>
-          {currentUser && (
-            <div className="px-3.5 py-2 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center shadow-xs">
-              <span className="block text-lg font-mono font-bold text-amber-500">{myCompletedGames.length}</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isManager ? 'Venue Matches' : 'My Matches'}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Tabs & Workspace Control Toolbar */}
-      <div className="space-y-3">
-        
         {/* Source Tab Segmented Ribbon */}
         {currentUser && (
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-md border border-slate-200/60 dark:border-slate-800/60 overflow-x-auto max-w-full scrollbar-none w-full sm:w-auto inline-flex">
+          <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-slate-800 w-full sm:w-auto gap-1 self-start sm:self-center">
             {[
-              { key: 'mine', label: isManager ? `🏟️ ${myClub?.name || 'My Venue'} Matches (${myCompletedGames.length})` : `⚡ My Match History (${myCompletedGames.length})` },
-              { key: 'all', label: `🌐 All Completed Matches (${completedGames.length})` }
+              { key: 'mine', label: isManager ? `🏟️ Venue (${myCompletedGames.length})` : `⚡ My Matches (${myCompletedGames.length})` },
+              { key: 'all', label: `🌐 All Matches (${completedGames.length})` }
             ].map(tab => (
               <button
                 key={tab.key}
+                type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3.5 py-1.5 rounded-sm text-xs font-bold transition-all uppercase whitespace-nowrap cursor-pointer ${
+                className={`py-1.5 px-3 rounded-lg text-xs font-black transition-all uppercase text-center cursor-pointer truncate ${
                   activeTab === tab.key
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-black'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold'
                 }`}
               >
                 {tab.label}
@@ -264,26 +259,36 @@ export const MatchHistoryPage = () => {
             ))}
           </div>
         )}
+      </div>
 
-        {/* Filter Toolbar */}
-        <div className="admin-card p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
-          
-          {/* Top Row: Search & Pick Date */}
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 w-full">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by match title, venue or city..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sport-500 transition-all"
-              />
-            </div>
+      {/* Modern Filter & Search Bar */}
+      <div className="p-2.5 sm:p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs space-y-2.5">
+        
+        {/* Row 1: Search & Date Filter */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search match, turf, city..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-7 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sport-500 transition-all"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
-            {/* Pick Date Selector */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-[10px] font-bold text-slate-400 uppercase whitespace-nowrap">Pick Date:</span>
+          {/* Date Selector */}
+          <div className="relative flex-shrink-0">
+            <div className="flex items-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 gap-1.5 focus-within:ring-2 focus-within:ring-sport-500">
+              <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
               <input
                 type="date"
                 value={customDate}
@@ -292,99 +297,81 @@ export const MatchHistoryPage = () => {
                   if (e.target.value) setDateFilter('custom');
                   else setDateFilter('all');
                 }}
-                className="px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white"
+                className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer w-28 sm:w-32"
+                title="Filter by date"
               />
               {customDate && (
                 <button
                   onClick={() => { setCustomDate(''); setDateFilter('all'); }}
-                  className="p-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                  title="Clear date"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3 h-3" />
                 </button>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Quick Date Pills Row */}
-          <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-100 dark:border-slate-800/60">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Date:</span>
+        {/* Row 2: Filter Chips */}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {[
-              { key: 'all', label: '📅 All Dates' },
-              { key: 'today', label: `⚡ Today (${todayStr})` },
-              { key: 'tomorrow', label: `🌅 Tomorrow (${tomorrowStr})` },
-              { key: 'past', label: '📜 Past Matches' }
-            ].map(d => (
+              { key: 'all', label: `All (${sourceGames.length})` },
+              { key: 'won', label: '🏆 Wins' },
+              { key: 'lost', label: '💔 Defeats' },
+              { key: 'draw', label: '🤝 Draws' },
+              { key: 'video', label: '🎥 Highlights' }
+            ].map(opt => (
               <button
-                key={d.key}
-                onClick={() => {
-                  setDateFilter(d.key);
-                  if (d.key !== 'custom') setCustomDate('');
-                }}
-                className={`px-2.5 py-1 rounded-sm text-xs font-bold uppercase transition-all cursor-pointer ${
-                  dateFilter === d.key
-                    ? 'bg-emerald-600 text-white font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                key={opt.key}
+                type="button"
+                onClick={() => setResultFilter(opt.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  resultFilter === opt.key
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs font-black'
+                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
-                {d.label}
+                {opt.label}
               </button>
             ))}
           </div>
 
-          {/* Format & Result Filters */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Format:</span>
-              <span className="px-3 py-1 rounded-sm text-xs font-bold uppercase bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs">
-                11v11 (Official Full Pitch)
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Result:</span>
-              {[
-                { key: 'all', label: 'All Results' },
-                { key: 'won', label: '🎉 Wins' },
-                { key: 'lost', label: '💔 Defeats' },
-                { key: 'draw', label: '🤝 Draws' },
-                { key: 'video', label: '🎥 Highlights Video' }
-              ].map(opt => (
-                <button
-                  key={opt.key}
-                  onClick={() => setResultFilter(opt.key)}
-                  className={`px-3 py-1 rounded-sm text-xs font-bold uppercase transition-all cursor-pointer ${
-                    resultFilter === opt.key
-                      ? 'bg-amber-500 text-slate-950 font-bold'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          {(searchTerm || resultFilter !== 'all' || customDate || dateFilter !== 'all') && (
+            <button
+              type="button"
+              onClick={resetAllFilters}
+              className="text-xs font-bold text-rose-500 hover:text-rose-600 whitespace-nowrap flex items-center gap-1 pl-2 flex-shrink-0 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
+
       </div>
 
       {/* Match History List */}
       {filtered.length === 0 ? (
-        <div className="admin-card p-12 text-center space-y-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-          <div className="w-12 h-12 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mx-auto text-xl">⚽</div>
+        <div className="p-10 text-center space-y-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mx-auto text-xl">⚽</div>
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight">No matches found</h3>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">No match records found</h3>
             <p className="text-xs font-medium text-slate-400 mt-1">
-              {activeTab === 'mine' ? (isManager ? "No completed matches recorded at your venue yet." : "You haven't participated in or hosted any completed matches yet.") : 'No completed matches match your filters.'}
+              {activeTab === 'mine' ? (isManager ? "No completed matches recorded at your venue yet." : "You haven't participated in any completed matches yet.") : 'No completed matches match your search filters.'}
             </p>
           </div>
           <button
+            type="button"
             onClick={resetAllFilters}
-            className="px-4 py-2 rounded-md bg-sport-500 hover:bg-sport-600 text-white text-xs font-bold uppercase shadow-sm cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-sport-500 hover:bg-sport-600 text-white text-xs font-bold uppercase shadow-xs cursor-pointer"
           >
             Clear Filters
           </button>
         </div>
       ) : (
-        <div className="space-y-3.5">
+        <div className="space-y-3">
           {filtered.map((game, idx) => {
             const result = getResultLabel(game);
             const hasScore = hasScoreEntered(game);
@@ -395,151 +382,167 @@ export const MatchHistoryPage = () => {
               (isManager && game.venueReference?.clubId === myClub?.id)
             );
 
-            const displayScoreA = game.score?.teamA ?? (game.liveScore?.teamA ?? 0);
-            const displayScoreB = game.score?.teamB ?? (game.liveScore?.teamB ?? 0);
+            const displayScoreA = hasScore ? parseInt(game.score.teamA, 10) : (game.liveScore?.teamA ?? 0);
+            const displayScoreB = hasScore ? parseInt(game.score.teamB, 10) : (game.liveScore?.teamB ?? 0);
+            const isDraw = hasScore && displayScoreA === displayScoreB;
+            const teamAWon = hasScore && displayScoreA > displayScoreB;
+            const teamBWon = hasScore && displayScoreB > displayScoreA;
+            const gameDate = game.dateTime?.date || game.date;
 
             return (
               <motion.div
                 key={game.id}
-                initial={{ opacity: 0, y: 6 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.15, delay: idx * 0.03 }}
               >
-                <Link to={`/games/${game.id}`} className="block">
-                  <div className={`admin-card admin-card-hover p-4 sm:p-5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all group ${isMyGame ? 'border-l-4 border-l-sport-500' : ''}`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-
-                      {/* Score Block */}
-                      <div className="flex-shrink-0 w-full sm:w-28 flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 p-3 rounded-md border bg-slate-950 text-white border-slate-800">
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-xl sm:text-2xl font-mono font-bold text-white leading-none">
-                            {displayScoreA}
+                <Link to={`/games/${game.id}`} className="block group">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all overflow-hidden">
+                    
+                    {/* 1. Header Ribbon: Status, Format, Date */}
+                    <div className="px-3.5 sm:px-4 py-2 bg-slate-50/90 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {game.status === 'ONGOING' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> LIVE MATCH
                           </span>
-                          <span className="text-xs font-bold text-slate-400">–</span>
-                          <span className="text-xl sm:text-2xl font-mono font-bold text-white leading-none">
-                            {displayScoreB}
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            FULL TIME
                           </span>
-                        </div>
-                        <span className="hidden sm:block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                          {hasScore ? 'FINAL SCORE' : 'COMPLETED'}
+                        )}
+                        <span className="px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px]">
+                          {game.format || '11v11'}
                         </span>
-                      </div>
-
-                      {/* Match Info */}
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={game.format === '5v5' || game.format === '2v2' ? 'emerald' : 'blue'} size="sm" className="rounded-md">{game.format}</Badge>
-                          {game.status === 'ONGOING' ? (
-                            <Badge variant="danger" size="sm" className="rounded-md">🔴 LIVE / ONGOING</Badge>
-                          ) : (
-                            <Badge variant="emerald" size="sm" className="rounded-md">✅ COMPLETED</Badge>
-                          )}
-                          {result && (
-                            <Badge variant={result.color} size="sm" className="rounded-md">🏆 {result.label}</Badge>
-                          )}
-                          {hasVideo && (
-                            <Badge variant="gold" size="sm" className="rounded-md flex items-center space-x-1">
-                              <Film className="w-3 h-3 text-amber-500" />
-                              <span>🎥 Video Available</span>
-                            </Badge>
-                          )}
-                          {isMyGame && (
-                            <Badge variant="blue" size="sm" className="rounded-md">{isManager ? '🏟️ Venue Match' : '⚡ My Match'}</Badge>
-                          )}
-                        </div>
-
-                        <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate group-hover:text-sport-500 transition-colors">
-                          {game.title}
-                        </h3>
-
-                        <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500 dark:text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-sport-500 flex-shrink-0" />
-                            {game.venueReference?.clubName} • {game.venueReference?.city}
+                        {isMyGame && (
+                          <span className="px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-[10px]">
+                            {isManager ? '🏟️ Venue' : '⚡ My Match'}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                            {game.dateTime?.date}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                            {game.dateTime?.startTime} – {game.dateTime?.endTime}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                            {game.confirmedPlayers?.length || 0} / {game.maxPlayers} Players
-                          </span>
-                        </div>
-
-                        {/* Player Avatars */}
-                        {game.confirmedPlayers?.length > 0 && (
-                          <div className="flex items-center gap-2 pt-1">
-                            <div className="flex -space-x-1.5">
-                              {game.confirmedPlayers.slice(0, 6).map(p => (
-                                <Avatar key={p.id} src={p.avatar} name={p.name} size="xs" className="rounded-md border-2 border-white dark:border-slate-900" />
-                              ))}
-                              {game.confirmedPlayers.length > 6 && (
-                                <div className="w-6 h-6 rounded-md bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-600 dark:text-slate-300 border-2 border-white dark:border-slate-900">
-                                  +{game.confirmedPlayers.length - 6}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-[10px] font-medium text-slate-400">participants</span>
-                          </div>
                         )}
                       </div>
 
-                      {/* RIGHT SIDE SLEEK FLOATING RESULT */}
-                      {result && (
-                        <motion.div
-                          initial={{ scale: 0.95, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          whileHover={{ scale: 1.05 }}
-                          transition={{ duration: 0.15 }}
-                          className="flex-shrink-0 px-2 sm:px-4 py-2 flex flex-col items-center justify-center text-center bg-transparent border-0 shadow-none select-none cursor-pointer"
-                        >
-                          <div className="flex flex-col items-center space-y-1">
-                            {result.type === 'WON' ? (
-                              <motion.div
-                                animate={{ rotate: [0, -8, 8, -8, 0] }}
-                                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                                className="flex items-center space-x-1"
-                              >
-                                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                                <Trophy className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
-                              </motion.div>
-                            ) : result.type === 'LOST' ? (
-                              <motion.div
-                                animate={{ y: [0, -2, 0] }}
-                                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                                className="flex items-center space-x-1"
-                              >
-                                <XCircle className="w-6 h-6 text-rose-500 dark:text-rose-400" />
-                              </motion.div>
-                            ) : (
-                              <div>
-                                <Award className="w-6 h-6 text-amber-500 dark:text-amber-400" />
-                              </div>
-                            )}
+                      <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1 flex-shrink-0">
+                        <Calendar className="w-3 h-3 text-slate-400" />
+                        <span>{formatMatchDate(gameDate)}</span>
+                        {game.dateTime?.startTime && (
+                          <span className="text-slate-400 font-medium">· {game.dateTime.startTime}</span>
+                        )}
+                      </div>
+                    </div>
 
-                            <span className={`text-sm sm:text-base font-bold uppercase tracking-wider block leading-none ${result.textColor}`}>
-                              {result.title}
+                    {/* 2. Match Title & Venue */}
+                    <div className="px-3.5 sm:px-4 pt-3 pb-1">
+                      <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate group-hover:text-sport-500 transition-colors">
+                        {game.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5 font-medium truncate">
+                        <MapPin className="w-3 h-3 text-sport-500 flex-shrink-0" />
+                        <span className="truncate">{game.venueReference?.clubName} · {game.venueReference?.city}</span>
+                      </p>
+                    </div>
+
+                    {/* 3. Sleek Sports Scoreboard */}
+                    <div className="px-3.5 sm:px-4 py-2.5">
+                      <div className="rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/70 dark:border-slate-800/80 p-2.5 space-y-2">
+                        
+                        {/* Team A */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-6 h-6 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center font-black text-[11px] border border-sky-500/20 flex-shrink-0">
+                              A
+                            </div>
+                            <span className={`text-xs font-bold truncate ${teamAWon ? 'text-slate-900 dark:text-white font-black' : 'text-slate-600 dark:text-slate-400'}`}>
+                              Team A
                             </span>
-
-                            <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 block uppercase tracking-widest pt-0.5">
-                              {result.subtitle}
-                            </span>
-
-                            {result.type === 'WON' && (
-                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[9px] uppercase mt-1 border border-emerald-500/20">
-                                <Zap className="w-3 h-3 text-amber-500 fill-amber-400" />
-                                <span>+3 PTS WIN</span>
+                            {teamAWon && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex-shrink-0">
+                                🏆 Winner
                               </span>
                             )}
                           </div>
-                        </motion.div>
-                      )}
+                          <span className={`text-base sm:text-lg font-mono font-black px-2 py-0.5 rounded ${
+                            teamAWon ? 'text-slate-900 dark:text-white font-extrabold' : 'text-slate-400'
+                          }`}>
+                            {displayScoreA}
+                          </span>
+                        </div>
+
+                        <div className="border-t border-slate-200/60 dark:border-slate-800/60" />
+
+                        {/* Team B */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-6 h-6 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-black text-[11px] border border-rose-500/20 flex-shrink-0">
+                              B
+                            </div>
+                            <span className={`text-xs font-bold truncate ${teamBWon ? 'text-slate-900 dark:text-white font-black' : 'text-slate-600 dark:text-slate-400'}`}>
+                              Team B
+                            </span>
+                            {teamBWon && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex-shrink-0">
+                                🏆 Winner
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-base sm:text-lg font-mono font-black px-2 py-0.5 rounded ${
+                            teamBWon ? 'text-slate-900 dark:text-white font-extrabold' : 'text-slate-400'
+                          }`}>
+                            {displayScoreB}
+                          </span>
+                        </div>
+
+                        {isDraw && (
+                          <div className="pt-1 text-center">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 uppercase tracking-wider">
+                              🤝 Match Ended in a Draw
+                            </span>
+                          </div>
+                        )}
+
+                      </div>
                     </div>
+
+                    {/* 4. Footer: Personal Result, Highlights & Players */}
+                    <div className="px-3.5 sm:px-4 py-2.5 bg-slate-50/60 dark:bg-slate-950/30 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Only show personal outcome if user actually played */}
+                        {currentUser && (result?.type === 'WON' || result?.type === 'LOST') ? (
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide flex items-center gap-1 ${result.bgColor} ${result.textColor} border ${result.borderColor}`}>
+                            {result.label}
+                          </span>
+                        ) : null}
+
+                        {hasVideo ? (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold flex items-center gap-1">
+                            <Film className="w-3 h-3" />
+                            <span>Highlights Available</span>
+                          </span>
+                        ) : (!currentUser || (result?.type !== 'WON' && result?.type !== 'LOST')) && game.organizer?.name ? (
+                          <span className="text-[11px] font-medium text-slate-400">
+                            Host: <span className="font-bold text-slate-600 dark:text-slate-300">{game.organizer.name}</span>
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {game.confirmedPlayers?.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <div className="flex -space-x-1.5">
+                              {game.confirmedPlayers.slice(0, 3).map(p => (
+                                <Avatar key={p.id} src={p.avatar} name={p.name} size="xs" className="w-5 h-5 rounded-full border-2 border-white dark:border-slate-900" />
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-bold">
+                              {game.confirmedPlayers.length}p
+                            </span>
+                          </div>
+                        )}
+                        <span className="text-[11px] font-bold text-slate-500 group-hover:text-sport-500 flex items-center transition-colors">
+                          <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                      </div>
+                    </div>
+
                   </div>
                 </Link>
               </motion.div>

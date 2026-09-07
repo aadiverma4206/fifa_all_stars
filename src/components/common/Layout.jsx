@@ -9,7 +9,7 @@ export const Layout = () => {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors w-full max-w-[100vw] overflow-x-hidden">
       <Navbar />
 
       <main className="flex-grow max-w-[1850px] w-full mx-auto px-2.5 sm:px-6 lg:px-8 pb-20 md:pb-12 min-w-0">

@@ -21,6 +21,7 @@ import BookCourtPage from './pages/player/BookCourtPage';
 import TournamentsPage from './pages/player/TournamentsPage';
 import TournamentDetailsPage from './pages/player/TournamentDetailsPage';
 import ProfilePage from './pages/player/ProfilePage';
+import WalletPage from './pages/player/WalletPage';
 import LeaderboardPage from './pages/player/LeaderboardPage';
 import CommunityPage from './pages/player/CommunityPage';
 import MatchHistoryPage from './pages/player/MatchHistoryPage';
@@ -54,9 +55,19 @@ function App() {
     applyTheme();
     const cleanupTheme = listenToSystemChanges();
     const cleanupGuardian = initActionGuardian();
+
+    // Prevent mouse wheel from changing number input values
+    const handleGlobalWheel = () => {
+      if (document.activeElement && document.activeElement.type === 'number') {
+        document.activeElement.blur();
+      }
+    };
+    window.addEventListener('wheel', handleGlobalWheel, { passive: true });
+
     return () => {
       if (cleanupTheme) cleanupTheme();
       if (cleanupGuardian) cleanupGuardian();
+      window.removeEventListener('wheel', handleGlobalWheel);
     };
   }, [applyTheme, listenToSystemChanges]);
 
@@ -104,6 +115,9 @@ function App() {
           <Route path="/player/home" element={<ProtectedRoute><PlayerHomePage /></ProtectedRoute>} />
           <Route path="/player/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/player/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+          <Route path="/player/add-money" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+          <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
           <Route path="/player/courts/book/:courtId" element={<ProtectedRoute><BookCourtPage /></ProtectedRoute>} />
           <Route path="/player/courts/book" element={<ProtectedRoute><BookCourtPage /></ProtectedRoute>} />
           <Route path="/courts/book/:courtId" element={<ProtectedRoute><BookCourtPage /></ProtectedRoute>} />

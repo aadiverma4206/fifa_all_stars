@@ -28,7 +28,7 @@ export const ProfilePage = () => {
   const myCourts = courts?.filter(c => c.clubId === myClub?.id) || [];
   const clubBookings = bookings?.filter(b => b.clubId === myClub?.id) || [];
 
-  const [topUpAmount, setTopUpAmount] = useState('500');
+  const [topUpAmount, setTopUpAmount] = useState('');
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [activeHistoryTab, setActiveHistoryTab] = useState(isManager ? 'created' : 'joined');
@@ -121,10 +121,15 @@ export const ProfilePage = () => {
 
     if (!checkNetworkOnline()) return;
 
+    const currentBalance = currentUser?.walletBalance || 0;
+    const maxAddable = Math.max(0, 200000 - currentBalance);
+
     const isValid = validateFormAndFocus(e, [
       { check: () => validatePositiveAmount(topUpAmount, 'Top-Up Amount', false), field: 'topUpAmount' },
-      { check: () => parseFloat(topUpAmount) < 10 ? { isValid: false, message: 'Minimum top-up amount is ₹10.' } : { isValid: true }, field: 'topUpAmount' },
-      { check: () => parseFloat(topUpAmount) > 50000 ? { isValid: false, message: 'Maximum top-up amount is ₹50,000 per transaction.' } : { isValid: true }, field: 'topUpAmount' }
+      { check: () => parseFloat(topUpAmount) < 1 ? { isValid: false, message: 'Minimum top-up amount is ₹1.' } : { isValid: true }, field: 'topUpAmount' },
+      { check: () => parseFloat(topUpAmount) > 50000 ? { isValid: false, message: 'Maximum top-up limit is ₹50,000 per transaction.' } : { isValid: true }, field: 'topUpAmount' },
+      { check: () => currentBalance >= 200000 ? { isValid: false, message: 'Your wallet has reached the maximum limit of ₹2,00,000.' } : { isValid: true }, field: 'topUpAmount' },
+      { check: () => currentBalance + parseFloat(topUpAmount) > 200000 ? { isValid: false, message: `Wallet cap reached! Maximum allowed balance is ₹2,00,000. You can only add up to ₹${maxAddable.toLocaleString('en-IN')}.` } : { isValid: true }, field: 'topUpAmount' }
     ]);
 
     if (!isValid) return;
@@ -136,6 +141,7 @@ export const ProfilePage = () => {
     try {
       updateWallet(val, 'Top-Up: Manual wallet reload');
       toast.success(`Top-up successful! Added ₹${val.toFixed(2)} to wallet.`);
+      setTopUpAmount('');
       setIsTopUpModalOpen(false);
     } catch (err) {
       logActionError('handleTopUp', err);
@@ -432,18 +438,30 @@ export const ProfilePage = () => {
               </div>
             </Link>
           ) : (
-            <div onClick={() => setIsTopUpModalOpen(true)} className="admin-card admin-card-hover p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5 cursor-pointer bg-white dark:bg-slate-900">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
-                <Wallet className="w-5 h-5" />
+            <div className="admin-card admin-card-hover p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5 bg-white dark:bg-slate-900">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTopUpModalOpen(true)}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-slate-950 transition-colors border border-amber-500/30 cursor-pointer"
+                >
+                  Quick Modal
+                </button>
               </div>
               <h3 className="font-black text-sm text-slate-900 dark:text-white uppercase">Wallet Balance</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 Current balance: <span className="text-amber-500 font-black text-sm">₹{currentUser?.walletBalance?.toFixed(2)}</span>. Add funds & view transaction history.
               </p>
-              <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 pt-1">
-                <span>Top-up Wallet Funds</span>
+              <Link 
+                to="/player/wallet"
+                className="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center justify-between pt-1 hover:underline"
+              >
+                <span>Open Add Money Page</span>
                 <ChevronRight className="w-3.5 h-3.5" />
-              </span>
+              </Link>
             </div>
           )}
 
@@ -878,12 +896,18 @@ export const ProfilePage = () => {
             <input
               name="topUpAmount"
               type="number"
-              step="50"
+              min="1"
+              max="50000"
+              step="any"
               value={topUpAmount}
               onChange={(e) => setTopUpAmount(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-sport-500 focus:outline-none"
+              onWheel={(e) => e.target.blur()}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-sport-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               required
             />
+            <p className="text-[10px] text-slate-400 font-semibold mt-1">
+              Min ₹1 • Max ₹50,000 per transaction
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
