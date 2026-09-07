@@ -170,7 +170,7 @@ export const LandingPage = () => {
         <h2 className="text-xl sm:text-4xl font-black uppercase tracking-tight mb-8 sm:mb-10">The Stats Never Lie</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-8">
           <div>
-            <span className="text-2xl sm:text-5xl font-black text-white">285K<span className="text-rose-500">+</span></span>
+            <span className="text-2xl sm:text-5xl font-black text-white">K<span className="text-rose-500">+</span></span>
             <span className="block text-[9px] sm:text-xs font-black text-slate-400 uppercase tracking-widest mt-1">REGISTERED PLAYERS</span>
           </div>
           <div>
