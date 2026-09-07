@@ -1594,7 +1594,7 @@ export const GameDetailsPage = () => {
                 name="editEntryFee"
                 type="number"
                 min="0"
-                step="50"
+                step="any"
                 value={editEntryFee}
                 onChange={(e) => setEditEntryFee(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -1654,50 +1654,51 @@ export const GameDetailsPage = () => {
     <Modal
       isOpen={isCancelMatchModalOpen}
       onClose={() => { if (!isActionLoading) setIsCancelMatchModalOpen(false); }}
-      title="🗑️ Cancel & Remove Match Session"
-      maxWidth="max-w-md"
+      maxWidth="max-w-[400px]"
     >
-      <div className="space-y-4">
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 space-y-2">
-          <p className="text-sm font-bold">Are you sure you want to cancel and remove this match?</p>
-          <p className="text-xs font-semibold opacity-80">This action cannot be undone. All players will be removed from the roster and entry fees refunded.</p>
+      <div className="space-y-3.5 text-center pt-1">
+        <div className="w-16 h-16 rounded-full border-[1.5px] border-[#e07a5f] bg-[#fffaf8] dark:bg-[#e07a5f]/10 flex items-center justify-center mx-auto mb-3">
+          <span className="text-[#e07a5f] text-3xl font-light leading-none select-none">!</span>
         </div>
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+        <h4 className="text-xl sm:text-2xl font-medium text-slate-800 dark:text-slate-100 tracking-normal mb-1 font-sans">
+          Do you want to Cancel Match ?
+        </h4>
+        <p className="text-xs sm:text-sm font-normal text-slate-500 dark:text-slate-400 leading-relaxed max-w-[310px] mx-auto">
+          This action cannot be undone. All registered players will be refunded.
+        </p>
+
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs text-left">
           <div className="flex justify-between">
             <span className="text-slate-400">Match:</span>
             <span className="text-slate-900 dark:text-white font-bold truncate max-w-[200px]">{game?.title}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-400">Format:</span>
-            <span className="text-slate-700 dark:text-slate-300">{game?.format}</span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold">{game?.format}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400">Players Registered:</span>
-            <span className="text-slate-700 dark:text-slate-300">{game?.confirmedPlayers?.length || 0} players</span>
+            <span className="text-slate-400">Players:</span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold">{game?.confirmedPlayers?.length || 0} players</span>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-1">
-          <Button
+
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCancelMatchModalOpen(false)}
-            className="w-full sm:flex-1 border border-slate-200 dark:border-slate-700 justify-center"
-          >
-            Keep Match
-          </Button>
-          <Button
-            type="button"
-            variant="danger"
-            size="sm"
-            icon={Trash2}
-            isLoading={isActionLoading}
             disabled={isActionLoading}
             onClick={handleConfirmCancelMatch}
-            className="w-full sm:flex-1 justify-center"
+            className="flex-1 py-2 sm:py-2.5 rounded-md font-medium text-xs sm:text-sm text-white bg-[#2b90d9] hover:bg-[#2380c2] active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
-            Yes, Cancel Match
-          </Button>
+            Yes, Proceed
+          </button>
+          <button
+            type="button"
+            disabled={isActionLoading}
+            onClick={() => setIsCancelMatchModalOpen(false)}
+            className="flex-1 py-2 sm:py-2.5 rounded-md font-medium text-xs sm:text-sm text-white bg-[#d9534f] hover:bg-[#c9302c] active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </Modal>
@@ -1706,15 +1707,20 @@ export const GameDetailsPage = () => {
     <Modal
       isOpen={isLeaveMatchModalOpen}
       onClose={() => { if (!isLeaving) setIsLeaveMatchModalOpen(false); }}
-      title="⚠️ Leave Match & Refund"
-      maxWidth="max-w-md"
+      maxWidth="max-w-[400px]"
     >
-      <div className="space-y-4">
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 space-y-2">
-          <p className="text-sm font-bold">Are you sure you want to leave this match?</p>
-          <p className="text-xs font-semibold opacity-80">Your roster spot will be freed for another player. Your entry fee will be refunded to your wallet.</p>
+      <div className="space-y-3.5 text-center pt-1">
+        <div className="w-16 h-16 rounded-full border-[1.5px] border-[#e07a5f] bg-[#fffaf8] dark:bg-[#e07a5f]/10 flex items-center justify-center mx-auto mb-3">
+          <span className="text-[#e07a5f] text-3xl font-light leading-none select-none">!</span>
         </div>
-        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+        <h4 className="text-xl sm:text-2xl font-medium text-slate-800 dark:text-slate-100 tracking-normal mb-1 font-sans">
+          Do you want to Leave Match ?
+        </h4>
+        <p className="text-xs sm:text-sm font-normal text-slate-500 dark:text-slate-400 leading-relaxed max-w-[310px] mx-auto">
+          Your slot will be freed for another player and your entry fee refunded.
+        </p>
+
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs text-left">
           <div className="flex justify-between">
             <span className="text-slate-400">Match:</span>
             <span className="text-slate-900 dark:text-white font-bold truncate max-w-[200px]">{game?.title}</span>
@@ -1726,27 +1732,24 @@ export const GameDetailsPage = () => {
             </div>
           )}
         </div>
-        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-1">
-          <Button
+
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsLeaveMatchModalOpen(false)}
-            className="w-full sm:flex-1 border border-slate-200 dark:border-slate-700 justify-center"
-          >
-            Stay in Match
-          </Button>
-          <Button
-            type="button"
-            variant="danger"
-            size="sm"
-            isLoading={isLeaving}
             disabled={isLeaving}
             onClick={handleLeaveMatch}
-            className="w-full sm:flex-1 justify-center"
+            className="flex-1 py-2 sm:py-2.5 rounded-md font-medium text-xs sm:text-sm text-white bg-[#2b90d9] hover:bg-[#2380c2] active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
-            Yes, Leave Match
-          </Button>
+            Yes, Proceed
+          </button>
+          <button
+            type="button"
+            disabled={isLeaving}
+            onClick={() => setIsLeaveMatchModalOpen(false)}
+            className="flex-1 py-2 sm:py-2.5 rounded-md font-medium text-xs sm:text-sm text-white bg-[#d9534f] hover:bg-[#c9302c] active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </Modal>

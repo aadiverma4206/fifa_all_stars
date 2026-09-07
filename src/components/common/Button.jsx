@@ -30,7 +30,7 @@ export const Button = ({
   const isClickLocked = useRef(false);
   const [internalLoading, setInternalLoading] = useState(false);
 
-  const baseStyles = 'relative inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97] shadow-sm tracking-wide overflow-hidden select-none cursor-pointer';
+  const baseStyles = 'relative inline-flex flex-row items-center justify-center font-bold rounded-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97] shadow-sm tracking-wide overflow-hidden select-none cursor-pointer';
 
   const variants = {
     primary:   'bg-sport-500 hover:bg-sport-600 text-white focus:ring-sport-500 shadow-sport-glow dark:bg-sport-500 dark:hover:bg-sport-600',
@@ -48,7 +48,7 @@ export const Button = ({
   };
 
   const showLoading = isLoading || internalLoading;
-  const hasRainbowBorder = rainbowBorder && !disabled && !showLoading;
+  const hasRainbowBorder = rainbowBorder && !disabled && !showLoading && variant !== 'gold';
 
   const handleClick = async (e) => {
     // 1. STRICT ANTI-DOUBLE-CLICK / SINGLE CLICK AT A TIME LOCK
@@ -186,9 +186,12 @@ export const Button = ({
         {showLoading ? (
           <FootballKickLoader size="sm" inline={true} />
         ) : Icon ? (
-          <Icon className="w-4 h-4 flex-shrink-0 relative z-10 pointer-events-none" />
+          <Icon className={clsx(
+            "flex-shrink-0 relative z-10 pointer-events-none",
+            size === 'sm' ? 'w-3.5 h-3.5' : size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'
+          )} />
         ) : null}
-        <span className="relative z-10 pointer-events-none">{children}</span>
+        <span className="relative z-10 pointer-events-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap">{children}</span>
       </button>
 
       {/* Screen-centered Football Kick animation when explicitly requested with fullScreenLoader or loadingText */}

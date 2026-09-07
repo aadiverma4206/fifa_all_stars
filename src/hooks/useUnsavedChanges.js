@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react';
+import { useAlertStore } from '../store/useAlertStore';
 
 /**
  * useUnsavedChanges
@@ -31,11 +32,18 @@ export const useUnsavedChanges = (isDirty, customMessage = 'You have unsaved cha
       return true;
     }
 
-    const confirmed = window.confirm(customMessage);
-    if (confirmed && typeof onProceed === 'function') {
-      onProceed();
-    }
-    return confirmed;
+    useAlertStore.getState().showAlert({
+      type: 'warning',
+      title: 'Do you want to Discard Changes ?',
+      message: customMessage,
+      confirmText: 'Yes, Proceed',
+      cancelText: 'Cancel',
+      showCancelButton: true,
+      onConfirm: () => {
+        if (typeof onProceed === 'function') onProceed();
+      },
+    });
+    return false;
   }, [isDirty, customMessage]);
 
   return {

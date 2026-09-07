@@ -102,7 +102,7 @@ export const ManagerGamesPage = () => {
   const [date, setDate] = useState(getTodayDate(1));
   const [startTime, setStartTime] = useState('19:00');
   const [endTime, setEndTime] = useState('20:30');
-  const [entryFee, setEntryFee] = useState('0');
+  const [entryFee, setEntryFee] = useState('');
   const [skill, setSkill] = useState('All Levels');
   const [privacy, setPrivacy] = useState('PUBLIC');
   const [selectedCourtId, setSelectedCourtId] = useState(myCourts[0]?.courtId || myCourts[0]?.id || '');
@@ -204,7 +204,7 @@ export const ManagerGamesPage = () => {
       }, currentUser);
 
       setTitle(''); setFormat('11v11'); setDate(getTodayDate(1));
-      setStartTime('19:00'); setEndTime('20:30'); setEntryFee('0');
+      setStartTime('19:00'); setEndTime('20:30'); setEntryFee('');
       setSkill('All Levels'); setPrivacy('PUBLIC'); setDescription('');
       setIsCreateModalOpen(false);
       toast.success('Game session published successfully!');

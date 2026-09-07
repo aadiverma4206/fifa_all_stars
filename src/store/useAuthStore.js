@@ -260,12 +260,22 @@ export const useAuthStore = create(
 
       updateWallet: (amount, description = 'Wallet Transaction') => {
         const user = get().currentUser;
-        if (!user) return;
+        if (!user) return false;
         const numAmount = parseFloat(amount);
         if (isNaN(numAmount) || !isFinite(numAmount)) {
           console.error('Invalid wallet amount:', amount);
-          return;
+          return false;
         }
+
+        const MAX_WALLET_LIMIT = 200000; // 2 Lakh INR Max Cap
+
+        // Enforce maximum wallet balance of ₹2,00,000
+        if (numAmount > 0 && (user.walletBalance || 0) + numAmount > MAX_WALLET_LIMIT) {
+          const maxAddable = Math.max(0, MAX_WALLET_LIMIT - (user.walletBalance || 0));
+          toast.error(`Wallet limit reached! Maximum allowed balance is ₹2,00,000. You can only add up to ₹${maxAddable.toLocaleString('en-IN')}.`);
+          return false;
+        }
+
         const newTx = {
           id: `tx_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
           type: numAmount >= 0 ? 'WALLET_TOPUP' : 'PAYMENT',
@@ -275,15 +285,17 @@ export const useAuthStore = create(
           description
         };
         const updatedHistory = [...(user.paymentHistory || []), newTx];
+        const newBalance = Math.min(MAX_WALLET_LIMIT, Math.max(0, Math.round(((user.walletBalance || 0) + numAmount) * 100) / 100));
         const updated = {
           ...user,
-          walletBalance: Math.max(0, Math.round(((user.walletBalance || 0) + numAmount) * 100) / 100),
+          walletBalance: newBalance,
           paymentHistory: updatedHistory
         };
         set({
           currentUser: updated,
           usersList: get().usersList.map(u => u.id === user.id ? updated : u)
         });
+        return true;
       },
 
       updateProfile: (data) => {

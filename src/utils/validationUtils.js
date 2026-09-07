@@ -133,6 +133,10 @@ export const validateDateRange = (startDate, endDate, fieldName = 'Date range') 
 
 // Amount / Price Validation
 export const validatePositiveAmount = (amount, fieldName = 'Amount', allowZero = true) => {
+  if (amount === '' || amount === null || amount === undefined) {
+    if (allowZero) return { isValid: true, message: '' };
+    return { isValid: false, message: `${fieldName} is required.` };
+  }
   const num = parseFloat(amount);
   if (isNaN(num)) {
     return { isValid: false, message: `${fieldName} must be a valid number.` };

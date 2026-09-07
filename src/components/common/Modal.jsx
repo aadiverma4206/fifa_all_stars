@@ -20,7 +20,7 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -32,22 +32,23 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
 
           {/* Modal Content */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`relative w-full ${maxWidth} bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-800 z-10 my-auto sm:my-8 text-slate-900 dark:text-slate-100 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto`}
+            className={`relative w-full ${maxWidth} bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 z-10 my-auto text-slate-900 dark:text-slate-100 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 sm:pb-4 mb-3 sm:mb-4 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="text-base sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white uppercase font-sans pr-2 line-clamp-2 sm:line-clamp-1">
+            <div className="flex items-center justify-between pb-2.5 sm:pb-3.5 mb-2.5 sm:mb-4 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm sm:text-lg font-black tracking-tight text-slate-900 dark:text-white uppercase font-sans pr-2 line-clamp-1">
                 {title}
               </h3>
               <button
+                type="button"
                 onClick={onClose}
-                className="p-1.5 sm:p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0 cursor-pointer"
+                className="p-1 sm:p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0 cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
