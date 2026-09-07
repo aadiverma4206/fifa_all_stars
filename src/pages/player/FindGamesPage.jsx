@@ -38,7 +38,7 @@ export const FindGamesPage = () => {
   const [format, setFormat] = useState('11v11');
   const [skillLevel, setSkillLevel] = useState('Intermediate');
   const [maxPlayers, setMaxPlayers] = useState('22');
-  const [entryFee, setEntryFee] = useState('0');
+  const [entryFee, setEntryFee] = useState('');
   const [privacy, setPrivacy] = useState('PUBLIC');
   const [description, setDescription] = useState('');
 
@@ -176,6 +176,7 @@ export const FindGamesPage = () => {
       toast.success(roleNotice);
       setIsHostModalOpen(false);
       setTitle('');
+      setEntryFee('');
     } catch (err) {
       logActionError('handleHostGame', err);
       toast.error(getErrorMessage(err, 'publishing game session'));
@@ -640,7 +641,6 @@ export const FindGamesPage = () => {
                 value={entryFee}
                 onChange={(e) => setEntryFee(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                required
               />
             </div>
           </div>
