@@ -932,16 +932,21 @@ export const ProfilePage = () => {
     <Modal
       isOpen={!!bookingToCancel}
       onClose={() => { if (!cancellingBookingId) setBookingToCancel(null); }}
-      title="⚠️ Cancel Reservation & Refund"
-      maxWidth="max-w-md"
+      maxWidth="max-w-[400px]"
     >
       {bookingToCancel && (
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 space-y-2">
-            <p className="text-sm font-bold">Are you sure you want to cancel this court reservation?</p>
-            <p className="text-xs font-semibold opacity-80">A refund request will be sent to the club for processing. Refund policies may apply.</p>
+        <div className="space-y-3.5 text-center pt-1">
+          <div className="w-16 h-16 rounded-full border-[1.5px] border-[#e07a5f] bg-[#fffaf8] dark:bg-[#e07a5f]/10 flex items-center justify-center mx-auto mb-3">
+            <span className="text-[#e07a5f] text-3xl font-light leading-none select-none">!</span>
           </div>
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-semibold">
+          <h4 className="text-xl sm:text-2xl font-medium text-slate-800 dark:text-slate-100 tracking-normal mb-1 font-sans">
+            Do you want to Cancel Reservation ?
+          </h4>
+          <p className="text-xs sm:text-sm font-normal text-slate-500 dark:text-slate-400 leading-relaxed max-w-[310px] mx-auto">
+            A refund request will be sent to the club for processing.
+          </p>
+
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs text-left">
             <div className="flex justify-between">
               <span className="text-slate-400">Court:</span>
               <span className="text-slate-900 dark:text-white font-bold">{bookingToCancel.courtName || 'Main Turf'}</span>
@@ -955,28 +960,24 @@ export const ProfilePage = () => {
               <span className="text-sport-500 font-bold">₹{bookingToCancel.amountPaid?.toFixed(2)}</span>
             </div>
           </div>
-          <div className="flex gap-3 pt-1">
-            <Button
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setBookingToCancel(null)}
-              className="flex-1 border border-slate-200 dark:border-slate-700"
-            >
-              Keep Reservation
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              icon={RotateCcw}
-              isLoading={!!cancellingBookingId}
               disabled={!!cancellingBookingId}
               onClick={handleCancelReservation}
-              className="flex-1"
+              className="flex-1 py-2 sm:py-2.5 rounded-md font-medium text-xs sm:text-sm text-white bg-[#2b90d9] hover:bg-[#2380c2] active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
             >
-              Yes, Cancel &amp; Refund
-            </Button>
+              Yes, Proceed
+            </button>
+            <button
+              type="button"
+              disabled={!!cancellingBookingId}
+              onClick={() => setBookingToCancel(null)}
+              className="flex-1 py-2 sm:py-2.5 rounded-md font-medium text-xs sm:text-sm text-white bg-[#d9534f] hover:bg-[#c9302c] active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

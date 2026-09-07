@@ -6,6 +6,7 @@
 
 import { isCriticalOperationActive, canNavigate } from './navigationGuardian';
 import { checkNetworkOnline } from './errorUtils';
+import { useAlertStore } from '../store/useAlertStore';
 import toast from 'react-hot-toast';
 
 // Active async action keys currently in-flight
@@ -133,14 +134,26 @@ export function initActionGuardian() {
       }
 
       // 5. Destructive Action Confirmation Guard:
-      if (actionEl.dataset?.confirm) {
-        const confirmed = window.confirm(actionEl.dataset.confirm);
-        if (!confirmed) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          return;
-        }
+      if (actionEl.dataset?.confirm && !actionEl._actionConfirmed) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        const confirmMsg = actionEl.dataset.confirm;
+        useAlertStore.getState().showAlert({
+          type: 'warning',
+          title: 'Do you want to Proceed ?',
+          message: confirmMsg,
+          confirmText: 'Yes, Proceed',
+          cancelText: 'Cancel',
+          showCancelButton: true,
+          onConfirm: () => {
+            actionEl._actionConfirmed = true;
+            actionEl.click();
+            setTimeout(() => { actionEl._actionConfirmed = false; }, 500);
+          },
+        });
+        return;
       }
 
       // 6. Online check for mutation buttons

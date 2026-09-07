@@ -5,7 +5,7 @@ import {
   Wallet, ArrowRight, ArrowDownLeft, ArrowUpRight, ShieldCheck, 
   CreditCard, Smartphone, Building2, CheckCircle2, AlertCircle, 
   Sparkles, History, ChevronRight, Lock, RefreshCw, Zap,
-  TrendingUp, TrendingDown, Clock, Check
+  TrendingUp, TrendingDown, Clock, Check, Eye, EyeOff
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getTodayDate } from '../../utils/dateUtils';
@@ -58,11 +58,64 @@ export const WalletPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [upiId, setUpiId] = useState('player@upi');
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
-  const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8821');
+  
+  // Card Payment States (100% correct interactive state)
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState(currentUser?.name?.toUpperCase() || '');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [showCvv, setShowCvv] = useState(false);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [historyFilter, setHistoryFilter] = useState('ALL'); // 'ALL' | 'CREDIT' | 'DEBIT'
   const [lastAddedAmount, setLastAddedAmount] = useState(null);
+
+  // Card network detection (Visa, Mastercard, RuPay, Amex)
+  const getCardNetwork = (num = '') => {
+    const clean = num.replace(/\D/g, '');
+    if (clean.startsWith('4')) return { name: 'Visa', color: 'bg-blue-600 text-white', label: 'VISA' };
+    if (/^(5[1-5]|2[2-7])/.test(clean)) return { name: 'Mastercard', color: 'bg-amber-600 text-white', label: 'MASTERCARD' };
+    if (/^(60|65|81|82)/.test(clean)) return { name: 'RuPay', color: 'bg-emerald-600 text-white', label: 'RuPay' };
+    if (/^(34|37)/.test(clean)) return { name: 'Amex', color: 'bg-indigo-600 text-white', label: 'AMEX' };
+    return { name: 'Card', color: 'bg-slate-700 text-slate-200', label: 'CARD' };
+  };
+
+  const handleCardNumberChange = (e) => {
+    const rawVal = e.target.value.replace(/\D/g, '').slice(0, 16);
+    const formatted = rawVal.match(/.{1,4}/g)?.join(' ') || rawVal;
+    setCardNumber(formatted);
+  };
+
+  const handleCardHolderChange = (e) => {
+    const cleaned = e.target.value.replace(/[^a-zA-Z\s.]/g, '').toUpperCase();
+    setCardHolder(cleaned);
+  };
+
+  const handleExpiryChange = (e) => {
+    let val = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (val.length >= 2) {
+      const month = parseInt(val.slice(0, 2), 10);
+      let validMonth = val.slice(0, 2);
+      if (month > 12) validMonth = '12';
+      if (month === 0 && val.length === 2) validMonth = '01';
+      val = validMonth + (val.length > 2 ? '/' + val.slice(2) : '/');
+    }
+    setCardExpiry(val);
+  };
+
+  const handleCvvChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setCardCvv(val);
+  };
+
+  const fillDemoCard = () => {
+    setCardNumber('4532 8920 1234 8821');
+    setCardHolder(currentUser?.name?.toUpperCase() || 'ALEX HUNTER');
+    setCardExpiry('08/29');
+    setCardCvv('789');
+    toast.success('💳 Demo Visa Card loaded for testing!');
+  };
 
   const currentBalance = currentUser?.walletBalance || 0;
   const paymentHistory = currentUser?.paymentHistory || [];
@@ -120,6 +173,41 @@ export const WalletPage = () => {
       return;
     }
 
+    // Card-Specific Interactive Validations
+    if (paymentMethod === 'CARD') {
+      const rawNum = cardNumber.replace(/\D/g, '');
+      if (rawNum.length < 15) {
+        toast.error('Please enter a valid 16-digit card number.');
+        return;
+      }
+      if (!cardHolder.trim()) {
+        toast.error('Please enter the cardholder name.');
+        return;
+      }
+      const rawExp = cardExpiry.replace(/\D/g, '');
+      if (rawExp.length < 4) {
+        toast.error('Please enter a valid expiry date (MM/YY).');
+        return;
+      }
+      const expMonth = parseInt(cardExpiry.slice(0, 2), 10);
+      const expYear = parseInt('20' + cardExpiry.slice(3, 5), 10);
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      if (expMonth < 1 || expMonth > 12) {
+        toast.error('Expiry month must be between 01 and 12.');
+        return;
+      }
+      if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+        toast.error('Card is expired. Please enter an active card.');
+        return;
+      }
+      if (cardCvv.length < 3) {
+        toast.error('Please enter a valid 3 or 4-digit CVV code.');
+        return;
+      }
+    }
+
     setIsConfirmModalOpen(true);
   };
 
@@ -146,9 +234,13 @@ export const WalletPage = () => {
       // Simulate real-time payment gateway handshake with football animation
       await new Promise(resolve => setTimeout(resolve, 1500));
 
+      const rawNum = cardNumber.replace(/\D/g, '');
+      const last4 = rawNum.slice(-4) || '8821';
+      const cardNet = getCardNetwork(cardNumber).name;
+
       const methodLabel = 
         paymentMethod === 'UPI' ? `UPI (${upiId || 'Direct UPI'})` :
-        paymentMethod === 'CARD' ? 'Credit/Debit Card' :
+        paymentMethod === 'CARD' ? `Card (${cardNet} •••• ${last4})` :
         `Net Banking (${selectedBank})`;
 
       updateWallet(numVal, `Wallet Reload: Added via ${methodLabel}`);
@@ -475,32 +567,111 @@ export const WalletPage = () => {
                   )}
 
                   {paymentMethod === 'CARD' && (
-                    <div className="space-y-2">
+                    <div className="space-y-3 pt-1">
+                      {/* Header with Card Information & Quick Demo Fill */}
+                      <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center gap-1.5">
+                          <CreditCard className="w-4 h-4 text-sky-500" />
+                          <span className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-300">
+                            Card Information
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={fillDemoCard}
+                          className="text-[10px] font-bold text-sport-600 dark:text-sport-400 hover:text-sport-500 flex items-center gap-1 bg-sport-500/10 dark:bg-sport-500/20 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>Fill Demo Card</span>
+                        </button>
+                      </div>
+
+                      {/* 1. Card Number */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase">
+                            Card Number
+                          </label>
+                          {cardNumber.replace(/\D/g, '').length > 0 && (
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${getCardNetwork(cardNumber).color}`}>
+                              {getCardNetwork(cardNumber).label}
+                            </span>
+                          )}
+                        </div>
+                        <div className="relative flex items-center">
+                          <input
+                            type="text"
+                            value={cardNumber}
+                            onChange={handleCardNumberChange}
+                            placeholder="4532 8920 1234 8821"
+                            maxLength={19}
+                            className="w-full pl-3.5 pr-10 py-2 sm:py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sport-500 tracking-wider"
+                          />
+                          <div className="absolute right-3 pointer-events-none text-slate-400">
+                            <CreditCard className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. Cardholder Name */}
                       <div>
                         <label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase mb-1">
-                          Card Number
+                          Cardholder Name
                         </label>
                         <input
                           type="text"
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(e.target.value)}
-                          placeholder="Card number"
-                          className="w-full px-3.5 py-2 sm:py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sport-500 font-mono"
+                          value={cardHolder}
+                          onChange={handleCardHolderChange}
+                          placeholder="NAME AS SHOWN ON CARD"
+                          className="w-full px-3.5 py-2 sm:py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sport-500 uppercase tracking-wide"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          defaultValue="08/29"
-                          placeholder="MM/YY"
-                          className="px-3 py-2 sm:py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none text-center"
-                        />
-                        <input
-                          type="password"
-                          defaultValue="•••"
-                          placeholder="CVV"
-                          className="px-3 py-2 sm:py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none text-center"
-                        />
+
+                      {/* 3. Expiry Date & CVV */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase mb-1">
+                            Expiry Date (MM/YY)
+                          </label>
+                          <input
+                            type="text"
+                            value={cardExpiry}
+                            onChange={handleExpiryChange}
+                            placeholder="MM/YY"
+                            maxLength={5}
+                            className="w-full px-3 py-2 sm:py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sport-500 text-center tracking-widest"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase mb-1">
+                            CVV / CVC
+                          </label>
+                          <div className="relative flex items-center">
+                            <input
+                              type={showCvv ? "text" : "password"}
+                              value={cardCvv}
+                              onChange={handleCvvChange}
+                              placeholder="•••"
+                              maxLength={4}
+                              className="w-full pl-3 pr-8 py-2 sm:py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sport-500 text-center tracking-widest"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowCvv(!showCvv)}
+                              className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                              title={showCvv ? "Hide CVV" : "Show CVV"}
+                            >
+                              {showCvv ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Security Trust Note */}
+                      <div className="flex items-center gap-1.5 pt-0.5 text-[10px] text-slate-400 font-medium">
+                        <Lock className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                        <span>256-bit SSL encrypted • Supports Visa, Mastercard, RuPay</span>
                       </div>
                     </div>
                   )}
@@ -724,19 +895,20 @@ export const WalletPage = () => {
         ) : (
           <div className="space-y-3 sm:space-y-4">
             <div className="text-center pb-0.5 sm:pb-1">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto mb-2">
-                <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+              {/* Circular Amber Icon Badge matching reference format */}
+              <div className="w-16 h-16 rounded-full border-[1.5px] border-[#e07a5f] bg-[#fffaf8] dark:bg-[#e07a5f]/10 flex items-center justify-center mx-auto mb-3.5">
+                <span className="text-[#e07a5f] text-3xl font-light leading-none select-none">!</span>
               </div>
-              <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                Confirm Wallet Top-Up
+              <h4 className="text-xl sm:text-2xl font-medium text-slate-800 dark:text-slate-100 tracking-normal mb-1 font-sans">
+                Do you want to Proceed ?
               </h4>
-              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Please review your transaction details before proceeding.
+              <p className="text-xs sm:text-sm font-normal text-slate-500 dark:text-slate-400 leading-relaxed max-w-[310px] mx-auto">
+                You are about to add ₹{parseFloat(amount || 0).toLocaleString('en-IN')} to your wallet balance.
               </p>
             </div>
 
             {/* Breakdown Card */}
-            <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/80 dark:border-slate-800 space-y-2 text-xs">
+            <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/80 dark:border-slate-800 space-y-2 text-xs text-left">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-slate-500 dark:text-slate-400 font-bold text-[11px] sm:text-xs">Amount to Pay</span>
                 <span className="font-mono font-black text-slate-900 dark:text-white text-sm sm:text-base">
@@ -748,10 +920,19 @@ export const WalletPage = () => {
                 <span className="text-slate-500 dark:text-slate-400 font-bold text-[11px] sm:text-xs">Payment Method</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 truncate text-right text-[11px] sm:text-xs">
                   {paymentMethod === 'UPI' ? `UPI (${upiId || 'Direct UPI'})` :
-                   paymentMethod === 'CARD' ? 'Credit/Debit Card' :
+                   paymentMethod === 'CARD' ? `Card (${getCardNetwork(cardNumber).name} •••• ${cardNumber.replace(/\D/g, '').slice(-4) || '8821'})` :
                    `Net Banking (${selectedBank})`}
                 </span>
               </div>
+
+              {paymentMethod === 'CARD' && cardHolder && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500 dark:text-slate-400 font-bold text-[11px] sm:text-xs">Cardholder</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200 uppercase truncate text-right text-[11px] sm:text-xs">
+                    {cardHolder}
+                  </span>
+                </div>
+              )}
 
               <div className="flex items-center justify-between gap-2">
                 <span className="text-slate-500 dark:text-slate-400 font-bold text-[11px] sm:text-xs">Processing Fee</span>
@@ -775,31 +956,24 @@ export const WalletPage = () => {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-1 sm:pt-2">
-              <Button
+            {/* Action Buttons matching reference styling */}
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
-                disabled={isProcessing}
-                onClick={() => setIsConfirmModalOpen(false)}
-                className="w-full font-bold text-xs py-2 sm:py-2.5 cursor-pointer"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="gold"
-                size="sm"
-                icon={Lock}
-                rainbowBorder={false}
-                isLoading={isProcessing}
                 disabled={isProcessing}
                 onClick={handleConfirmPayment}
-                className="w-full font-black text-xs uppercase shadow-md cursor-pointer py-2.5"
+                className="flex-1 py-2 sm:py-2.5 rounded-md font-medium text-xs sm:text-sm text-white bg-[#2b90d9] hover:bg-[#2380c2] active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
               >
-                Confirm Pay
-              </Button>
+                Yes, Proceed
+              </button>
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="flex-1 py-2 sm:py-2.5 rounded-md font-medium text-xs sm:text-sm text-white bg-[#d9534f] hover:bg-[#c9302c] active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         )}

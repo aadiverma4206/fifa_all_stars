@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import Layout from './components/common/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { useThemeStore } from './store/useThemeStore';
@@ -45,6 +44,8 @@ import SupportTicketsPage from './pages/admin/SupportTicketsPage';
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ScrollToTop from './components/common/ScrollToTop';
+import GlobalAlertModal from './components/common/GlobalAlertModal';
+import { initToastBridge } from './store/useAlertStore';
 import { initActionGuardian } from './utils/actionGuardian';
 
 function App() {
@@ -53,6 +54,7 @@ function App() {
 
   useEffect(() => {
     applyTheme();
+    initToastBridge();
     const cleanupTheme = listenToSystemChanges();
     const cleanupGuardian = initActionGuardian();
 
@@ -74,7 +76,8 @@ function App() {
   return (
     <ErrorBoundary>
       <ScrollToTop />
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      {/* Universal Dead-Center Screen Alert Modal (Successful with Green Right, Unsuccessful with Red Cross) */}
+      <GlobalAlertModal />
       <Routes>
         
         {/* Main Layout Wrapping All Public, Auth, Player, Manager, and Admin Routes */}
