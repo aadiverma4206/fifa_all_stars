@@ -169,5 +169,137 @@ export const dummyGames = [
     status: "COMPLETED",
     score: { teamA: 5, teamB: 4 },
     description: "Completed 11v11 stadium session with thrill finish."
+  },
+
+  // --- BERNABEU ARENA TURF COMPLETED MATCH RECORDS ---
+  {
+    id: "gam_105",
+    title: "Raipur 11v11 Showdown at Bernabeu Arena",
+    createdByPlayer: true,
+    creatorRole: "PLAYER",
+    organizer: {
+      id: "usr_player_demo",
+      name: "Arjun Mehta",
+      avatar: "/assets/images/avatars/player-avatar.jpg",
+      role: "PLAYER"
+    },
+    format: "11v11",
+    maxPlayers: 22,
+    entryFee: 200,
+    confirmedPlayers: [
+      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/player-avatar.jpg", position: "ST", team: "TEAM_A" },
+      { id: "usr_p2", name: "Siddharth Rao", avatar: "/assets/images/avatars/avatar-6.jpg", position: "CAM", team: "TEAM_A" },
+      { id: "usr_p3", name: "Ananya Iyer", avatar: "/assets/images/avatars/avatar-3.jpg", position: "GK", team: "TEAM_A" },
+      { id: "usr_p4", name: "Karan Patel", avatar: "/assets/images/avatars/avatar-4.jpg", position: "CB", team: "TEAM_A" },
+      { id: "usr_p6", name: "Aarav Joshi", avatar: "/assets/images/avatars/avatar-8.jpg", position: "CM", team: "TEAM_A" },
+      { id: "usr_admin_demo", name: "Aaditya Verma", avatar: "/assets/images/avatars/admin-avatar.jpg", position: "CAM", team: "TEAM_B" },
+      { id: "usr_admin_2", name: "Rohan Deshmukh", avatar: "/assets/images/avatars/avatar-2.jpg", position: "CB", team: "TEAM_B" },
+      { id: "usr_p7", name: "Rohan Kapoor", avatar: "/assets/images/avatars/avatar-9.jpg", position: "ST", team: "TEAM_B" },
+      { id: "usr_p8", name: "Tanya Sharma", avatar: "/assets/images/avatars/avatar-10.jpg", position: "CM", team: "TEAM_B" },
+      { id: "usr_p10", name: "Ishan Verma", avatar: "/assets/images/avatars/avatar-8.jpg", position: "LB", team: "TEAM_B" }
+    ],
+    waitlist: [],
+    skill: "Advanced",
+    privacy: "PUBLIC",
+    venueReference: {
+      clubId: "clb_raipur_1",
+      clubName: "Bernabeu Arena Turf",
+      courtId: "crt_rp_101",
+      courtName: "Raipur Pitch Alpha (11v11)",
+      city: "Raipur"
+    },
+    dateTime: {
+      date: getTodayDate(-2),
+      startTime: "19:00",
+      endTime: "20:30"
+    },
+    status: "COMPLETED",
+    score: { teamA: 4, teamB: 3 },
+    videoReference: "/assets/videos/sample-match.mp4",
+    videoUrl: "/assets/videos/sample-match.mp4",
+    description: "Spectacular 11v11 derby at Bernabeu Arena Turf with 7 total goals scored."
+  },
+
+  {
+    id: "gam_106",
+    title: "Bernabeu Arena Raipur Super League 11v11",
+    createdByPlayer: false,
+    creatorRole: "CLUB_MANAGER",
+    organizer: {
+      id: "usr_manager_demo",
+      name: "Rajesh Sharma",
+      avatar: "/assets/images/avatars/manager-avatar.jpg",
+      role: "CLUB_MANAGER"
+    },
+    format: "11v11",
+    maxPlayers: 22,
+    entryFee: 250,
+    confirmedPlayers: [
+      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/player-avatar.jpg", position: "ST", team: "TEAM_A" },
+      { id: "usr_p5", name: "Neha Gupta", avatar: "/assets/images/avatars/avatar-7.jpg", position: "LW", team: "TEAM_A" },
+      { id: "usr_p6", name: "Aarav Joshi", avatar: "/assets/images/avatars/avatar-8.jpg", position: "CM", team: "TEAM_A" },
+      { id: "usr_p7", name: "Rohan Kapoor", avatar: "/assets/images/avatars/avatar-9.jpg", position: "ST", team: "TEAM_B" },
+      { id: "usr_p9", name: "Devendra Singh", avatar: "/assets/images/avatars/avatar-2.jpg", position: "RW", team: "TEAM_B" },
+      { id: "usr_p11", name: "Farhan Akhtar", avatar: "/assets/images/avatars/avatar-5.jpg", position: "CDM", team: "TEAM_B" }
+    ],
+    waitlist: [],
+    skill: "All Levels",
+    privacy: "PUBLIC",
+    venueReference: {
+      clubId: "clb_raipur_1",
+      clubName: "Bernabeu Arena Turf",
+      courtId: "crt_rp_102",
+      courtName: "Raipur Pitch Bravo (11v11)",
+      city: "Raipur"
+    },
+    dateTime: {
+      date: getTodayDate(-4),
+      startTime: "20:00",
+      endTime: "21:30"
+    },
+    status: "COMPLETED",
+    score: { teamA: 2, teamB: 2 },
+    description: "Hard-fought 2-2 draw between Team A and Team B at Bernabeu Pitch Bravo."
+  },
+
+  {
+    id: "gam_107",
+    title: "Bernabeu Friday Night Classic",
+    createdByPlayer: false,
+    creatorRole: "CLUB_MANAGER",
+    organizer: {
+      id: "usr_manager_demo",
+      name: "Rajesh Sharma",
+      avatar: "/assets/images/avatars/manager-avatar.jpg",
+      role: "CLUB_MANAGER"
+    },
+    format: "11v11",
+    maxPlayers: 22,
+    entryFee: 200,
+    confirmedPlayers: [
+      { id: "usr_p2", name: "Siddharth Rao", avatar: "/assets/images/avatars/avatar-6.jpg", position: "CAM", team: "TEAM_A" },
+      { id: "usr_p4", name: "Karan Patel", avatar: "/assets/images/avatars/avatar-4.jpg", position: "CB", team: "TEAM_A" },
+      { id: "usr_p8", name: "Tanya Sharma", avatar: "/assets/images/avatars/avatar-10.jpg", position: "CM", team: "TEAM_B" },
+      { id: "usr_p12", name: "Kabir Sen", avatar: "/assets/images/avatars/avatar-4.jpg", position: "GK", team: "TEAM_B" }
+    ],
+    waitlist: [],
+    skill: "Professional",
+    privacy: "PUBLIC",
+    venueReference: {
+      clubId: "clb_raipur_1",
+      clubName: "Bernabeu Arena Turf",
+      courtId: "crt_rp_101",
+      courtName: "Raipur Pitch Alpha (11v11)",
+      city: "Raipur"
+    },
+    dateTime: {
+      date: getTodayDate(-7),
+      startTime: "18:30",
+      endTime: "20:00"
+    },
+    status: "COMPLETED",
+    score: { teamA: 3, teamB: 1 },
+    videoReference: "/assets/videos/sample-match.mp4",
+    description: "Flawless defensive masterclass by Team A with clinical finishing."
   }
 ];

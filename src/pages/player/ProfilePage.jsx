@@ -127,7 +127,7 @@ export const ProfilePage = () => {
     const isValid = validateFormAndFocus(e, [
       { check: () => validatePositiveAmount(topUpAmount, 'Top-Up Amount', false), field: 'topUpAmount' },
       { check: () => parseFloat(topUpAmount) < 1 ? { isValid: false, message: 'Minimum top-up amount is ₹1.' } : { isValid: true }, field: 'topUpAmount' },
-      { check: () => parseFloat(topUpAmount) > 50000 ? { isValid: false, message: 'Maximum top-up limit is ₹50,000 per transaction.' } : { isValid: true }, field: 'topUpAmount' },
+      { check: () => parseFloat(topUpAmount) > 50000 ? { isValid: false, message: 'Amount cannot cross ₹50,000! Maximum top-up limit is ₹50,000 per transaction.' } : { isValid: true }, field: 'topUpAmount' },
       { check: () => currentBalance >= 200000 ? { isValid: false, message: 'Your wallet has reached the maximum limit of ₹2,00,000.' } : { isValid: true }, field: 'topUpAmount' },
       { check: () => currentBalance + parseFloat(topUpAmount) > 200000 ? { isValid: false, message: `Wallet cap reached! Maximum allowed balance is ₹2,00,000. You can only add up to ₹${maxAddable.toLocaleString('en-IN')}.` } : { isValid: true }, field: 'topUpAmount' }
     ]);
@@ -916,9 +916,27 @@ export const ProfilePage = () => {
               type="number"
               min="1"
               max="50000"
+              maxLength={8}
               step="any"
               value={topUpAmount}
-              onChange={(e) => setTopUpAmount(e.target.value)}
+              onChange={(e) => {
+                let val = e.target.value.replace(/[^0-9.]/g, '');
+                const parts = val.split('.');
+                if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                if (parts[1] && parts[1].length > 2) val = `${parts[0]}.${parts[1].slice(0, 2)}`;
+                const num = parseFloat(val);
+                if (!isNaN(num) && num > 50000) {
+                  setTopUpAmount('50000');
+                  toast.error('Amount cannot cross ₹50,000! Set to maximum ₹50,000.', { id: 'max-topup-warning' });
+                  return;
+                }
+                setTopUpAmount(val);
+              }}
+              onKeyDown={(e) => {
+                if (['e', 'E', '+', '-'].includes(e.key)) {
+                  e.preventDefault();
+                }
+              }}
               onWheel={(e) => e.target.blur()}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-sport-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               required

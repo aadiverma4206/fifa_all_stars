@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getTodayDate } from '../../utils/dateUtils';
-import { validatePositiveAmount } from '../../utils/validationUtils';
+import { validatePositiveAmount, validateTopUpAmount } from '../../utils/validationUtils';
 import { checkNetworkOnline } from '../../utils/errorUtils';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
@@ -139,7 +139,38 @@ export const WalletPage = () => {
     return true;
   }).reverse(); // Most recent first
 
+  const handleAmountChange = (e) => {
+    let val = e.target.value;
+    if (val === '') {
+      setAmount('');
+      return;
+    }
+    // Clean string to only numbers and decimal
+    val = val.replace(/[^0-9.]/g, '');
+    const parts = val.split('.');
+    if (parts.length > 2) {
+      val = parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (parts[1] && parts[1].length > 2) {
+      val = `${parts[0]}.${parts[1].slice(0, 2)}`;
+    }
+
+    const num = parseFloat(val);
+    if (!isNaN(num) && num > 50000) {
+      setAmount('50000');
+      toast.error('Amount cannot cross ₹50,000! Set to maximum ₹50,000.', { id: 'max-amount-warning' });
+      return;
+    }
+    setAmount(val);
+  };
+
   const handlePresetSelect = (val) => {
+    const num = parseFloat(val);
+    if (num > 50000) {
+      setAmount('50000');
+      toast.error('Amount cannot cross ₹50,000! Set to maximum ₹50,000.', { id: 'max-amount-warning' });
+      return;
+    }
     setAmount(val);
   };
 
@@ -149,19 +180,19 @@ export const WalletPage = () => {
 
     if (!checkNetworkOnline()) return;
 
-    const validation = validatePositiveAmount(amount, 'Top-Up Amount', false);
+    const validation = validateTopUpAmount(amount, currentBalance, MAX_WALLET_CAP);
     if (!validation.isValid) {
       toast.error(validation.message);
       return;
     }
 
     const numVal = parseFloat(amount);
-    if (numVal < 1) {
+    if (isNaN(numVal) || numVal < 1) {
       toast.error('Minimum top-up amount is ₹1.');
       return;
     }
     if (numVal > 50000) {
-      toast.error('Maximum top-up limit is ₹50,000 per transaction.');
+      toast.error('Amount cannot cross ₹50,000! Maximum top-up limit is ₹50,000 per transaction.');
       return;
     }
     if (currentBalance >= MAX_WALLET_CAP) {
@@ -216,12 +247,12 @@ export const WalletPage = () => {
     if (!checkNetworkOnline()) return;
 
     const numVal = parseFloat(amount);
-    if (numVal < 1) {
+    if (isNaN(numVal) || numVal < 1) {
       toast.error('Minimum top-up amount is ₹1.');
       return;
     }
     if (numVal > 50000) {
-      toast.error('Maximum top-up limit is ₹50,000 per transaction.');
+      toast.error('Amount cannot cross ₹50,000! Maximum top-up limit is ₹50,000 per transaction.');
       return;
     }
     if (currentBalance + numVal > MAX_WALLET_CAP) {
@@ -440,9 +471,15 @@ export const WalletPage = () => {
                     type="number"
                     min="1"
                     max="50000"
+                    maxLength={8}
                     step="any"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={handleAmountChange}
+                    onKeyDown={(e) => {
+                      if (['e', 'E', '+', '-'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
                     onWheel={(e) => e.target.blur()}
                     placeholder="Enter amount (e.g. 1, 99, 500)"
                     disabled={currentBalance >= MAX_WALLET_CAP}
@@ -460,13 +497,13 @@ export const WalletPage = () => {
                   <p className="text-[10px] sm:text-[11px] text-rose-500 font-bold flex items-center gap-1">
                     <span>⚠️ Wallet limit reached! Your wallet already has ₹2,00,000 (Maximum Cap).</span>
                   </p>
+                ) : amount && parseFloat(amount) > 50000 ? (
+                  <p className="text-[10px] sm:text-[11px] text-rose-500 font-bold flex items-center gap-1">
+                    <span>⚠️ Amount cannot cross ₹50,000! Maximum top-up limit is ₹50,000 per transaction.</span>
+                  </p>
                 ) : amount && (currentBalance + parseFloat(amount)) > MAX_WALLET_CAP ? (
                   <p className="text-[10px] sm:text-[11px] text-rose-500 font-bold flex items-center gap-1">
                     <span>⚠️ Exceeds ₹2,00,000 limit! Max you can add right now is ₹{remainingCapacity.toLocaleString('en-IN')}.</span>
-                  </p>
-                ) : amount && parseFloat(amount) > 50000 ? (
-                  <p className="text-[10px] sm:text-[11px] text-rose-500 font-bold flex items-center gap-1">
-                    <span>⚠️ Maximum top-up limit is ₹50,000 per transaction.</span>
                   </p>
                 ) : amount && parseFloat(amount) < 1 ? (
                   <p className="text-[10px] sm:text-[11px] text-rose-500 font-bold flex items-center gap-1">
@@ -702,7 +739,7 @@ export const WalletPage = () => {
                 <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
                   <span>Adding to Wallet:</span>
                   <span className="text-slate-900 dark:text-white font-mono font-black text-xs sm:text-sm">
-                    ₹{parseFloat(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{Math.min(50000, Math.max(0, parseFloat(amount || 0) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
@@ -726,7 +763,7 @@ export const WalletPage = () => {
                   }
                   className="w-full font-black text-xs sm:text-sm uppercase py-3 sm:py-3.5 rounded-xl shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Pay ₹{parseFloat(amount || 0).toLocaleString('en-IN')} &amp; Add to Wallet
+                  Pay ₹{Math.min(50000, Math.max(0, parseFloat(amount || 0) || 0)).toLocaleString('en-IN')} &amp; Add to Wallet
                 </Button>
 
                 <div className="flex items-center justify-center space-x-1.5 sm:space-x-2 text-[10px] text-slate-400 font-bold pt-1 text-center">
@@ -885,7 +922,7 @@ export const WalletPage = () => {
                 Processing Secure Top-Up
               </h4>
               <p className="text-base text-amber-500 font-black font-mono">
-                ₹{parseFloat(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                ₹{Math.min(50000, Math.max(0, parseFloat(amount || 0) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
               <p className="text-xs text-slate-400 font-semibold animate-pulse">
                 Connecting to payment gateway... Please wait.
@@ -903,7 +940,7 @@ export const WalletPage = () => {
                 Do you want to Proceed ?
               </h4>
               <p className="text-xs sm:text-sm font-normal text-slate-500 dark:text-slate-400 leading-relaxed max-w-[310px] mx-auto">
-                You are about to add ₹{parseFloat(amount || 0).toLocaleString('en-IN')} to your wallet balance.
+                You are about to add ₹{Math.min(50000, Math.max(0, parseFloat(amount || 0) || 0)).toLocaleString('en-IN')} to your wallet balance.
               </p>
             </div>
 
@@ -912,7 +949,7 @@ export const WalletPage = () => {
               <div className="flex items-center justify-between gap-2">
                 <span className="text-slate-500 dark:text-slate-400 font-bold text-[11px] sm:text-xs">Amount to Pay</span>
                 <span className="font-mono font-black text-slate-900 dark:text-white text-sm sm:text-base">
-                  ₹{parseFloat(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹{Math.min(50000, Math.max(0, parseFloat(amount || 0) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 

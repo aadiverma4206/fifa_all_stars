@@ -150,6 +150,31 @@ export const validatePositiveAmount = (amount, fieldName = 'Amount', allowZero =
   return { isValid: true, message: '' };
 };
 
+// Top-Up Amount Validation: Min ₹1, Max ₹50,000 per transaction
+export const validateTopUpAmount = (amount, currentBalance = 0, maxWalletCap = 200000) => {
+  if (amount === '' || amount === null || amount === undefined) {
+    return { isValid: false, message: 'Top-up amount is required.' };
+  }
+  const num = parseFloat(amount);
+  if (isNaN(num) || !isFinite(num)) {
+    return { isValid: false, message: 'Please enter a valid numeric amount.' };
+  }
+  if (num < 1) {
+    return { isValid: false, message: 'Minimum top-up amount is ₹1.' };
+  }
+  if (num > 50000) {
+    return { isValid: false, message: 'Amount cannot cross ₹50,000! Maximum top-up limit is ₹50,000 per transaction.' };
+  }
+  if (currentBalance >= maxWalletCap) {
+    return { isValid: false, message: 'Your wallet has reached the maximum limit of ₹2,00,000.' };
+  }
+  if (currentBalance + num > maxWalletCap) {
+    const remaining = Math.max(0, maxWalletCap - currentBalance);
+    return { isValid: false, message: `Wallet limit reached! Maximum allowed balance is ₹2,00,000. You can only add up to ₹${remaining.toLocaleString('en-IN')}.` };
+  }
+  return { isValid: true, message: '' };
+};
+
 // Game Price / Entry Fee Validation: Min ₹200, Max ₹200,000
 export const validateGamePrice = (amount, fieldName = 'Entry Fee') => {
   if (amount === '' || amount === null || amount === undefined) {

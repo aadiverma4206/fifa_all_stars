@@ -1302,6 +1302,13 @@ export const useDataStore = create(
                 g.courtName = g.courtName.replace(/\((?:5v5|7v7|3v3|2v2|1v1|8v8)\)/gi, '(11v11)').replace(/Futsal Dome/gi, 'Stadium Dome');
               }
             });
+
+            // Ensure newly added completed dummy games are present in local state
+            dummyGames.forEach(dg => {
+              if (!state.games.some(g => g.id === dg.id)) {
+                state.games.push(dg);
+              }
+            });
           }
           if (Array.isArray(state.bookings)) {
             state.bookings.forEach(b => {
