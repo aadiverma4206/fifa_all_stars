@@ -8,7 +8,7 @@ import BackButton from '../../components/common/BackButton';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
-import { validateTitle, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateUrl, validateFormAndFocus, validateGamePrice, isGameCreatedByPlayer } from '../../utils/validationUtils';
+import { validateTitle, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateUrl, validateFormAndFocus, validateGamePrice, isGameCreatedByPlayer, isUserGameHost } from '../../utils/validationUtils';
 import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import { validateFile, readFileAsDataUrl, ALLOWED_VIDEO_TYPES, ALLOWED_VIDEO_EXTENSIONS, DEFAULT_MAX_VIDEO_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
 import toast from 'react-hot-toast';
@@ -28,18 +28,25 @@ export const GameDetailsPage = () => {
   const teamBPlayers = confirmedPlayers.filter((p, i) => p.team === 'TEAM_B' || (!p.team && i >= teamCapacity));
 
   const spotsLeft = Math.max(0, maxSlots - confirmedPlayers.length);
+  const isFull = spotsLeft === 0;
   const isConfirmed = confirmedPlayers.some(p => p.id === currentUser?.id);
   const isWaitlisted = game?.waitlist?.some(p => p.id === currentUser?.id);
   const waitlistIndex = game?.waitlist?.findIndex(p => p.id === currentUser?.id);
-  const isFull = confirmedPlayers.length >= maxSlots || game?.status === 'FULL';
   const isGameCompleted = game?.status === 'COMPLETED' || (game?.score !== null && game?.score !== undefined && game?.score?.teamA !== null && game?.score?.teamA !== undefined);
+  const isGameOngoing = game?.status === 'ONGOING';
+  const isGameStarted = isGameOngoing || isGameCompleted;
   const linkedVideos = (gameVideos || []).filter(v => v.gameId === game?.id);
   const hasLinkedVideo = linkedVideos.length > 0 || !!game?.videoReference;
   const isManagerOrAdmin = currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN';
   const canUploadVideo = isManagerOrAdmin || !hasLinkedVideo;
-  const isAuthorizedManager = isManagerOrAdmin || game?.organizer?.id === currentUser?.id;
-  const isMatchCreatedByPlayer = isGameCreatedByPlayer(game, usersList);
-  const isPriceChangeLocked = isManagerOrAdmin && isMatchCreatedByPlayer;
+  const isCreatorOrHost = isUserGameHost(game, currentUser);
+  const isAuthorizedManager = isManagerOrAdmin || isCreatorOrHost;
+  // Sirf match create karne wala / host hi price change kar sakta hai
+  const isPriceChangeLocked = !isCreatorOrHost;
+
+  // Complete roster check: Players cannot start match without complete roster; only Manager/Admin can start early
+  const isRosterComplete = confirmedPlayers.length >= maxSlots;
+  const canStartMatch = isManagerOrAdmin || isRosterComplete;
 
   const [scoreTeamA, setScoreTeamA] = useState('');
   const [scoreTeamB, setScoreTeamB] = useState('');
@@ -298,10 +305,20 @@ export const GameDetailsPage = () => {
     if (isLeaving || isLeavingRef.current) return;
     if (!checkNetworkOnline()) return;
 
+    if (isGameStarted) {
+      toast.error('Match has already started! Refunds and roster departures are not permitted once the match is in progress or completed.');
+      setIsLeaveMatchModalOpen(false);
+      return;
+    }
+
     isLeavingRef.current = true;
     setIsLeaving(true);
     try {
-      leaveGame(game.id, currentUser.id);
+      const res = leaveGame(game.id, currentUser.id);
+      if (res === false) {
+        setIsLeaveMatchModalOpen(false);
+        return;
+      }
       if (game.entryFee > 0) {
         updateWallet(game.entryFee, `Refund: Left match ${game.title}`);
         toast.success(`You have left the match. ₹${game.entryFee} has been refunded to your wallet.`);
@@ -351,10 +368,16 @@ export const GameDetailsPage = () => {
     if (isActionLoading || isActionLoadingRef.current) return;
     if (!checkNetworkOnline()) return;
 
+    if (!canStartMatch) {
+      toast.error(`Cannot start match yet! All ${maxSlots} players must join first (${confirmedPlayers.length}/${maxSlots} joined). Only Club Managers & Admins can start the match before all players join.`);
+      return;
+    }
+
     isActionLoadingRef.current = true;
     setIsActionLoading(true);
     try {
-      updateGameLifecycle(game.id, 'ONGOING');
+      const res = updateGameLifecycle(game.id, 'ONGOING', currentUser);
+      if (res === false) return;
       toast.success('Match is now LIVE! Good luck to both teams.');
     } catch (err) {
       logActionError('handleStartMatch', err);
@@ -1043,17 +1066,26 @@ export const GameDetailsPage = () => {
                   ) : (
                     <>
                       {game.status !== 'ONGOING' && (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          icon={Play}
-                          isLoading={isActionLoading}
-                          disabled={isActionLoading}
-                          onClick={handleStartMatch}
-                          className="w-full justify-center text-[11px]"
-                        >
-                          Start Match
-                        </Button>
+                        <div className="col-span-2 space-y-1">
+                          <Button
+                            variant={canStartMatch ? "primary" : "outline"}
+                            size="sm"
+                            icon={Play}
+                            isLoading={isActionLoading}
+                            disabled={isActionLoading}
+                            onClick={handleStartMatch}
+                            className={`w-full justify-center text-[11px] ${!canStartMatch ? 'opacity-85 border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/5' : ''}`}
+                          >
+                            {canStartMatch 
+                              ? 'Start Match' 
+                              : `Start Match (${confirmedPlayers.length}/${maxSlots} Joined)`}
+                          </Button>
+                          {!isManagerOrAdmin && !isRosterComplete && (
+                            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold text-center leading-tight">
+                              ⚠️ Complete roster required: All {maxSlots} players must join before a player host can start ({confirmedPlayers.length}/{maxSlots} joined). Only Manager / Admin can start early.
+                            </p>
+                          )}
+                        </div>
                       )}
 
                       <Button variant="emerald" size="sm" icon={CheckCircle} onClick={handleOpenScoreModal} className="w-full justify-center text-[11px]">
@@ -1093,9 +1125,19 @@ export const GameDetailsPage = () => {
 
             <div>
               {isGameCompleted ? (
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-slate-300 font-extrabold text-xs flex items-center justify-center space-x-2 shadow-inner">
+                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-slate-300 font-extrabold text-xs flex items-center justify-center space-x-2 shadow-inner text-center">
                   <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span>MATCH COMPLETED — ROSTER LOCKED</span>
+                  <span>MATCH COMPLETED — ROSTER & REFUNDS LOCKED</span>
+                </div>
+              ) : isGameOngoing ? (
+                <div className="space-y-2">
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-extrabold text-xs flex items-center justify-center space-x-2 shadow-inner text-center">
+                    <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                    <span>MATCH IN PROGRESS — REFUNDS LOCKED</span>
+                  </div>
+                  <p className="text-[10px] text-center font-bold text-slate-500 dark:text-slate-400 leading-tight">
+                    🔒 Match has already started. As per tournament rules, refund requests are not allowed once the match kicks off.
+                  </p>
                 </div>
               ) : currentUser?.role === 'CLUB_MANAGER' ? (
                 <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center space-x-2">
@@ -1149,6 +1191,10 @@ export const GameDetailsPage = () => {
               <div className="flex items-start gap-2">
                 <span className="text-emerald-500 font-bold">✓</span>
                 <span><strong>Footwear:</strong> Turf shoes (TF) or AG studs recommended. Metal studs are strictly prohibited.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-rose-500 font-bold">✕</span>
+                <span><strong>Refund Policy:</strong> Refunds can only be requested BEFORE the match begins. Once the match has started (Live/Ongoing), refund requests are strictly disabled.</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-emerald-500 font-bold">✓</span>
@@ -1633,7 +1679,7 @@ export const GameDetailsPage = () => {
               </div>
               {isPriceChangeLocked ? (
                 <p className="mt-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-start space-x-1 leading-tight">
-                  <span>🔒 Match created by player ({game?.organizer?.name || 'Player'}). Admin & Manager cannot change price.</span>
+                  <span>🔒 Price locked: Only the match creator / host ({game?.organizer?.name || 'Host'}) can change the price.</span>
                 </p>
               ) : (
                 <p className="mt-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">

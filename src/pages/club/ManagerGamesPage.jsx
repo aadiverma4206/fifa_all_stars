@@ -13,7 +13,7 @@ import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
-import { validateTitle, validateDateNotPast, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateFormAndFocus, validateGamePrice, isGameCreatedByPlayer } from '../../utils/validationUtils';
+import { validateTitle, validateDateNotPast, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateFormAndFocus, validateGamePrice, isGameCreatedByPlayer, isUserGameHost } from '../../utils/validationUtils';
 import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
@@ -80,8 +80,8 @@ export const ManagerGamesPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
 
-  const isSelectedGameCreatedByPlayer = isGameCreatedByPlayer(selectedGame, usersList);
-  const isManagerPriceLocked = (currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN') && isSelectedGameCreatedByPlayer;
+  const isSelectedGameCreatorOrHost = isUserGameHost(selectedGame, currentUser);
+  const isManagerPriceLocked = !isSelectedGameCreatorOrHost;
 
   // Loading & Concurrency Locks
   const [isCreatingGame, setIsCreatingGame] = useState(false);
@@ -435,7 +435,7 @@ export const ManagerGamesPage = () => {
     startingGameRef.current = true;
     setStartingGameId(game.id);
     try {
-      updateGameLifecycle(game.id, 'ONGOING');
+      updateGameLifecycle(game.id, 'ONGOING', currentUser);
       toast.success(`Match "${game.title}" is now LIVE!`);
     } catch (err) {
       logActionError('handleStartMatch', err);
@@ -1218,7 +1218,7 @@ export const ManagerGamesPage = () => {
               </div>
               {isManagerPriceLocked ? (
                 <p className="mt-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 leading-tight">
-                  🔒 Match hosted by player ({selectedGame?.organizer?.name || 'Player'}). Managers cannot edit price.
+                  🔒 Price locked: Only the match creator / host ({selectedGame?.organizer?.name || 'Host'}) can change the price.
                 </p>
               ) : (
                 <p className="mt-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
