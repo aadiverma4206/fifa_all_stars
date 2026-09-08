@@ -191,7 +191,14 @@ export const Navbar = () => {
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                     className="flex items-center space-x-1.5 focus:outline-none p-1 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
-                    <Avatar src={currentUser?.profileImageUrl || currentUser?.avatar} name={currentUser?.name} size="sm" status="active" className="rounded-md" />
+                    <Avatar 
+                      src={currentUser?.profileImageUrl || currentUser?.avatar} 
+                      role={currentUser?.role}
+                      name={currentUser?.name} 
+                      size="sm" 
+                      status="active" 
+                      className="rounded-md" 
+                    />
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                   </button>
 
@@ -364,6 +371,7 @@ export const Navbar = () => {
                         <div className="flex items-center space-x-2.5 min-w-0">
                           <Avatar 
                             src={currentUser?.profileImageUrl || currentUser?.avatar} 
+                            role={currentUser?.role}
                             name={currentUser?.name} 
                             size="md" 
                             status="active" 

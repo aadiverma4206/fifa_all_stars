@@ -105,6 +105,7 @@ export const PlayerHomePage = () => {
           <div className="flex items-center space-x-4">
             <Avatar 
               src={currentUser?.profileImageUrl || currentUser?.avatar} 
+              role={currentUser?.role}
               name={currentUser?.name} 
               size="lg" 
               status="active" 
@@ -370,6 +371,7 @@ export const PlayerHomePage = () => {
             <div className="flex items-center space-x-3.5">
               <Avatar 
                 src={currentUser?.profileImageUrl || currentUser?.avatar} 
+                role={currentUser?.role}
                 name={currentUser?.name} 
                 size="lg" 
                 status="active" 

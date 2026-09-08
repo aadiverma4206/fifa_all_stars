@@ -1,12 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import clsx from 'clsx';
 
-export const Avatar = ({ src, alt = 'Avatar', name = '', size = 'md', status, className = '' }) => {
+export const ROLE_DEFAULT_AVATARS = {
+  SUPER_ADMIN: '/assets/images/avatars/admin-avatar.jpg',
+  CLUB_MANAGER: '/assets/images/avatars/manager-avatar.jpg',
+  PLAYER: '/assets/images/avatars/player-avatar.jpg',
+};
+
+export const getDefaultAvatarForRole = (role) => {
+  const normalized = (role || '').toUpperCase();
+  if (normalized.includes('ADMIN')) return ROLE_DEFAULT_AVATARS.SUPER_ADMIN;
+  if (normalized.includes('MANAGER')) return ROLE_DEFAULT_AVATARS.CLUB_MANAGER;
+  if (normalized.includes('PLAYER')) return ROLE_DEFAULT_AVATARS.PLAYER;
+  return ROLE_DEFAULT_AVATARS.PLAYER;
+};
+
+export const Avatar = ({ 
+  src, 
+  alt = 'Avatar', 
+  name = '', 
+  role = '', 
+  size = 'md', 
+  status, 
+  className = '' 
+}) => {
   const [imageError, setImageError] = useState(false);
+
+  // Compute effective image source: passed src, or role default
+  const defaultRoleSrc = role ? getDefaultAvatarForRole(role) : null;
+  const effectiveSrc = src || defaultRoleSrc;
 
   useEffect(() => {
     setImageError(false);
-  }, [src]);
+  }, [src, role]);
 
   const getInitials = (str) => {
     if (!str && !alt) return 'FA';
@@ -33,20 +59,42 @@ export const Avatar = ({ src, alt = 'Avatar', name = '', size = 'md', status, cl
     xl: 'w-4 h-4'
   };
 
+  // Distinct gradients based on role
+  const getRoleGradient = () => {
+    const r = (role || '').toUpperCase();
+    if (r.includes('ADMIN')) {
+      return 'from-amber-600 via-amber-500 to-yellow-400 ring-amber-500/40 text-white';
+    }
+    if (r.includes('MANAGER')) {
+      return 'from-sky-600 via-indigo-600 to-blue-500 ring-sky-500/40 text-white';
+    }
+    return 'from-emerald-600 via-teal-600 to-sport-500 ring-emerald-500/40 text-white';
+  };
+
   const initials = getInitials(name || alt);
   const sizeClass = sizes[size] || sizes.md;
 
+  const handleImgError = () => {
+    // If a custom image failed but we have a role fallback that wasn't already tried, fallback to it
+    if (effectiveSrc !== defaultRoleSrc && defaultRoleSrc) {
+      // Let it fall back to default role avatar
+      setImageError(false);
+    } else {
+      setImageError(true);
+    }
+  };
+
   return (
     <div className={clsx('relative inline-block flex-shrink-0 select-none', sizeClass, className)}>
-      {!imageError && src ? (
+      {!imageError && effectiveSrc ? (
         <img
-          src={src}
+          src={effectiveSrc}
           alt={alt}
-          onError={() => setImageError(true)}
-          className="w-full h-full rounded-full object-cover ring-2 ring-sport-500/30 shadow-sm"
+          onError={handleImgError}
+          className="w-full h-full rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700 shadow-sm"
         />
       ) : (
-        <div className="w-full h-full rounded-full bg-gradient-to-tr from-sport-600 to-teal-500 text-white flex items-center justify-center font-bold tracking-wider ring-2 ring-sport-500/30 shadow-sm">
+        <div className={clsx('w-full h-full rounded-full bg-gradient-to-tr flex items-center justify-center font-bold tracking-wider ring-2 shadow-sm', getRoleGradient())}>
           {initials}
         </div>
       )}

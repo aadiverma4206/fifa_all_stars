@@ -102,7 +102,12 @@ export const DashboardLayout = () => {
 
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center space-x-2">
-              <Avatar src={currentUser?.avatar} size="sm" />
+              <Avatar 
+                src={currentUser?.profileImageUrl || currentUser?.avatar} 
+                role={currentUser?.role} 
+                name={currentUser?.name} 
+                size="sm" 
+              />
               <div className="text-xs truncate max-w-[110px]">
                 <p className="font-bold text-slate-900 dark:text-white truncate">{currentUser?.name}</p>
                 <p className="text-[10px] text-slate-400 capitalize">{currentUser?.role.replace('_', ' ')}</p>

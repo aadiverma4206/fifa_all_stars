@@ -277,7 +277,7 @@ export const CommunityPage = () => {
       {/* Create Post Box */}
       <div className="footy-card p-5 space-y-4">
         <div className="flex items-start space-x-3">
-          <Avatar src={currentUser?.profileImageUrl || currentUser?.avatar} name={currentUser?.name} size="md" />
+          <Avatar src={currentUser?.profileImageUrl || currentUser?.avatar} role={currentUser?.role} name={currentUser?.name} size="md" />
           <textarea
             name="postText"
             rows="3"

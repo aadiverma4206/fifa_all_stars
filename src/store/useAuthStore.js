@@ -49,7 +49,7 @@ export const useAuthStore = create(
           phone: phone ? phone.trim() : '+91 90000 00000',
           password: password,
           role: 'PLAYER', // AUTOMATICALLY ASSIGNED PLAYER ROLE ONLY
-          profileImageUrl: profileImageUrl || '/assets/images/avatars/avatar-1.jpg',
+          profileImageUrl: profileImageUrl || '/assets/images/avatars/player-avatar.jpg',
           city: city || 'Raipur',
           position: normPos,
           preferredFoot: preferredFoot,
@@ -136,7 +136,7 @@ export const useAuthStore = create(
           skillLevel: 'Advanced',
           eloRating: 1600,
           bio: bio || 'General Manager of assigned football venue.',
-          profileImageUrl: '/assets/images/avatars/avatar-3.jpg',
+          profileImageUrl: managerData.profileImageUrl || '/assets/images/avatars/manager-avatar.jpg',
           badges: ['VerifiedPartner'],
           joinedDate: getTodayDate(0),
           walletBalance: 5000.00,
@@ -342,6 +342,24 @@ export const useAuthStore = create(
       name: 'fifa_all_stars_auth_storage',
       onRehydrateStorage: () => (state) => {
         if (state) {
+          const migrateAvatar = (u) => {
+            if (!u) return;
+            if (u.id === 'usr_admin_demo' && (!u.profileImageUrl || u.profileImageUrl.includes('avatar-1.jpg'))) {
+              u.profileImageUrl = '/assets/images/avatars/admin-avatar.jpg';
+              u.avatar = '/assets/images/avatars/admin-avatar.jpg';
+            } else if (u.id === 'usr_manager_demo' && (!u.profileImageUrl || u.profileImageUrl.includes('avatar-3.jpg'))) {
+              u.profileImageUrl = '/assets/images/avatars/manager-avatar.jpg';
+              u.avatar = '/assets/images/avatars/manager-avatar.jpg';
+            } else if (u.id === 'usr_player_demo' && (!u.profileImageUrl || u.profileImageUrl.includes('avatar-1.jpg'))) {
+              u.profileImageUrl = '/assets/images/avatars/player-avatar.jpg';
+              u.avatar = '/assets/images/avatars/player-avatar.jpg';
+            }
+          };
+          migrateAvatar(state.currentUser);
+          if (Array.isArray(state.usersList)) {
+            state.usersList.forEach(migrateAvatar);
+          }
+
           if (state.currentUser?.profileImageUrl?.includes('/src/assets/images/')) {
             state.currentUser.profileImageUrl = state.currentUser.profileImageUrl.replace('/src/assets/images/', '/assets/images/');
           }

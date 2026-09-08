@@ -10,6 +10,7 @@ import { getDefaultRoleRoute } from '../../utils/permissions';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
+import Avatar from '../../components/common/Avatar';
 import communityPlayersImg from '../../assets/images/hero/community-players.jpg';
 import { validateName, validateEmail, validatePassword, validatePhone, validateNonEmpty, validateEmailOrPhone, validateConfirmPassword, validateFormAndFocus } from '../../utils/validationUtils';
 import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
@@ -65,6 +66,7 @@ export const LoginPage = () => {
       pass: 'Player@123',
       badge: '⚽ Player Portal',
       description: 'Book pitch slots, join pickup games & view player ratings & stats.',
+      avatar: '/assets/images/avatars/player-avatar.jpg'
     },
     CLUB_MANAGER: {
       role: 'CLUB_MANAGER',
@@ -74,6 +76,7 @@ export const LoginPage = () => {
       pass: 'Manager@123',
       badge: '🏟️ Club Manager',
       description: 'Manage turf schedules, peak rates & pitch bookings.',
+      avatar: '/assets/images/avatars/manager-avatar.jpg'
     },
     SUPER_ADMIN: {
       role: 'SUPER_ADMIN',
@@ -83,6 +86,7 @@ export const LoginPage = () => {
       pass: 'SuperAdmin@123',
       badge: '🛡️ Super Admin',
       description: 'Platform governance, user accounts & audit logs.',
+      avatar: '/assets/images/avatars/admin-avatar.jpg'
     }
   };
 
@@ -456,18 +460,33 @@ export const LoginPage = () => {
             </div>
 
             {/* Persona Auto-Fill Card */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block">
-                  Persona: {currentPersona.user}
-                </span>
-                <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">{currentPersona.email}</span>
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center space-x-3">
+                <Avatar 
+                  src={currentPersona.avatar} 
+                  role={currentPersona.role} 
+                  name={currentPersona.user} 
+                  size="md" 
+                  status="active" 
+                  className="rounded-xl ring-2 ring-slate-200 dark:ring-slate-700" 
+                />
+                <div className="space-y-0.5">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block">
+                      Persona:
+                    </span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      {currentPersona.user}
+                    </span>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">{currentPersona.email}</span>
+                </div>
               </div>
               <button
                 type="button"
                 disabled={isLoading || isDemoLoading}
                 onClick={() => handleQuickDemo(selectedRole)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 font-extrabold text-[11px] transition-all shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 font-extrabold text-[11px] transition-all shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer self-stretch sm:self-auto text-center"
               >
                 {isDemoLoading ? (
                   <span className="inline-flex items-center gap-1">
