@@ -556,19 +556,48 @@ export const useDataStore = create(
     toast.success(`Match status updated to ${newStatus}`);
   },
 
-  updateGameDetails: (gameId, updatedFields) => {
+  updateGameDetails: (gameId, updatedFields, actingUser = null) => {
     const games = get().games;
     const target = games.find(g => g.id === gameId);
     if (!target) return;
 
+    // Check if original game was created by a player
+    const isOriginallyCreatedByPlayer = 
+      target.createdByPlayer === true ||
+      target.creatorRole === 'PLAYER' ||
+      target.organizer?.role === 'PLAYER' ||
+      (target.organizer?.id && target.organizer.id.startsWith('usr_player'));
+
+    const isActingManagerOrAdmin = actingUser && (actingUser.role === 'CLUB_MANAGER' || actingUser.role === 'SUPER_ADMIN');
+
+    let sanitizedFields = { ...updatedFields };
+
+    // Admin & Manager CANNOT alter price if game was created by a player
+    if (isOriginallyCreatedByPlayer && isActingManagerOrAdmin && updatedFields.entryFee !== undefined) {
+      if (Number(updatedFields.entryFee) !== Number(target.entryFee)) {
+        toast.error('Admins and Managers cannot alter the price of a player-created match.');
+      }
+      sanitizedFields.entryFee = target.entryFee;
+    } else if (sanitizedFields.entryFee !== undefined) {
+      // Validate game price range: Min ₹200, Max ₹200,000
+      const numericFee = parseFloat(sanitizedFields.entryFee);
+      if (isNaN(numericFee) || numericFee < 200) {
+        sanitizedFields.entryFee = 200;
+      } else if (numericFee > 200000) {
+        sanitizedFields.entryFee = 200000;
+      } else {
+        sanitizedFields.entryFee = numericFee;
+      }
+    }
+
     set({
-      games: games.map(g => g.id === gameId ? { ...g, ...updatedFields } : g)
+      games: games.map(g => g.id === gameId ? { ...g, ...sanitizedFields } : g)
     });
 
     get().addNotification({
       userId: null,
       title: `✏️ Match Details Updated`,
-      message: `Host updated match details for "${updatedFields.title || target.title}".`,
+      message: `Match details updated for "${updatedFields.title || target.title}".`,
       linkUrl: `/games/${gameId}`,
       clubId: target.venueReference?.clubId,
       gameId
@@ -808,6 +837,9 @@ export const useDataStore = create(
     }
     // Note: If Manager/Admin creates, confirmedPlayers is [] (0 slots taken by manager, 100% slots available for players)
 
+    const creatorRole = creatorUser?.role || (isPlayerCreator ? 'PLAYER' : 'CLUB_MANAGER');
+    const safeEntryFee = Math.min(200000, Math.max(200, parseFloat(newGameData.entryFee) || 200));
+
     const newGame = {
       id: `gam_${Date.now()}`,
       status: 'OPEN_FOR_JOINING',
@@ -817,12 +849,16 @@ export const useDataStore = create(
       waitlist: [],
       score: null,
       privacy: newGameData.privacy || 'PUBLIC',
+      createdByPlayer: isPlayerCreator,
+      creatorRole: creatorRole,
       organizer: {
         id: creatorUser?.id || 'usr_club_mgr_101',
         name: creatorUser?.name || 'Club Manager',
-        avatar: creatorUser?.profileImageUrl || creatorUser?.avatar
+        avatar: creatorUser?.profileImageUrl || creatorUser?.avatar,
+        role: creatorRole
       },
-      ...newGameData
+      ...newGameData,
+      entryFee: safeEntryFee
     };
 
     set({ games: [newGame, ...get().games] });

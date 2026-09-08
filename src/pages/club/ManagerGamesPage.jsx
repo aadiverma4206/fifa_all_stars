@@ -13,7 +13,7 @@ import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Avatar from '../../components/common/Avatar';
-import { validateTitle, validateDateNotPast, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateFormAndFocus } from '../../utils/validationUtils';
+import { validateTitle, validateDateNotPast, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateFormAndFocus, validateGamePrice, isGameCreatedByPlayer } from '../../utils/validationUtils';
 import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
@@ -79,6 +79,9 @@ export const ManagerGamesPage = () => {
   const [isLiveScoreModalOpen, setIsLiveScoreModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
+
+  const isSelectedGameCreatedByPlayer = isGameCreatedByPlayer(selectedGame, usersList);
+  const isManagerPriceLocked = (currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN') && isSelectedGameCreatedByPlayer;
 
   // Loading & Concurrency Locks
   const [isCreatingGame, setIsCreatingGame] = useState(false);
@@ -174,12 +177,12 @@ export const ManagerGamesPage = () => {
       { check: () => validateTitle(title, 'Game Title'), field: 'title' },
       { check: () => validateDateNotPast(date, 'Game Date'), field: 'date' },
       { check: () => validateTimeRange(startTime, endTime), field: 'startTime' },
-      { check: () => validatePositiveAmount(entryFee, 'Entry Fee', true), field: 'entryFee' }
+      { check: () => validateGamePrice(entryFee, 'Entry Fee'), field: 'entryFee' }
     ]);
 
     if (!isValid) return;
 
-    const feeVal = parseFloat(entryFee) || 0;
+    const feeVal = parseFloat(entryFee) || 200;
     const selectedCourt = myCourts.find(c => c.courtId === selectedCourtId || c.id === selectedCourtId) || myCourts[0];
 
     isCreatingGameRef.current = true;
@@ -227,7 +230,7 @@ export const ManagerGamesPage = () => {
     setEditDate(game.dateTime?.date || game.date || getTodayDate(1));
     setEditStartTime(game.dateTime?.startTime || '19:00');
     setEditEndTime(game.dateTime?.endTime || '20:30');
-    setEditEntryFee(String(game.entryFee || 0));
+    setEditEntryFee(String(game.entryFee !== undefined ? game.entryFee : 200));
     setEditSkill(game.skill || 'All Levels');
     setEditPrivacy(game.privacy || 'PUBLIC');
     setEditCourtId(game.venueReference?.courtId || myCourts[0]?.courtId || '');
@@ -245,12 +248,18 @@ export const ManagerGamesPage = () => {
       { check: () => validateTitle(editTitle, 'Game Title'), field: 'editTitle' },
       { check: () => validateDateNotPast(editDate, 'Game Date'), field: 'editDate' },
       { check: () => validateTimeRange(editStartTime, editEndTime), field: 'editStartTime' },
-      { check: () => validatePositiveAmount(editEntryFee, 'Entry Fee', true), field: 'editEntryFee' }
+      { 
+        check: () => {
+          if (isManagerPriceLocked) return { isValid: true };
+          return validateGamePrice(editEntryFee, 'Entry Fee');
+        }, 
+        field: 'editEntryFee' 
+      }
     ]);
 
     if (!isValid) return;
 
-    const feeVal = parseFloat(editEntryFee) || 0;
+    const feeVal = isManagerPriceLocked ? (selectedGame.entryFee || 200) : (parseFloat(editEntryFee) || 200);
     const selectedCourt = myCourts.find(c => c.courtId === editCourtId || c.id === editCourtId) || myCourts[0];
     const computedSlots = MATCH_FORMAT_SLOTS[editFormat] || selectedGame.maxPlayers || 10;
     const trimmedTitle = editTitle.trim();
@@ -261,7 +270,7 @@ export const ManagerGamesPage = () => {
       trimmedTitle !== (selectedGame.title || '').trim() ||
       editFormat !== selectedGame.format ||
       computedSlots !== selectedGame.maxPlayers ||
-      feeVal !== (selectedGame.entryFee || 0) ||
+      (!isManagerPriceLocked && feeVal !== (selectedGame.entryFee || 0)) ||
       editSkill !== selectedGame.skill ||
       editPrivacy !== selectedGame.privacy ||
       editDate !== (selectedGame.dateTime?.date || selectedGame.date) ||
@@ -298,7 +307,7 @@ export const ManagerGamesPage = () => {
           courtName: selectedCourt?.name || selectedGame.venueReference?.courtName
         },
         description: trimmedDesc
-      });
+      }, currentUser);
 
       setIsEditModalOpen(false);
       setSelectedGame(null);
@@ -1023,15 +1032,22 @@ export const ManagerGamesPage = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Entry Fee (₹ per player)</label>
+              <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Entry Fee (₹ per player) *</label>
               <input
                 name="entryFee"
                 type="number"
-                min="0"
+                min="200"
+                max="200000"
+                step="any"
+                placeholder="e.g. 250"
                 value={entryFee}
                 onChange={e => setEntryFee(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
+                required
               />
+              <p className="mt-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                Min: ₹200 • Max: ₹2,00,000
+              </p>
             </div>
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Privacy</label>
@@ -1165,15 +1181,50 @@ export const ManagerGamesPage = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Entry Fee (₹)</label>
-              <input
-                name="editEntryFee"
-                type="number"
-                min="0"
-                value={editEntryFee}
-                onChange={e => setEditEntryFee(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase">
+                  Entry Fee (₹) *
+                </label>
+                {isManagerPriceLocked && (
+                  <span className="inline-flex items-center space-x-1 text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>Locked</span>
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  name="editEntryFee"
+                  type="number"
+                  min="200"
+                  max="200000"
+                  step="any"
+                  disabled={isManagerPriceLocked}
+                  readOnly={isManagerPriceLocked}
+                  value={editEntryFee}
+                  onChange={e => setEditEntryFee(e.target.value)}
+                  className={`w-full px-4 py-2.5 rounded-xl border text-xs font-bold transition-colors ${
+                    isManagerPriceLocked
+                      ? 'border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 cursor-not-allowed select-none'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-sport-500 focus:outline-none'
+                  }`}
+                  required
+                />
+                {isManagerPriceLocked && (
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-amber-500">
+                    <Lock className="w-3.5 h-3.5" />
+                  </div>
+                )}
+              </div>
+              {isManagerPriceLocked ? (
+                <p className="mt-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 leading-tight">
+                  🔒 Match hosted by player ({selectedGame?.organizer?.name || 'Player'}). Managers cannot edit price.
+                </p>
+              ) : (
+                <p className="mt-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                  Min: ₹200 • Max: ₹2,00,000
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5 uppercase">Privacy</label>

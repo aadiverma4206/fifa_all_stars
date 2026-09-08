@@ -150,6 +150,46 @@ export const validatePositiveAmount = (amount, fieldName = 'Amount', allowZero =
   return { isValid: true, message: '' };
 };
 
+// Game Price / Entry Fee Validation: Min ₹200, Max ₹200,000
+export const validateGamePrice = (amount, fieldName = 'Entry Fee') => {
+  if (amount === '' || amount === null || amount === undefined) {
+    return { isValid: false, message: `${fieldName} is required.` };
+  }
+  const num = parseFloat(amount);
+  if (isNaN(num)) {
+    return { isValid: false, message: `${fieldName} must be a valid number.` };
+  }
+  if (num < 200) {
+    return { isValid: false, message: `${fieldName} cannot be less than ₹200 (Minimum price is ₹200).` };
+  }
+  if (num > 200000) {
+    return { isValid: false, message: `${fieldName} cannot exceed ₹2,00,000 (Maximum price is ₹2,00,000).` };
+  }
+  return { isValid: true, message: '' };
+};
+
+// Helper: Check whether a game was originally created by a player
+export const isGameCreatedByPlayer = (game, usersList = []) => {
+  if (!game) return false;
+  if (game.createdByPlayer === true) return true;
+  if (game.creatorRole === 'PLAYER') return true;
+  if (game.organizer?.role === 'PLAYER') return true;
+  if (game.organizer?.id) {
+    const orgUser = usersList.find(u => u.id === game.organizer.id);
+    if (orgUser) return orgUser.role === 'PLAYER';
+    if (game.organizer.id.startsWith('usr_player')) return true;
+    if (
+      game.organizer.id.startsWith('usr_mgr') ||
+      game.organizer.id.startsWith('usr_admin') ||
+      game.organizer.id.startsWith('usr_ops') ||
+      game.organizer.id.startsWith('usr_finance')
+    ) {
+      return false;
+    }
+  }
+  return false;
+};
+
 // Numeric Float Range Validation
 export const validateNumericRange = (val, min, max, fieldName = 'Value') => {
   const num = parseFloat(val);

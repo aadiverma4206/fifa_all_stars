@@ -4,14 +4,17 @@ export const dummyGames = [
   {
     id: "gam_101",
     title: "Raipur Friday Night 11v11 Super Match",
+    createdByPlayer: true,
+    creatorRole: "PLAYER",
     organizer: {
       id: "usr_player_demo",
       name: "Arjun Mehta",
-      avatar: "/assets/images/avatars/avatar-1.jpg"
+      avatar: "/assets/images/avatars/avatar-1.jpg",
+      role: "PLAYER"
     },
     format: "11v11",
     maxPlayers: 22,
-    entryFee: 150, // ₹150 per player
+    entryFee: 200, // ₹200 per player (Min: ₹200, Max: ₹200,000)
     confirmedPlayers: [
       { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/avatar-1.jpg", position: "ST", team: "TEAM_A" },
       { id: "usr_p6", name: "Aarav Joshi", avatar: "/assets/images/avatars/avatar-8.jpg", position: "CM", team: "TEAM_A" },
@@ -40,10 +43,13 @@ export const dummyGames = [
   {
     id: "gam_102",
     title: "Weekend 11v11 Champions Battle",
+    createdByPlayer: true,
+    creatorRole: "PLAYER",
     organizer: {
       id: "usr_player_demo",
       name: "Arjun Mehta",
-      avatar: "/assets/images/avatars/avatar-1.jpg"
+      avatar: "/assets/images/avatars/avatar-1.jpg",
+      role: "PLAYER"
     },
     format: "11v11",
     maxPlayers: 22,
@@ -92,10 +98,13 @@ export const dummyGames = [
   {
     id: "gam_103",
     title: "Bangalore Techie Fastbreak 11v11",
+    createdByPlayer: true,
+    creatorRole: "PLAYER",
     organizer: {
       id: "usr_p2",
       name: "Siddharth Rao",
-      avatar: "/assets/images/avatars/avatar-6.jpg"
+      avatar: "/assets/images/avatars/avatar-6.jpg",
+      role: "PLAYER"
     },
     format: "11v11",
     maxPlayers: 22,
@@ -127,14 +136,17 @@ export const dummyGames = [
   {
     id: "gam_104",
     title: "Pune Stadium Showcase 11v11",
+    createdByPlayer: true,
+    creatorRole: "PLAYER",
     organizer: {
       id: "usr_p5",
       name: "Neha Gupta",
-      avatar: "/assets/images/avatars/avatar-7.jpg"
+      avatar: "/assets/images/avatars/avatar-7.jpg",
+      role: "PLAYER"
     },
     format: "11v11",
     maxPlayers: 22,
-    entryFee: 180,
+    entryFee: 200, // Min ₹200
     confirmedPlayers: [
       { id: "usr_p5", name: "Neha Gupta", avatar: "/assets/images/avatars/avatar-7.jpg", position: "LW", team: "TEAM_A" },
       { id: "usr_p11", name: "Farhan Akhtar", avatar: "/assets/images/avatars/avatar-5.jpg", position: "GK", team: "TEAM_B" }

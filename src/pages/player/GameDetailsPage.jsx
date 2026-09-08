@@ -8,7 +8,7 @@ import BackButton from '../../components/common/BackButton';
 import Avatar from '../../components/common/Avatar';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
-import { validateTitle, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateUrl, validateFormAndFocus } from '../../utils/validationUtils';
+import { validateTitle, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateUrl, validateFormAndFocus, validateGamePrice, isGameCreatedByPlayer } from '../../utils/validationUtils';
 import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import { validateFile, readFileAsDataUrl, ALLOWED_VIDEO_TYPES, ALLOWED_VIDEO_EXTENSIONS, DEFAULT_MAX_VIDEO_SIZE, formatFileSize } from '../../utils/fileValidationUtils';
 import toast from 'react-hot-toast';
@@ -38,6 +38,8 @@ export const GameDetailsPage = () => {
   const isManagerOrAdmin = currentUser?.role === 'CLUB_MANAGER' || currentUser?.role === 'SUPER_ADMIN';
   const canUploadVideo = isManagerOrAdmin || !hasLinkedVideo;
   const isAuthorizedManager = isManagerOrAdmin || game?.organizer?.id === currentUser?.id;
+  const isMatchCreatedByPlayer = isGameCreatedByPlayer(game, usersList);
+  const isPriceChangeLocked = isManagerOrAdmin && isMatchCreatedByPlayer;
 
   const [scoreTeamA, setScoreTeamA] = useState('');
   const [scoreTeamB, setScoreTeamB] = useState('');
@@ -144,7 +146,7 @@ export const GameDetailsPage = () => {
     setEditEndTime(game.dateTime?.endTime || '20:30');
     setEditFormat(game.format || '11v11');
     setEditMaxPlayers(String(game.maxPlayers || 22));
-    setEditEntryFee(String(game.entryFee || 0));
+    setEditEntryFee(String(game.entryFee !== undefined ? game.entryFee : 200));
     setEditSkill(game.skill || 'Intermediate');
     setEditPrivacy(game.privacy || 'PUBLIC');
     setEditDescription(game.description || '');
@@ -161,12 +163,19 @@ export const GameDetailsPage = () => {
       { check: () => validateTitle(editTitle, 'Game Name'), field: 'editTitle' },
       { check: () => validateTimeRange(editStartTime, editEndTime), field: 'editStartTime' },
       { check: () => validateIntegerRange(editMaxPlayers, 2, 50, 'Max Players'), field: 'editMaxPlayers' },
-      { check: () => validatePositiveAmount(editEntryFee, 'Entry Fee', true), field: 'editEntryFee' }
+      { 
+        check: () => {
+          if (isPriceChangeLocked) return { isValid: true };
+          return validateGamePrice(editEntryFee, 'Entry Fee');
+        }, 
+        field: 'editEntryFee' 
+      }
     ]);
 
     if (!isValid) return;
 
-    const feeVal = parseFloat(editEntryFee) || 0;
+    // Strict lock: If price change is locked for admin/manager, always preserve original game price
+    const feeVal = isPriceChangeLocked ? (game?.entryFee || 200) : (parseFloat(editEntryFee) || 200);
     const computedSlots = parseInt(editMaxPlayers, 10) || MATCH_FORMAT_SLOTS[editFormat] || 10;
     const trimmedTitle = editTitle.trim();
     const trimmedDesc = editDescription.trim();
@@ -176,7 +185,7 @@ export const GameDetailsPage = () => {
       trimmedTitle !== (game?.title || '').trim() ||
       editFormat !== game?.format ||
       computedSlots !== (game?.maxPlayers || MATCH_FORMAT_SLOTS[game?.format] || 10) ||
-      feeVal !== (game?.entryFee || 0) ||
+      (!isPriceChangeLocked && feeVal !== (game?.entryFee || 0)) ||
       editSkill !== game?.skill ||
       editPrivacy !== game?.privacy ||
       editDate !== game?.dateTime?.date ||
@@ -197,7 +206,7 @@ export const GameDetailsPage = () => {
         title: trimmedTitle,
         format: editFormat,
         maxPlayers: computedSlots,
-        entryFee: feeVal,
+        entryFee: isPriceChangeLocked ? (game?.entryFee || 200) : feeVal,
         skill: editSkill,
         privacy: editPrivacy,
         dateTime: {
@@ -206,7 +215,7 @@ export const GameDetailsPage = () => {
           endTime: editEndTime
         },
         description: trimmedDesc
-      });
+      }, currentUser);
 
       setIsEditModalOpen(false);
       toast.success('Match details updated!');
@@ -1587,19 +1596,50 @@ export const GameDetailsPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
-                Entry Fee (₹)
-              </label>
-              <input
-                name="editEntryFee"
-                type="number"
-                min="0"
-                step="any"
-                value={editEntryFee}
-                onChange={(e) => setEditEntryFee(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                required
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Entry Fee (₹) <span className="text-rose-500">*</span>
+                </label>
+                {isPriceChangeLocked && (
+                  <span className="inline-flex items-center space-x-1 text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>Price Locked</span>
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  name="editEntryFee"
+                  type="number"
+                  min="200"
+                  max="200000"
+                  step="any"
+                  disabled={isPriceChangeLocked}
+                  readOnly={isPriceChangeLocked}
+                  value={editEntryFee}
+                  onChange={(e) => setEditEntryFee(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-lg border font-semibold text-xs transition-colors ${
+                    isPriceChangeLocked
+                      ? 'border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/70 text-slate-500 dark:text-slate-400 cursor-not-allowed select-none'
+                      : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none'
+                  }`}
+                  required
+                />
+                {isPriceChangeLocked && (
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-amber-500">
+                    <Lock className="w-3.5 h-3.5" />
+                  </div>
+                )}
+              </div>
+              {isPriceChangeLocked ? (
+                <p className="mt-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-start space-x-1 leading-tight">
+                  <span>🔒 Match created by player ({game?.organizer?.name || 'Player'}). Admin & Manager cannot change price.</span>
+                </p>
+              ) : (
+                <p className="mt-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                  Min: ₹200 • Max: ₹2,00,000
+                </p>
+              )}
             </div>
 
             <div>

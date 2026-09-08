@@ -8,7 +8,7 @@ import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Avatar from '../../components/common/Avatar';
 import Modal from '../../components/common/Modal';
-import { validateTitle, validateDateNotPast, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateFormAndFocus } from '../../utils/validationUtils';
+import { validateTitle, validateDateNotPast, validateTimeRange, validatePositiveAmount, validateIntegerRange, validateFormAndFocus, validateGamePrice } from '../../utils/validationUtils';
 import { getErrorMessage, logActionError, checkNetworkOnline } from '../../utils/errorUtils';
 import toast from 'react-hot-toast';
 
@@ -129,7 +129,7 @@ export const FindGamesPage = () => {
       { check: () => validateDateNotPast(date, 'Game Date'), field: 'date' },
       { check: () => validateTimeRange(startTime, endTime), field: 'startTime' },
       { check: () => validateIntegerRange(maxPlayers, 2, 50, 'Max Players'), field: 'maxPlayers' },
-      { check: () => validatePositiveAmount(entryFee, 'Entry Fee', true), field: 'entryFee' },
+      { check: () => validateGamePrice(entryFee, 'Entry Fee'), field: 'entryFee' },
       { check: () => {
         if (isPlayerHost && feeVal > 0 && (currentUser.walletBalance || 0) < feeVal) {
           return { isValid: false, message: `Insufficient wallet balance! Hosting as a Player requires paying the entry fee (₹${feeVal}). Please top up in Profile.` };
@@ -631,17 +631,23 @@ export const FindGamesPage = () => {
 
             <div>
               <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
-                Entry Fee (₹)
+                Entry Fee (₹) <span className="text-rose-500">*</span>
               </label>
               <input
                 name="entryFee"
                 type="number"
-                min="0"
+                min="200"
+                max="200000"
                 step="any"
+                placeholder="e.g. 200"
                 value={entryFee}
                 onChange={(e) => setEntryFee(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                required
               />
+              <p className="mt-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                Min: ₹200 • Max: ₹2,00,000
+              </p>
             </div>
           </div>
 
