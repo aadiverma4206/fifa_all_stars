@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, Calendar, MapPin, Search, Filter, ChevronRight, Clock, Users, ArrowLeft, Star, Sparkles, TrendingDown, Zap, XCircle, Award, Film, Building2, X, RotateCcw } from 'lucide-react';
+import { 
+  Trophy, Calendar, MapPin, Search, Filter, ChevronRight, Clock, Users, 
+  ArrowLeft, Star, Sparkles, TrendingDown, Zap, XCircle, Award, Film, 
+  Building2, X, RotateCcw, LayoutGrid, List, Flame, TrendingUp, CheckCircle2, 
+  ShieldCheck, Play, Video
+} from 'lucide-react';
 import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getTodayDate } from '../../utils/dateUtils';
@@ -10,20 +15,23 @@ import Avatar from '../../components/common/Avatar';
 import BackButton from '../../components/common/BackButton';
 
 export const MatchHistoryPage = () => {
-  const { games, gameVideos, clubs } = useDataStore();
+  const { games, gameVideos, clubs, courts } = useDataStore();
   const { currentUser } = useAuthStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [formatFilter, setFormatFilter] = useState('all');
+  const [pitchFilter, setPitchFilter] = useState('all');
   const [resultFilter, setResultFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'tomorrow' | 'past' | 'custom'
+  const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'yesterday' | 'past' | 'custom'
   const [customDate, setCustomDate] = useState('');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
   const todayStr = getTodayDate(0);
   const tomorrowStr = getTodayDate(1);
 
   const isManager = currentUser?.role === 'CLUB_MANAGER';
-  const myClub = clubs.find(c => c.managerIds?.includes(currentUser?.id)) || clubs[0];
+  const myClub = clubs.find(c => c.managerIds?.includes(currentUser?.id) || c.managerId === currentUser?.id) || clubs[0];
+  const myCourts = courts?.filter(c => c.clubId === myClub?.id) || [];
 
   // Helper to check if a game has a score entered
   const hasScoreEntered = (g) => {
@@ -50,7 +58,13 @@ export const MatchHistoryPage = () => {
   // My games / My Venue games:
   const myCompletedGames = currentUser
     ? completedGames.filter(g => {
-        if (isManager && myClub?.id && g.venueReference?.clubId === myClub.id) return true;
+        if (isManager && myClub?.id) {
+          return (
+            g.venueReference?.clubId === myClub.id ||
+            g.clubId === myClub.id ||
+            g.venueReference?.clubName?.toLowerCase() === myClub.name?.toLowerCase()
+          );
+        }
         return (
           g.confirmedPlayers?.some(p => p.id === currentUser.id) ||
           g.organizer?.id === currentUser.id
@@ -61,6 +75,19 @@ export const MatchHistoryPage = () => {
   const [activeTab, setActiveTab] = useState(currentUser ? 'mine' : 'all');
 
   const sourceGames = activeTab === 'mine' ? myCompletedGames : completedGames;
+
+  // Venue Management KPI Metrics
+  const venueTotalGoals = myCompletedGames.reduce((sum, g) => {
+    const sA = parseInt(g.score?.teamA || 0, 10) || 0;
+    const sB = parseInt(g.score?.teamB || 0, 10) || 0;
+    return sum + sA + sB;
+  }, 0);
+  const venueAvgGoals = myCompletedGames.length > 0 
+    ? (venueTotalGoals / myCompletedGames.length).toFixed(1) 
+    : '0.0';
+  const venueHighlightsCount = myCompletedGames.filter(g => 
+    (gameVideos || []).some(v => v.gameId === g.id) || !!g.videoReference || !!g.videoUrl
+  ).length;
 
   const getResultLabel = (game) => {
     const hasScore = hasScoreEntered(game);
@@ -165,18 +192,24 @@ export const MatchHistoryPage = () => {
     const search = searchTerm.toLowerCase();
     const matchTitle = g.title?.toLowerCase().includes(search);
     const matchVenue = g.venueReference?.clubName?.toLowerCase().includes(search);
+    const matchCourt = (g.venueReference?.courtName || g.courtName)?.toLowerCase().includes(search);
     const matchCity = g.venueReference?.city?.toLowerCase().includes(search);
-    const matchesSearch = matchTitle || matchVenue || matchCity || !searchTerm;
+    const matchesSearch = matchTitle || matchVenue || matchCourt || matchCity || !searchTerm;
 
     const matchesFormat = formatFilter === 'all' || g.format === formatFilter;
+
+    // Pitch filter
+    const matchesPitch = pitchFilter === 'all' || 
+      g.venueReference?.courtId === pitchFilter || 
+      g.venueReference?.courtName?.toLowerCase()?.includes(pitchFilter.toLowerCase());
 
     // Date filtering
     const gameDate = g.dateTime?.date || g.date || '';
     let matchesDate = true;
     if (dateFilter === 'today') {
       matchesDate = gameDate === todayStr;
-    } else if (dateFilter === 'tomorrow') {
-      matchesDate = gameDate === tomorrowStr;
+    } else if (dateFilter === 'yesterday') {
+      matchesDate = gameDate === getTodayDate(-1);
     } else if (dateFilter === 'past') {
       matchesDate = gameDate <= todayStr;
     } else if (dateFilter === 'custom' && customDate) {
@@ -193,14 +226,13 @@ export const MatchHistoryPage = () => {
       (resultFilter === 'completed' && (result?.type === 'COMPLETED' || g.status === 'COMPLETED')) ||
       (resultFilter === 'video' && hasVideo);
 
-    return matchesSearch && matchesFormat && matchesDate && matchesResult;
+    return matchesSearch && matchesFormat && matchesPitch && matchesDate && matchesResult;
   });
-
-  const formats = ['all', '11v11'];
 
   const resetAllFilters = () => {
     setSearchTerm('');
     setFormatFilter('all');
+    setPitchFilter('all');
     setResultFilter('all');
     setDateFilter('all');
     setCustomDate('');
@@ -219,75 +251,208 @@ export const MatchHistoryPage = () => {
   };
 
   return (
-    <div className="space-y-4 py-4 sm:py-6 max-w-4xl w-full mx-auto px-3 sm:px-6 lg:px-8 overflow-x-hidden">
+    <div className="space-y-6 py-4 sm:py-6 max-w-[1700px] w-full mx-auto px-2 sm:px-4 lg:px-6 overflow-x-hidden">
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
-        <div>
-          <BackButton fallback={isManager ? "/club/games" : "/player/find-games"} label={isManager ? "Back to Sessions" : "Back to Find Games"} className="mb-1.5 text-xs font-semibold" />
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 flex-shrink-0" />
-            <span>{isManager ? `${myClub?.name || 'Venue'} Match Records` : 'Match History & Results'}</span>
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {isManager 
-              ? 'Official match records and final scores hosted at your venue.'
-              : 'Completed pick-up fixtures, scores, highlights and match outcomes.'
-            }
-          </p>
+      {/* ═══ 1. TOP HEADER & VENUE HERO BANNER ═══ */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <BackButton 
+              fallback={isManager ? "/club/games" : "/player/find-games"} 
+              label={isManager ? "Back to Sessions" : "Back to Find Games"} 
+              className="mb-2 text-xs font-semibold" 
+            />
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2.5">
+                <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500 flex-shrink-0" />
+                <span>{isManager ? `${myClub?.name || 'Venue'} Match Records` : 'Match History & Results'}</span>
+              </h1>
+              {isManager && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-black uppercase">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Official Venue Archive</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+              {isManager 
+                ? `Official match records, live scores, and video archives hosted at ${myClub?.name || 'your venue'}.`
+                : 'Completed pick-up fixtures, scores, highlights and match outcomes across verified venues.'
+              }
+            </p>
+          </div>
+
+          {/* Source Tabs & View Switcher */}
+          <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+            {currentUser && (
+              <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-slate-800 gap-1">
+                {[
+                  { key: 'mine', label: isManager ? `🏟️ Venue (${myCompletedGames.length})` : `⚡ My Matches (${myCompletedGames.length})` },
+                  { key: 'all', label: `🌐 All Matches (${completedGames.length})` }
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`py-2 px-3.5 rounded-lg text-xs font-black transition-all uppercase text-center cursor-pointer whitespace-nowrap ${
+                      activeTab === tab.key
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm font-black'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* View Mode Toggle (Grid vs List) */}
+            <div className="hidden sm:inline-flex p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-slate-800 gap-1">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                }`}
+                title="List View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Source Tab Segmented Ribbon */}
-        {currentUser && (
-          <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-slate-800 w-full sm:w-auto gap-1 self-start sm:self-center">
-            {[
-              { key: 'mine', label: isManager ? `🏟️ Venue (${myCompletedGames.length})` : `⚡ My Matches (${myCompletedGames.length})` },
-              { key: 'all', label: `🌐 All Matches (${completedGames.length})` }
-            ].map(tab => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`py-1.5 px-3 rounded-lg text-xs font-black transition-all uppercase text-center cursor-pointer truncate ${
-                  activeTab === tab.key
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-black'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+        {/* ═══ 2. VENUE STATS KPI CARDS (FOR CLUB MANAGER) ═══ */}
+        {isManager && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="admin-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  Total Matches Hosted
+                </span>
+                <span className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                  {myCompletedGames.length}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-1 mt-0.5">
+                  <CheckCircle2 className="w-3 h-3" /> Full Time Verified
+                </span>
+              </div>
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center flex-shrink-0">
+                <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+            </div>
+
+            <div className="admin-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  Total Goals Scored
+                </span>
+                <span className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                  {venueTotalGoals}
+                </span>
+                <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 mt-0.5">
+                  <Flame className="w-3 h-3" /> High Excitement Venue
+                </span>
+              </div>
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+            </div>
+
+            <div className="admin-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  Scoring Average
+                </span>
+                <span className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                  {venueAvgGoals} <span className="text-xs font-semibold text-slate-400">G/M</span>
+                </span>
+                <span className="text-[11px] font-bold text-sky-500 flex items-center gap-1 mt-0.5">
+                  <TrendingUp className="w-3 h-3" /> Competitive 11v11
+                </span>
+              </div>
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-500 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+            </div>
+
+            <div className="admin-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  Video Highlights
+                </span>
+                <span className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                  {venueHighlightsCount}
+                </span>
+                <span className="text-[11px] font-bold text-purple-500 flex items-center gap-1 mt-0.5">
+                  <Film className="w-3 h-3" /> Replays Available
+                </span>
+              </div>
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-500 flex items-center justify-center flex-shrink-0">
+                <Film className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Modern Filter & Search Bar */}
-      <div className="p-2.5 sm:p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs space-y-2.5">
+      {/* ═══ 3. MODERN FULL-WIDTH FILTER & SEARCH BAR ═══ */}
+      <div className="p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs space-y-3">
         
-        {/* Row 1: Search & Date Filter */}
-        <div className="flex items-center gap-2">
+        {/* Row 1: Search, Pitch Selector & Date Picker */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
           <div className="relative flex-1 min-w-0">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search match, turf, city..."
+              placeholder="Search match title, pitch, team, or city..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-7 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sport-500 transition-all"
+              className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sport-500 transition-all"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
+          {/* Pitch Filter (For Venue Manager) */}
+          {isManager && myCourts.length > 0 && (
+            <div className="relative flex-shrink-0 min-w-[180px]">
+              <select
+                value={pitchFilter}
+                onChange={(e) => setPitchFilter(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sport-500 cursor-pointer"
+              >
+                <option value="all">🏟️ All Venue Pitches</option>
+                {myCourts.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Date Selector */}
           <div className="relative flex-shrink-0">
-            <div className="flex items-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 gap-1.5 focus-within:ring-2 focus-within:ring-sport-500">
+            <div className="flex items-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-sport-500">
               <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
               <input
                 type="date"
@@ -297,40 +462,39 @@ export const MatchHistoryPage = () => {
                   if (e.target.value) setDateFilter('custom');
                   else setDateFilter('all');
                 }}
-                className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer w-28 sm:w-32"
-                title="Filter by date"
+                className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer w-32"
+                title="Filter by match date"
               />
               {customDate && (
                 <button
                   onClick={() => { setCustomDate(''); setDateFilter('all'); }}
                   className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                  title="Clear date"
+                  title="Clear date filter"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Row 2: Filter Chips */}
-        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-0.5 scrollbar-none">
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Row 2: Filter Chips & Reset */}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-0.5 scrollbar-none flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {[
-              { key: 'all', label: `All (${sourceGames.length})` },
-              { key: 'won', label: '🏆 Wins' },
-              { key: 'lost', label: '💔 Defeats' },
-              { key: 'draw', label: '🤝 Draws' },
-              { key: 'video', label: '🎥 Highlights' }
+              { key: 'all', label: `All Matches (${sourceGames.length})` },
+              { key: 'won', label: '🏆 Team Victories' },
+              { key: 'draw', label: '🤝 Draws / Ties' },
+              { key: 'video', label: '🎥 With Video Replays' }
             ].map(opt => (
               <button
                 key={opt.key}
                 type="button"
                 onClick={() => setResultFilter(opt.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer border ${
                   resultFilter === opt.key
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs font-black'
-                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 border-slate-900 dark:border-white shadow-xs font-black'
+                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
                 {opt.label}
@@ -338,48 +502,54 @@ export const MatchHistoryPage = () => {
             ))}
           </div>
 
-          {(searchTerm || resultFilter !== 'all' || customDate || dateFilter !== 'all') && (
+          {(searchTerm || resultFilter !== 'all' || pitchFilter !== 'all' || customDate || dateFilter !== 'all') && (
             <button
               type="button"
               onClick={resetAllFilters}
-              className="text-xs font-bold text-rose-500 hover:text-rose-600 whitespace-nowrap flex items-center gap-1 pl-2 flex-shrink-0 cursor-pointer"
+              className="text-xs font-bold text-rose-500 hover:text-rose-600 whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-rose-500/10 transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-3 h-3" />
-              <span>Reset</span>
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Filters</span>
             </button>
           )}
         </div>
 
       </div>
 
-      {/* Match History List */}
+      {/* ═══ 4. MATCH HISTORY CONTENT (RESPONSIVE FULL SCREEN GRID / LIST) ═══ */}
       {filtered.length === 0 ? (
-        <div className="p-10 text-center space-y-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mx-auto text-xl">⚽</div>
+        <div className="p-12 text-center space-y-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm max-w-lg mx-auto">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto text-2xl">
+            ⚽
+          </div>
           <div>
-            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">No match records found</h3>
-            <p className="text-xs font-medium text-slate-400 mt-1">
-              {activeTab === 'mine' ? (isManager ? "No completed matches recorded at your venue yet." : "You haven't participated in any completed matches yet.") : 'No completed matches match your search filters.'}
+            <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+              No match records found
+            </h3>
+            <p className="text-xs font-medium text-slate-400 mt-1 max-w-sm mx-auto">
+              {activeTab === 'mine' 
+                ? (isManager ? "No completed matches recorded under the selected filters at your venue." : "You haven't participated in any completed matches matching these criteria.") 
+                : 'No completed matches match your search criteria.'}
             </p>
           </div>
           <button
             type="button"
             onClick={resetAllFilters}
-            className="px-4 py-2 rounded-xl bg-sport-500 hover:bg-sport-600 text-white text-xs font-bold uppercase shadow-xs cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-sport-500 hover:bg-sport-600 text-white text-xs font-black uppercase shadow-md cursor-pointer transition-all"
           >
-            Clear Filters
+            Clear Filters &amp; View All
           </button>
         </div>
-      ) : (
-        <div className="space-y-3">
+      ) : viewMode === 'grid' ? (
+        /* ═══ GRID VIEW: BEAUTIFUL FULL-SCREEN 3-COLUMN ADAPTIVE SPORTS CARDS ═══ */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
           {filtered.map((game, idx) => {
             const result = getResultLabel(game);
             const hasScore = hasScoreEntered(game);
             const hasVideo = (gameVideos || []).some(v => v.gameId === game.id) || !!game.videoReference || !!game.videoUrl;
-            const isMyGame = currentUser && (
-              game.confirmedPlayers?.some(p => p.id === currentUser.id) ||
-              game.organizer?.id === currentUser.id ||
-              (isManager && game.venueReference?.clubId === myClub?.id)
+            const isMyVenue = isManager && (
+              game.venueReference?.clubId === myClub?.id ||
+              game.venueReference?.clubName?.toLowerCase() === myClub?.name?.toLowerCase()
             );
 
             const displayScoreA = hasScore ? parseInt(game.score.teamA, 10) : (game.liveScore?.teamA ?? 0);
@@ -392,75 +562,76 @@ export const MatchHistoryPage = () => {
             return (
               <motion.div
                 key={game.id}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.15, delay: idx * 0.03 }}
+                transition={{ duration: 0.2, delay: idx * 0.03 }}
+                className="h-full"
               >
-                <Link to={`/games/${game.id}`} className="block group">
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all overflow-hidden">
-                    
-                    {/* 1. Header Ribbon: Status, Format, Date */}
-                    <div className="px-3.5 sm:px-4 py-2 bg-slate-50/90 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs gap-2">
+                <div className="h-full flex flex-col justify-between bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-700 transition-all overflow-hidden group">
+                  
+                  <div>
+                    {/* Card Top Ribbon */}
+                    <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950/70 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {game.status === 'ONGOING' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> LIVE MATCH
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                             FULL TIME
                           </span>
                         )}
                         <span className="px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px]">
                           {game.format || '11v11'}
                         </span>
-                        {isMyGame && (
-                          <span className="px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-[10px]">
-                            {isManager ? '🏟️ Venue' : '⚡ My Match'}
+                        {isMyVenue && (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-black text-[10px]">
+                            🏟️ Venue Host
                           </span>
                         )}
                       </div>
 
                       <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1 flex-shrink-0">
-                        <Calendar className="w-3 h-3 text-slate-400" />
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         <span>{formatMatchDate(gameDate)}</span>
-                        {game.dateTime?.startTime && (
-                          <span className="text-slate-400 font-medium">· {game.dateTime.startTime}</span>
-                        )}
                       </div>
                     </div>
 
-                    {/* 2. Match Title & Venue */}
-                    <div className="px-3.5 sm:px-4 pt-3 pb-1">
-                      <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate group-hover:text-sport-500 transition-colors">
-                        {game.title}
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5 font-medium truncate">
-                        <MapPin className="w-3 h-3 text-sport-500 flex-shrink-0" />
-                        <span className="truncate">{game.venueReference?.clubName} · {game.venueReference?.city}</span>
+                    {/* Match Title & Venue Details */}
+                    <div className="p-4 pb-2">
+                      <Link to={`/games/${game.id}`} className="block">
+                        <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate group-hover:text-sport-500 transition-colors">
+                          {game.title}
+                        </h3>
+                      </Link>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-1 font-medium truncate">
+                        <MapPin className="w-3.5 h-3.5 text-sport-500 flex-shrink-0" />
+                        <span className="font-bold text-slate-700 dark:text-slate-300">{game.venueReference?.courtName || game.venueReference?.clubName}</span>
+                        <span>· {game.venueReference?.city}</span>
                       </p>
                     </div>
 
-                    {/* 3. Sleek Sports Scoreboard */}
-                    <div className="px-3.5 sm:px-4 py-2.5">
-                      <div className="rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/70 dark:border-slate-800/80 p-2.5 space-y-2">
+                    {/* Sports Scoreboard Widget */}
+                    <div className="px-4 py-2">
+                      <div className="rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/80 dark:border-slate-800 p-3 space-y-2.5">
                         
                         {/* Team A */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-6 h-6 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center font-black text-[11px] border border-sky-500/20 flex-shrink-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center font-black text-xs border border-sky-500/20 flex-shrink-0">
                               A
                             </div>
-                            <span className={`text-xs font-bold truncate ${teamAWon ? 'text-slate-900 dark:text-white font-black' : 'text-slate-600 dark:text-slate-400'}`}>
+                            <span className={`text-xs sm:text-sm font-bold truncate ${teamAWon ? 'text-slate-900 dark:text-white font-black' : 'text-slate-600 dark:text-slate-400'}`}>
                               Team A
                             </span>
                             {teamAWon && (
-                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex-shrink-0">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex-shrink-0">
                                 🏆 Winner
                               </span>
                             )}
                           </div>
-                          <span className={`text-base sm:text-lg font-mono font-black px-2 py-0.5 rounded ${
+                          <span className={`text-lg sm:text-xl font-mono font-black px-2 py-0.5 rounded ${
                             teamAWon ? 'text-slate-900 dark:text-white font-extrabold' : 'text-slate-400'
                           }`}>
                             {displayScoreA}
@@ -471,20 +642,20 @@ export const MatchHistoryPage = () => {
 
                         {/* Team B */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-6 h-6 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-black text-[11px] border border-rose-500/20 flex-shrink-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-black text-xs border border-rose-500/20 flex-shrink-0">
                               B
                             </div>
-                            <span className={`text-xs font-bold truncate ${teamBWon ? 'text-slate-900 dark:text-white font-black' : 'text-slate-600 dark:text-slate-400'}`}>
+                            <span className={`text-xs sm:text-sm font-bold truncate ${teamBWon ? 'text-slate-900 dark:text-white font-black' : 'text-slate-600 dark:text-slate-400'}`}>
                               Team B
                             </span>
                             {teamBWon && (
-                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex-shrink-0">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex-shrink-0">
                                 🏆 Winner
                               </span>
                             )}
                           </div>
-                          <span className={`text-base sm:text-lg font-mono font-black px-2 py-0.5 rounded ${
+                          <span className={`text-lg sm:text-xl font-mono font-black px-2 py-0.5 rounded ${
                             teamBWon ? 'text-slate-900 dark:text-white font-extrabold' : 'text-slate-400'
                           }`}>
                             {displayScoreB}
@@ -493,8 +664,8 @@ export const MatchHistoryPage = () => {
 
                         {isDraw && (
                           <div className="pt-1 text-center">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 uppercase tracking-wider">
-                              🤝 Match Ended in a Draw
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-500 uppercase tracking-wider">
+                              🤝 Match Drawn · Shared Points
                             </span>
                           </div>
                         )}
@@ -502,52 +673,162 @@ export const MatchHistoryPage = () => {
                       </div>
                     </div>
 
-                    {/* 4. Footer: Personal Result, Highlights & Players */}
-                    <div className="px-3.5 sm:px-4 py-2.5 bg-slate-50/60 dark:bg-slate-950/30 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs gap-2">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* Only show personal outcome if user actually played */}
-                        {currentUser && (result?.type === 'WON' || result?.type === 'LOST') ? (
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide flex items-center gap-1 ${result.bgColor} ${result.textColor} border ${result.borderColor}`}>
-                            {result.label}
-                          </span>
-                        ) : null}
-
-                        {hasVideo ? (
-                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold flex items-center gap-1">
-                            <Film className="w-3 h-3" />
-                            <span>Highlights Available</span>
-                          </span>
-                        ) : (!currentUser || (result?.type !== 'WON' && result?.type !== 'LOST')) && game.organizer?.name ? (
-                          <span className="text-[11px] font-medium text-slate-400">
-                            Host: <span className="font-bold text-slate-600 dark:text-slate-300">{game.organizer.name}</span>
-                          </span>
-                        ) : null}
+                    {/* Match Description */}
+                    {game.description && (
+                      <div className="px-4 py-1.5">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                          {game.description}
+                        </p>
                       </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {game.confirmedPlayers?.length > 0 && (
-                          <div className="flex items-center gap-1">
-                            <div className="flex -space-x-1.5">
-                              {game.confirmedPlayers.slice(0, 3).map(p => (
-                                <Avatar key={p.id} src={p.avatar} name={p.name} size="xs" className="w-5 h-5 rounded-full border-2 border-white dark:border-slate-900" />
-                              ))}
-                            </div>
-                            <span className="text-[10px] text-slate-400 font-bold">
-                              {game.confirmedPlayers.length}p
-                            </span>
-                          </div>
-                        )}
-                        <span className="text-[11px] font-bold text-slate-500 group-hover:text-sport-500 flex items-center transition-colors">
-                          <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                        </span>
-                      </div>
-                    </div>
-
+                    )}
                   </div>
-                </Link>
+
+                  {/* Card Bottom / Footer Actions */}
+                  <div className="px-4 py-3 bg-slate-50/70 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 mt-2">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                      {hasVideo ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-[10px] font-black">
+                          <Play className="w-3 h-3 fill-current" />
+                          <span>Highlights</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold">
+                          Kickoff: {game.dateTime?.startTime || '19:00'}
+                        </span>
+                      )}
+
+                      {game.confirmedPlayers?.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex -space-x-1.5">
+                            {game.confirmedPlayers.slice(0, 3).map(p => (
+                              <Avatar 
+                                key={p.id} 
+                                src={p.avatar} 
+                                name={p.name} 
+                                size="xs" 
+                                className="w-5 h-5 rounded-full border-2 border-white dark:border-slate-900" 
+                              />
+                            ))}
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-bold">
+                            {game.confirmedPlayers.length} Players
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Link
+                      to={`/games/${game.id}`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-sport-500 hover:text-white dark:hover:bg-sport-500 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-xs flex-shrink-0"
+                    >
+                      <span>Scorecard</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                </div>
               </motion.div>
             );
           })}
+        </div>
+      ) : (
+        /* ═══ LIST / TABLE VIEW: FULL-WIDTH EXECUTIVE ROSTER ═══ */
+        <div className="admin-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                <tr>
+                  <th className="py-3.5 px-4">Status &amp; Date</th>
+                  <th className="py-3.5 px-4">Match Title &amp; Pitch</th>
+                  <th className="py-3.5 px-4 text-center">Scoreboard</th>
+                  <th className="py-3.5 px-4 text-center">Outcome</th>
+                  <th className="py-3.5 px-4">Lineup &amp; Video</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filtered.map(game => {
+                  const hasScore = hasScoreEntered(game);
+                  const sA = hasScore ? parseInt(game.score.teamA, 10) : (game.liveScore?.teamA ?? 0);
+                  const sB = hasScore ? parseInt(game.score.teamB, 10) : (game.liveScore?.teamB ?? 0);
+                  const isDraw = hasScore && sA === sB;
+                  const teamAWon = hasScore && sA > sB;
+                  const teamBWon = hasScore && sB > sA;
+                  const hasVideo = (gameVideos || []).some(v => v.gameId === game.id) || !!game.videoReference || !!game.videoUrl;
+
+                  return (
+                    <tr key={game.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 block w-max">
+                          FULL TIME
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-bold block mt-1">
+                          {formatMatchDate(game.dateTime?.date || game.date)}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <span className="font-extrabold text-slate-900 dark:text-white text-xs block truncate max-w-xs">
+                          {game.title}
+                        </span>
+                        <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-sport-500" />
+                          {game.venueReference?.courtName || game.venueReference?.clubName}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono font-black text-sm">
+                          <span className={teamAWon ? 'text-sky-500' : 'text-slate-400'}>{sA}</span>
+                          <span className="text-slate-400">:</span>
+                          <span className={teamBWon ? 'text-rose-500' : 'text-slate-400'}>{sB}</span>
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        {isDraw ? (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase border border-amber-500/20">
+                            🤝 Tied
+                          </span>
+                        ) : teamAWon ? (
+                          <span className="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[10px] font-black uppercase border border-sky-500/20">
+                            🏆 Team A Won
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase border border-rose-500/20">
+                            🏆 Team B Won
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {hasVideo && (
+                            <span className="p-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20" title="Highlights available">
+                              <Film className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+                          <span className="text-[11px] font-bold text-slate-500">
+                            {game.confirmedPlayers?.length || 0} players
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <Link
+                          to={`/games/${game.id}`}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-sport-500 hover:text-white dark:hover:bg-sport-500 text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1"
+                        >
+                          <span>Details</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -556,3 +837,4 @@ export const MatchHistoryPage = () => {
 };
 
 export default MatchHistoryPage;
+

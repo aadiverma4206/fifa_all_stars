@@ -267,6 +267,12 @@ export const useAuthStore = create(
           return false;
         }
 
+        // Enforce maximum per-transaction top-up limit of ₹50,000
+        if (numAmount > 50000) {
+          toast.error('Transaction limit exceeded! Amount cannot cross ₹50,000 per transaction.');
+          return false;
+        }
+
         const MAX_WALLET_LIMIT = 200000; // 2 Lakh INR Max Cap
 
         // Enforce maximum wallet balance of ₹2,00,000
