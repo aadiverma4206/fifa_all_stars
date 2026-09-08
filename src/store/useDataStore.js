@@ -535,10 +535,22 @@ export const useDataStore = create(
   },
 
   // --- MATCH LIFECYCLE MANAGEMENT ---
-  updateGameLifecycle: (gameId, newStatus) => {
+  updateGameLifecycle: (gameId, newStatus, actingUser = null) => {
     const games = get().games;
     const target = games.find(g => g.id === gameId);
-    if (!target) return;
+    if (!target) return false;
+
+    // Player cannot start match until all players have joined; only manager/admin can start early
+    if (newStatus === 'ONGOING') {
+      const isManagerOrAdmin = actingUser?.role === 'CLUB_MANAGER' || actingUser?.role === 'SUPER_ADMIN';
+      const maxSlots = target.maxPlayers || MATCH_FORMAT_SLOTS[target.format] || 10;
+      const isRosterComplete = (target.confirmedPlayers?.length || 0) >= maxSlots;
+
+      if (!isManagerOrAdmin && !isRosterComplete) {
+        toast.error(`Cannot start match yet! All ${maxSlots} players must join first (${target.confirmedPlayers?.length || 0}/${maxSlots} joined). Only Club Managers & Admins can start match without a full roster.`);
+        return false;
+      }
+    }
 
     set({
       games: games.map(g => g.id === gameId ? { ...g, status: newStatus } : g)
@@ -554,6 +566,7 @@ export const useDataStore = create(
     });
 
     toast.success(`Match status updated to ${newStatus}`);
+    return true;
   },
 
   updateGameDetails: (gameId, updatedFields, actingUser = null) => {
@@ -561,32 +574,30 @@ export const useDataStore = create(
     const target = games.find(g => g.id === gameId);
     if (!target) return;
 
-    // Check if original game was created by a player
-    const isOriginallyCreatedByPlayer = 
-      target.createdByPlayer === true ||
-      target.creatorRole === 'PLAYER' ||
-      target.organizer?.role === 'PLAYER' ||
-      (target.organizer?.id && target.organizer.id.startsWith('usr_player'));
-
-    const isActingManagerOrAdmin = actingUser && (actingUser.role === 'CLUB_MANAGER' || actingUser.role === 'SUPER_ADMIN');
+    // Check if acting user is the original creator or host of this match
+    const isCreatorOrHost = actingUser && (
+      target.organizer?.id === actingUser.id ||
+      target.creatorId === actingUser.id ||
+      target.hostId === actingUser.id
+    );
 
     let sanitizedFields = { ...updatedFields };
 
-    // Admin & Manager CANNOT alter price if game was created by a player
-    if (isOriginallyCreatedByPlayer && isActingManagerOrAdmin && updatedFields.entryFee !== undefined) {
-      if (Number(updatedFields.entryFee) !== Number(target.entryFee)) {
-        toast.error('Admins and Managers cannot alter the price of a player-created match.');
-      }
-      sanitizedFields.entryFee = target.entryFee;
-    } else if (sanitizedFields.entryFee !== undefined) {
-      // Validate game price range: Min ₹200, Max ₹200,000
-      const numericFee = parseFloat(sanitizedFields.entryFee);
-      if (isNaN(numericFee) || numericFee < 200) {
-        sanitizedFields.entryFee = 200;
-      } else if (numericFee > 200000) {
-        sanitizedFields.entryFee = 200000;
+    // ONLY the creator / host of the match can modify the price
+    if (updatedFields.entryFee !== undefined && Number(updatedFields.entryFee) !== Number(target.entryFee)) {
+      if (!isCreatorOrHost) {
+        toast.error('Only the match creator / host can modify the price.');
+        sanitizedFields.entryFee = target.entryFee;
       } else {
-        sanitizedFields.entryFee = numericFee;
+        // Validate game price range: Min ₹200, Max ₹200,000
+        const numericFee = parseFloat(sanitizedFields.entryFee);
+        if (isNaN(numericFee) || numericFee < 200) {
+          sanitizedFields.entryFee = 200;
+        } else if (numericFee > 200000) {
+          sanitizedFields.entryFee = 200000;
+        } else {
+          sanitizedFields.entryFee = numericFee;
+        }
       }
     }
 
@@ -770,11 +781,16 @@ export const useDataStore = create(
   leaveGame: (gameId, userId) => {
     const games = get().games;
     const targetGame = games.find(g => g.id === gameId);
-    if (!targetGame) return;
+    if (!targetGame) return false;
+
+    if (targetGame.status === 'ONGOING') {
+      toast.error('Match has already started! Refunds and roster cancellations are strictly prohibited once the game is live.');
+      return false;
+    }
 
     if (targetGame.status === 'COMPLETED' || (targetGame.score && targetGame.score.teamA !== null)) {
-      toast.error('This match is completed! Roster is permanently locked.');
-      return;
+      toast.error('This match is completed! Roster and refunds are permanently locked.');
+      return false;
     }
 
     const leavingPlayer = targetGame.confirmedPlayers?.find(p => p.id === userId);
@@ -851,6 +867,8 @@ export const useDataStore = create(
       privacy: newGameData.privacy || 'PUBLIC',
       createdByPlayer: isPlayerCreator,
       creatorRole: creatorRole,
+      creatorId: creatorUser?.id || 'usr_club_mgr_101',
+      hostId: creatorUser?.id || 'usr_club_mgr_101',
       organizer: {
         id: creatorUser?.id || 'usr_club_mgr_101',
         name: creatorUser?.name || 'Club Manager',

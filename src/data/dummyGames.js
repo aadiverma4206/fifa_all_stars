@@ -9,14 +9,14 @@ export const dummyGames = [
     organizer: {
       id: "usr_player_demo",
       name: "Arjun Mehta",
-      avatar: "/assets/images/avatars/avatar-1.jpg",
+      avatar: "/assets/images/avatars/player-avatar.jpg",
       role: "PLAYER"
     },
     format: "11v11",
     maxPlayers: 22,
     entryFee: 200, // ₹200 per player (Min: ₹200, Max: ₹200,000)
     confirmedPlayers: [
-      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/avatar-1.jpg", position: "ST", team: "TEAM_A" },
+      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/player-avatar.jpg", position: "ST", team: "TEAM_A" },
       { id: "usr_p6", name: "Aarav Joshi", avatar: "/assets/images/avatars/avatar-8.jpg", position: "CM", team: "TEAM_A" },
       { id: "usr_p10", name: "Ishan Verma", avatar: "/assets/images/avatars/avatar-8.jpg", position: "CB", team: "TEAM_B" }
     ],
@@ -48,7 +48,7 @@ export const dummyGames = [
     organizer: {
       id: "usr_player_demo",
       name: "Arjun Mehta",
-      avatar: "/assets/images/avatars/avatar-1.jpg",
+      avatar: "/assets/images/avatars/player-avatar.jpg",
       role: "PLAYER"
     },
     format: "11v11",
@@ -56,7 +56,7 @@ export const dummyGames = [
     entryFee: 200, // ₹200 per player
     confirmedPlayers: [
       // --- Team A Lineup ---
-      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/avatar-1.jpg", position: "ST", team: "TEAM_A" },
+      { id: "usr_player_demo", name: "Arjun Mehta", avatar: "/assets/images/avatars/player-avatar.jpg", position: "ST", team: "TEAM_A" },
       { id: "usr_p2", name: "Siddharth Rao", avatar: "/assets/images/avatars/avatar-6.jpg", position: "CAM", team: "TEAM_A" },
       { id: "usr_p3", name: "Ananya Iyer", avatar: "/assets/images/avatars/avatar-3.jpg", position: "GK", team: "TEAM_A" },
       { id: "usr_p4", name: "Karan Patel", avatar: "/assets/images/avatars/avatar-4.jpg", position: "CB", team: "TEAM_A" },
@@ -68,7 +68,7 @@ export const dummyGames = [
       { id: "usr_p7", name: "Rohan Kapoor", avatar: "/assets/images/avatars/avatar-9.jpg", position: "ST", team: "TEAM_B" },
       { id: "usr_p8", name: "Tanya Sharma", avatar: "/assets/images/avatars/avatar-10.jpg", position: "CM", team: "TEAM_B" },
       { id: "usr_p9", name: "Devendra Singh", avatar: "/assets/images/avatars/avatar-2.jpg", position: "RW", team: "TEAM_B" },
-      { id: "usr_admin_demo", name: "Aaditya Verma", avatar: "/assets/images/avatars/avatar-1.jpg", position: "CAM", team: "TEAM_B" },
+      { id: "usr_admin_demo", name: "Aaditya Verma", avatar: "/assets/images/avatars/admin-avatar.jpg", position: "CAM", team: "TEAM_B" },
       { id: "usr_admin_2", name: "Rohan Deshmukh", avatar: "/assets/images/avatars/avatar-2.jpg", position: "CB", team: "TEAM_B" },
       { id: "usr_p11", name: "Farhan Akhtar", avatar: "/assets/images/avatars/avatar-5.jpg", position: "CDM", team: "TEAM_B" },
       { id: "usr_p12", name: "Kabir Sen", avatar: "/assets/images/avatars/avatar-4.jpg", position: "GK", team: "TEAM_B" }

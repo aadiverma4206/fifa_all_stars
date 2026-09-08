@@ -256,7 +256,7 @@ export const UserManagementPage = () => {
                       {/* USER COLUMN */}
                       <td className="py-3.5 px-4 sm:px-5">
                         <div className="flex items-center space-x-3">
-                          <Avatar src={user.profileImageUrl || user.avatar} name={user.name} size="sm" className="rounded-md" />
+                          <Avatar src={user.profileImageUrl || user.avatar} role={user.role} name={user.name} size="sm" className="rounded-md" />
                           <div className="min-w-0">
                             <div className="flex items-center space-x-1.5">
                               <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{user.name}</span>
@@ -563,7 +563,7 @@ export const UserManagementPage = () => {
         {selectedUser && (
           <div className="space-y-4 text-xs font-semibold">
             <div className="flex items-center space-x-4 p-4 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-              <Avatar src={selectedUser.profileImageUrl || selectedUser.avatar} name={selectedUser.name} size="lg" className="rounded-md" />
+              <Avatar src={selectedUser.profileImageUrl || selectedUser.avatar} role={selectedUser.role} name={selectedUser.name} size="lg" className="rounded-md" />
               <div>
                 <div className="flex items-center space-x-2">
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">{selectedUser.name}</h3>

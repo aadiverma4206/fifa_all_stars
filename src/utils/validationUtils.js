@@ -168,6 +168,16 @@ export const validateGamePrice = (amount, fieldName = 'Entry Fee') => {
   return { isValid: true, message: '' };
 };
 
+// Helper: Check whether a user is the original creator / host of the game
+export const isUserGameHost = (game, user) => {
+  if (!game || !user) return false;
+  return (
+    game.organizer?.id === user.id ||
+    game.creatorId === user.id ||
+    game.hostId === user.id
+  );
+};
+
 // Helper: Check whether a game was originally created by a player
 export const isGameCreatedByPlayer = (game, usersList = []) => {
   if (!game) return false;

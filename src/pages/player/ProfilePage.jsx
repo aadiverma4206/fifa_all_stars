@@ -246,6 +246,7 @@ export const ProfilePage = () => {
         <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 w-full lg:w-auto">
           <Avatar 
             src={currentUser?.profileImageUrl || currentUser?.avatar} 
+            role={currentUser?.role}
             name={currentUser?.name} 
             size="xl" 
             status="active" 
@@ -745,6 +746,7 @@ export const ProfilePage = () => {
             <div className="relative">
               <Avatar
                 src={avatarPreview || currentUser?.profileImageUrl || currentUser?.avatar}
+                role={currentUser?.role}
                 name={currentUser?.name}
                 size="lg"
                 className="w-14 h-14 rounded-2xl border border-slate-300 dark:border-slate-700"
@@ -784,6 +786,22 @@ export const ProfilePage = () => {
                   <div className="bg-sport-500 h-full transition-all duration-150" style={{ width: `${avatarUploadProgress}%` }} />
                 </div>
               )}
+              <div className="flex items-center gap-2 pt-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const defaultRoleSrc = currentUser?.role === 'SUPER_ADMIN' 
+                      ? '/assets/images/avatars/admin-avatar.jpg'
+                      : (currentUser?.role === 'CLUB_MANAGER' ? '/assets/images/avatars/manager-avatar.jpg' : '/assets/images/avatars/player-avatar.jpg');
+                    setAvatarPreview(defaultRoleSrc);
+                    setAvatarFile(null);
+                    if (avatarInputRef.current) avatarInputRef.current.value = '';
+                  }}
+                  className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  ⚡ Use Official {currentUser?.role?.replace('_', ' ')} Avatar
+                </button>
+              </div>
             </div>
           </div>
 

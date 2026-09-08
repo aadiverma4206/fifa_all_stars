@@ -5,7 +5,7 @@ export const dummyCommunityPosts = [
     city: "Raipur",
     authorId: "usr_player_demo",
     authorName: "Arjun Mehta",
-    authorAvatar: "/assets/images/avatars/avatar-1.jpg",
+    authorAvatar: "/assets/images/avatars/player-avatar.jpg",
     authorElo: 1840,
     timestamp: "2 hours ago",
     content: "What a crazy 11v11 match tonight at Bernabeu Arena Raipur! Thanks to Ananya for saving 3 penalties in a row. MVP performance! 🧤🔥",

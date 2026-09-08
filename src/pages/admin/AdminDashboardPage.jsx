@@ -207,7 +207,7 @@ export const AdminDashboardPage = () => {
                 return (
                   <div key={user.id} className="p-3 rounded-md bg-slate-50/70 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-4 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 transition-colors">
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
-                      <Avatar src={user.profileImageUrl || user.avatar} name={user.name} size="sm" className="rounded-md" />
+                      <Avatar src={user.profileImageUrl || user.avatar} role={user.role} name={user.name} size="sm" className="rounded-md" />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-bold text-xs text-slate-900 dark:text-white truncate">{user.name}</span>
