@@ -1,4 +1,4 @@
-# FIFA ALL STARS — Grassroots Footy Match Hub
+# FIFA ALL STARS (Project Name - All Stars Arena ) — Grassroots Footy Match Hub
 
 **FIFA ALL STARS** is a premium, high-performance, frontend-only React web application for organizing grassroots football matches, court slot bookings, tournament knockout brackets, and club/league administration. Built with **React 18**, **Vite**, **TailwindCSS**, **Zustand**, **Three.js / React Three Fiber**, **Framer Motion**, and **Lucide Icons**.
 
